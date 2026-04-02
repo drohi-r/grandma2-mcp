@@ -1,19 +1,34 @@
 <svg width="900" height="200" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="900" height="200" fill="#0d1117"/>
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0a"/>
+      <stop offset="100%" stop-color="#1a0a0a"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF2020"/>
+      <stop offset="50%" stop-color="#FF4444"/>
+      <stop offset="100%" stop-color="#CC0000"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF202000"/>
+      <stop offset="20%" stop-color="#FF2020"/>
+      <stop offset="80%" stop-color="#FF2020"/>
+      <stop offset="100%" stop-color="#FF202000"/>
+    </linearGradient>
+  </defs>
 
-  <!-- 3D shadow layers — deepest first, stepping 2px toward main position -->
-  <text x="466" y="126" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#1a0000">MA2 AGENT</text>
-  <text x="464" y="124" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#2d0000">MA2 AGENT</text>
-  <text x="462" y="122" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#450000">MA2 AGENT</text>
-  <text x="460" y="120" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#5c0000">MA2 AGENT</text>
-  <text x="458" y="118" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#730000">MA2 AGENT</text>
-  <text x="456" y="116" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#8a0000">MA2 AGENT</text>
-  <text x="454" y="114" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#a30000">MA2 AGENT</text>
-  <text x="452" y="112" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#bb0000">MA2 AGENT</text>
+  <!-- Background -->
+  <rect width="900" height="200" fill="url(#bgGrad)"/>
 
-  <!-- Main text — red with dark outline -->
-  <text x="450" y="110" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#FF2020" stroke="#1a0500" stroke-width="1" paint-order="stroke">MA2 AGENT</text>
+  <!-- Top accent line -->
+  <rect x="150" y="40" width="600" height="1" fill="url(#accentLine)" opacity="0.4"/>
+
+  <!-- Main title — clean flat design, no 3D shadow -->
+  <text x="450" y="115" font-family="'Helvetica Neue', Arial, sans-serif" font-size="72" font-weight="800" text-anchor="middle" letter-spacing="12" fill="url(#textGrad)">MA2 AGENT</text>
+
+  <!-- Bottom accent line -->
+  <rect x="150" y="135" width="600" height="1" fill="url(#accentLine)" opacity="0.4"/>
 
   <!-- Subtitle -->
-  <text x="450" y="160" font-family="'Courier New', Courier, monospace" font-size="13" text-anchor="middle" letter-spacing="2" fill="#6b7280">grandMA2 Console Agent  &#183;  191 MCP Tools  &#183;  AI-Native</text>
+  <text x="450" y="165" font-family="'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="300" text-anchor="middle" letter-spacing="4" fill="#666666">GRANDMA2 CONSOLE AGENT  &#183;  196 MCP TOOLS  &#183;  AI-NATIVE</text>
 </svg>

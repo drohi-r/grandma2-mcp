@@ -221,6 +221,12 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "promote_session_to_skill":     MA2Right.ADMIN,
     "approve_skill":                MA2Right.ADMIN,
     "run_agent_goal":               MA2Right.ADMIN,
+    # ── New tools (batch operations + diagnostics) ──────────────────────
+    "batch_label":                  MA2Right.PROGRAM,
+    "bulk_executor_assign":         MA2Right.SETUP,
+    "auto_number_cues":             MA2Right.PROGRAM,
+    "compare_cue_values":           MA2Right.NONE,
+    "diagnose_no_output":           MA2Right.NONE,
 }
 
 # MA2 console error code for rights denial
