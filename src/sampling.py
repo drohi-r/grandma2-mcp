@@ -50,12 +50,12 @@ def _sanitize_console_state(state: dict[str, str]) -> dict[str, str]:
     return sanitized
 
 
-# Default model preferences: favor intelligence over speed/cost
+# Default model preferences: favor intelligence over speed/cost.
+# No model hints — let the MCP client choose based on priority weights.
 _DEFAULT_PREFS = ModelPreferences(
     intelligencePriority=0.8,
     speedPriority=0.5,
     costPriority=0.3,
-    hints=[ModelHint(name="claude-sonnet-4-6")],
 )
 
 

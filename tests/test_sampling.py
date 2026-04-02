@@ -120,6 +120,6 @@ class TestDefaultPreferences:
         assert _DEFAULT_PREFS.intelligencePriority > _DEFAULT_PREFS.speedPriority
         assert _DEFAULT_PREFS.intelligencePriority > _DEFAULT_PREFS.costPriority
 
-    def test_has_model_hint(self):
-        assert len(_DEFAULT_PREFS.hints) == 1
-        assert "claude" in _DEFAULT_PREFS.hints[0].name.lower()
+    def test_no_hardcoded_model_hint(self):
+        # Model hints removed — MCP client chooses based on priority weights
+        assert _DEFAULT_PREFS.hints is None or len(_DEFAULT_PREFS.hints) == 0

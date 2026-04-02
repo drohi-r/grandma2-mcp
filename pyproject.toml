@@ -1,7 +1,7 @@
 [project]
 name = "grandpa2-buddy"
 version = "0.1.0"
-description = "AI agent for grandMA2 lighting consoles — 148 MCP tools via Telnet"
+description = "AI agent for grandMA2 lighting consoles — 191 MCP tools via Telnet"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"

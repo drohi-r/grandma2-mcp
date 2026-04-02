@@ -223,9 +223,45 @@ def parse_telnet_feedback(
     3. If response contains "error" but NOT rights-related → INCONCLUSIVE
     4. Otherwise → PASS_ALLOWED
     """
+    import json as _json
+
+    # Try JSON parsing first for structured responses
+    try:
+        data = _json.loads(response_str)
+        if isinstance(data, dict):
+            if data.get("blocked") is True:
+                return TelnetFeedback(
+                    feedback_class=FeedbackClass.PASS_DENIED,
+                    accepted=False,
+                    is_rights_denial=False,
+                )
+            if "error" in data:
+                # Check if it's a rights denial
+                error_str = str(data["error"])
+                rights_match = _RIGHTS_DENIAL_RE.search(error_str)
+                if rights_match:
+                    return TelnetFeedback(
+                        feedback_class=FeedbackClass.FAILED_OPEN,
+                        accepted=False,
+                        is_rights_denial=True,
+                        error_code=rights_match.group(0),
+                    )
+                return TelnetFeedback(
+                    feedback_class=FeedbackClass.INCONCLUSIVE,
+                    accepted=False,
+                    is_rights_denial=False,
+                )
+            return TelnetFeedback(
+                feedback_class=FeedbackClass.PASS_ALLOWED,
+                accepted=True,
+                is_rights_denial=False,
+            )
+    except (ValueError, TypeError):
+        pass  # Not JSON — fall through to string matching
+
     s = response_str.lower()
 
-    # Check for MCP scope block
+    # Check for MCP scope block (string fallback)
     if '"blocked": true' in response_str or "'blocked': true" in s or '"blocked":true' in response_str:
         return TelnetFeedback(
             feedback_class=FeedbackClass.PASS_DENIED,

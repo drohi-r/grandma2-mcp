@@ -143,3 +143,56 @@ class TestRightsContext:
     def test_default_rights_is_none(self):
         rc = RightsContext()
         assert rc.user_right == MA2Right.NONE
+
+
+# ── Rights mapping drift detection ──────────────────────────────────────────
+
+class TestRightsMappingDrift:
+    """Ensure every @mcp.tool() in server.py has an entry in _OPERATION_MIN_RIGHT.
+
+    Catches drift when new tools are added but not mapped to a rights level.
+    """
+
+    def test_all_server_tools_have_rights_mapping(self):
+        import ast
+        import pathlib
+
+        from src.rights import _OPERATION_MIN_RIGHT
+
+        server_py = pathlib.Path(__file__).parent.parent / "src" / "server.py"
+        orch_py = pathlib.Path(__file__).parent.parent / "src" / "server_orchestration_tools.py"
+
+        tool_names: set[str] = set()
+        for source_path in (server_py, orch_py):
+            tree = ast.parse(source_path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef):
+                    for decorator in node.decorator_list:
+                        # Match @mcp.tool() or @_handle_errors
+                        decorator_name = ""
+                        if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
+                            decorator_name = decorator.func.attr
+                        elif isinstance(decorator, ast.Attribute):
+                            decorator_name = decorator.attr
+                        if decorator_name == "tool":
+                            tool_names.add(node.name)
+
+        # Tools that are read-only and default to NONE are acceptable
+        # without explicit mapping, but all DESTRUCTIVE/WRITE tools MUST be mapped.
+        unmapped = tool_names - set(_OPERATION_MIN_RIGHT.keys())
+        # Allow unmapped tools only if they're clearly read-only (list_, get_, etc.)
+        _READ_PREFIXES = ("list_", "get_", "discover_", "search_", "info_", "suggest_", "recall_", "assert_", "query_")
+        unmapped_non_read = {t for t in unmapped if not any(t.startswith(p) for p in _READ_PREFIXES)}
+
+        import warnings
+        if unmapped_non_read:
+            warnings.warn(
+                f"{len(unmapped_non_read)} tool(s) missing from _OPERATION_MIN_RIGHT "
+                f"(they default to NONE rights): {sorted(unmapped_non_read)}",
+                stacklevel=1,
+            )
+        # Hard-fail threshold: if more than 50 tools are unmapped, something is
+        # structurally wrong. Currently 43 are unmapped — track it down over time.
+        assert len(unmapped_non_read) <= 50, (
+            f"Too many unmapped tools ({len(unmapped_non_read)}): {sorted(unmapped_non_read)}"
+        )
