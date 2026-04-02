@@ -1,6 +1,6 @@
 <svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">MA2 Agent banner</title>
-  <desc id="desc">Dark production-style banner with warm red orange accents and bold MA2 Agent lettering.</desc>
+  <desc id="desc">Dark production-style banner with red black white accents and bold MA2 Agent lettering.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#050505"/>
@@ -8,13 +8,13 @@
       <stop offset="1" stop-color="#141414"/>
     </linearGradient>
     <linearGradient id="accent" x1="1040" y1="90" x2="1520" y2="430" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FF7A1A"/>
-      <stop offset="0.5" stop-color="#FF4D2D"/>
-      <stop offset="1" stop-color="#C81D25"/>
+      <stop offset="0" stop-color="#FF2A2A"/>
+      <stop offset="0.55" stop-color="#D4141E"/>
+      <stop offset="1" stop-color="#7D0E15"/>
     </linearGradient>
     <linearGradient id="lineAccent" x1="260" y1="0" x2="1120" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FF7A1A"/>
-      <stop offset="1" stop-color="#FF4D2D"/>
+      <stop offset="0" stop-color="#FF2A2A"/>
+      <stop offset="1" stop-color="#B5121B"/>
     </linearGradient>
     <filter id="glow" x="980" y="40" width="620" height="440" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="28"/>
@@ -51,7 +51,7 @@
   <rect x="78" y="437" width="332" height="7" rx="3.5" fill="url(#lineAccent)"/>
 
   <g opacity="0.12" filter="url(#glow)">
-    <circle cx="1290" cy="260" r="150" fill="#FF5A24"/>
+    <circle cx="1290" cy="260" r="150" fill="#C2151D"/>
   </g>
 
   <g opacity="0.96">
@@ -64,19 +64,15 @@
     <path d="M1296 156V364" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
   </g>
 
-  <text x="78" y="170" fill="#F3EEE8" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="8">
-    PRECISION LIGHTING CONTROL
+  <text x="78" y="172" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="7">
+    GRANDMA2 LIGHTING CONTROL
   </text>
 
-  <text x="78" y="286" fill="#F8F2EC" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="138" font-weight="900" letter-spacing="4">
+  <text x="78" y="292" fill="#F8F2EC" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="140" font-weight="900" letter-spacing="4">
     MA2 AGENT
   </text>
 
-  <text x="84" y="346" fill="#BEB7B0" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="5">
-    GRANDMA2 WORKFLOW • PLAYBACK • PROGRAMMING • LIVE PRODUCTION
-  </text>
-
-  <text x="84" y="426" fill="#E2602E" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="6">
-    SHOWFILE INTELLIGENCE / RUNTIME AUTOMATION / CONSOLE-SAFE EXECUTION
+  <text x="84" y="364" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="4">
+    PLAYBACK  •  PROGRAMMING  •  AUTOMATION
   </text>
 </svg>

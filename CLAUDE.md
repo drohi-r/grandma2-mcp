@@ -2,8 +2,8 @@
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
 version: 1.0.0
-created: 2026-03-01T23:37:51Z
-last_updated: 2026-04-02T05:05:00Z
+created: 2026-04-02T00:00:00Z
+last_updated: 2026-04-02T05:20:00Z
 ---
 
 # Project Rules

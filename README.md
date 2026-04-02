@@ -2,8 +2,8 @@
 title: MA2 Agent
 description: AI agent for grandMA2 lighting consoles — 218 MCP tools via Telnet
 version: 1.0.0
-created: 2025-11-04T17:05:43Z
-last_updated: 2026-04-02T05:05:00Z
+created: 2026-04-02T00:00:00Z
+last_updated: 2026-04-02T05:20:00Z
 ---
 
 <p align="center">
