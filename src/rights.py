@@ -171,6 +171,56 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "inspect_sessions":           MA2Right.ADMIN,
     "delete_user":                MA2Right.ADMIN,
     "register_decomposition_rule": MA2Right.ADMIN,
+    # ── Previously unmapped tools (added during hardening pass) ──────────
+    # none (0) — read-only inspection / validation
+    "classify_show_mode":           MA2Right.NONE,
+    "diff_console_state":           MA2Right.NONE,
+    "detect_dmx_address_conflicts": MA2Right.NONE,
+    "validate_preset_references":   MA2Right.NONE,
+    "check_pool_slot_availability": MA2Right.NONE,
+    "rdm_get_info":                 MA2Right.NONE,
+    "scan_page_executor_layout":    MA2Right.NONE,
+    "generate_compliance_report":   MA2Right.NONE,
+    "plan_agent_goal":              MA2Right.NONE,
+    "watch_system_var":             MA2Right.NONE,
+    # playback (1) — fader/effect/chaser control
+    "control_chaser":               MA2Right.PLAYBACK,
+    "control_special_master":       MA2Right.PLAYBACK,
+    "master_control":               MA2Right.PLAYBACK,
+    "modulate_effect":              MA2Right.PLAYBACK,
+    "normalize_page_faders":        MA2Right.PLAYBACK,
+    "clear_effects_on_page":        MA2Right.PLAYBACK,
+    "set_effect_param":             MA2Right.PLAYBACK,
+    "hydrate_sequences":            MA2Right.PLAYBACK,
+    # presets (2) — executor config, UI lock
+    "set_executor_priority":        MA2Right.PRESETS,
+    "unlock_console_ui":            MA2Right.PRESETS,
+    # program (3) — store/label/modify objects
+    "store_world":                  MA2Right.PROGRAM,
+    "store_agenda":                 MA2Right.PROGRAM,
+    "label_world":                  MA2Right.PROGRAM,
+    "update_object":                MA2Right.PROGRAM,
+    "remap_fixture_ids":            MA2Right.PROGRAM,
+    "programming_action":           MA2Right.PROGRAM,
+    # setup (4) — patch, RDM, plugins, scripting
+    "assign_effect_to_executor":    MA2Right.SETUP,
+    "rdm_discover":                 MA2Right.SETUP,
+    "rdm_patch":                    MA2Right.SETUP,
+    "reload_all_plugins":           MA2Right.SETUP,
+    "call_plugin_tool":             MA2Right.SETUP,
+    "run_lua_script":               MA2Right.SETUP,
+    "plugin_management":            MA2Right.SETUP,
+    # admin (5) — auth, system admin, agent harness
+    "console_login":                MA2Right.ADMIN,
+    "console_logout":               MA2Right.ADMIN,
+    "lock_console_ui":              MA2Right.ADMIN,
+    "system_admin":                 MA2Right.ADMIN,
+    "confirm_destructive_steps":    MA2Right.ADMIN,
+    "abort_task":                   MA2Right.ADMIN,
+    "retry_failed_steps":           MA2Right.ADMIN,
+    "promote_session_to_skill":     MA2Right.ADMIN,
+    "approve_skill":                MA2Right.ADMIN,
+    "run_agent_goal":               MA2Right.ADMIN,
 }
 
 # MA2 console error code for rights denial

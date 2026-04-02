@@ -184,15 +184,8 @@ class TestRightsMappingDrift:
         _READ_PREFIXES = ("list_", "get_", "discover_", "search_", "info_", "suggest_", "recall_", "assert_", "query_")
         unmapped_non_read = {t for t in unmapped if not any(t.startswith(p) for p in _READ_PREFIXES)}
 
-        import warnings
-        if unmapped_non_read:
-            warnings.warn(
-                f"{len(unmapped_non_read)} tool(s) missing from _OPERATION_MIN_RIGHT "
-                f"(they default to NONE rights): {sorted(unmapped_non_read)}",
-                stacklevel=1,
-            )
-        # Hard-fail threshold: if more than 50 tools are unmapped, something is
-        # structurally wrong. Currently 43 are unmapped — track it down over time.
-        assert len(unmapped_non_read) <= 50, (
-            f"Too many unmapped tools ({len(unmapped_non_read)}): {sorted(unmapped_non_read)}"
+        # All non-read tools must be mapped. Fail if any are missing.
+        assert not unmapped_non_read, (
+            f"{len(unmapped_non_read)} non-read tool(s) missing from _OPERATION_MIN_RIGHT: "
+            f"{sorted(unmapped_non_read)}"
         )
