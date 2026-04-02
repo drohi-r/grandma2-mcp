@@ -51,3 +51,4 @@ doc/grandMA2_KMeans_Complete.json
 # Agent harness runtime artifacts
 agent_data/
 agent_traces/
+.DS_Store
