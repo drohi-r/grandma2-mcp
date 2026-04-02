@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import inspect
 import sqlite3
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -68,6 +69,7 @@ class ToolTelemetry:
     def __init__(self, db_path: Path = _DEFAULT_DB) -> None:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        self._lock = threading.Lock()
         self._init_schema()
 
     # ------------------------------------------------------------------ #
@@ -113,24 +115,25 @@ class ToolTelemetry:
     ) -> None:
         """Insert one invocation row.  Silently suppresses any write error."""
         try:
-            self._conn.execute(
-                "INSERT INTO tool_invocations "
-                "(ts,tool_name,inputs_json,output_preview,error_class,"
-                "latency_ms,risk_tier,operator,session_id) "
-                "VALUES (?,?,?,?,?,?,?,?,?)",
-                (
-                    time.time(),
-                    tool_name,
-                    inputs_json,
-                    output_preview,
-                    error_class,
-                    latency_ms,
-                    risk_tier,
-                    operator,
-                    session_id,
-                ),
-            )
-            self._conn.commit()
+            with self._lock:
+                self._conn.execute(
+                    "INSERT INTO tool_invocations "
+                    "(ts,tool_name,inputs_json,output_preview,error_class,"
+                    "latency_ms,risk_tier,operator,session_id) "
+                    "VALUES (?,?,?,?,?,?,?,?,?)",
+                    (
+                        time.time(),
+                        tool_name,
+                        inputs_json,
+                        output_preview,
+                        error_class,
+                        latency_ms,
+                        risk_tier,
+                        operator,
+                        session_id,
+                    ),
+                )
+                self._conn.commit()
         except Exception:  # noqa: BLE001
             pass  # telemetry must never break a tool call
 

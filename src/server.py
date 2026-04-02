@@ -9144,7 +9144,7 @@ async def set_effect_param(param: str, value: float) -> str:
 @mcp.tool()
 @require_scope(OAuthScope.MACRO_EDIT)
 @_handle_errors
-async def call_plugin_tool(plugin_id: int | str) -> str:
+async def call_plugin_tool(plugin_id: int | str, confirm_destructive: bool = False) -> str:
     """
     Execute a plugin on the grandMA2 console by ID or name.
 
@@ -9153,10 +9153,16 @@ async def call_plugin_tool(plugin_id: int | str) -> str:
 
     Args:
         plugin_id: Plugin number (int) or name (str).
+        confirm_destructive: Must be True to proceed. Defaults to False (blocked).
 
     Returns:
         str: JSON with command_sent and raw_response.
     """
+    if not confirm_destructive:
+        return json.dumps({
+            "blocked": True,
+            "error": "call_plugin_tool is DESTRUCTIVE. Set confirm_destructive=True to proceed.",
+        }, indent=2)
     client = await get_client()
     cmd = build_call_plugin(plugin_id)
     raw = await client.send_command_with_response(cmd)
@@ -9166,7 +9172,7 @@ async def call_plugin_tool(plugin_id: int | str) -> str:
 @mcp.tool()
 @require_scope(OAuthScope.MACRO_EDIT)
 @_handle_errors
-async def run_lua_script(script: str) -> str:
+async def run_lua_script(script: str, confirm_destructive: bool = False) -> str:
     """
     Execute an inline Lua script directly on the grandMA2 console.
 
@@ -9175,10 +9181,16 @@ async def run_lua_script(script: str) -> str:
 
     Args:
         script: Lua source code (e.g. 'print("hello")', 'gma.cmd("Blackout")').
+        confirm_destructive: Must be True to proceed. Defaults to False (blocked).
 
     Returns:
         str: JSON with command_sent and raw_response.
     """
+    if not confirm_destructive:
+        return json.dumps({
+            "blocked": True,
+            "error": "run_lua_script is DESTRUCTIVE. Set confirm_destructive=True to proceed.",
+        }, indent=2)
     client = await get_client()
     cmd = build_run_lua(script)
     raw = await client.send_command_with_response(cmd)
@@ -9188,16 +9200,24 @@ async def run_lua_script(script: str) -> str:
 @mcp.tool()
 @require_scope(OAuthScope.MACRO_EDIT)
 @_handle_errors
-async def reload_all_plugins() -> str:
+async def reload_all_plugins(confirm_destructive: bool = False) -> str:
     """
     Reload all plugins from disk on the grandMA2 console.
 
     Sends ReloadPlugins, which rescans the plugin folder and reloads
     all Lua plugin files. Use after editing plugin files on disk.
 
+    Args:
+        confirm_destructive: Must be True to proceed. Defaults to False (blocked).
+
     Returns:
         str: JSON with command_sent and raw_response.
     """
+    if not confirm_destructive:
+        return json.dumps({
+            "blocked": True,
+            "error": "reload_all_plugins is DESTRUCTIVE. Set confirm_destructive=True to proceed.",
+        }, indent=2)
     client = await get_client()
     cmd = build_reload_plugins()
     raw = await client.send_command_with_response(cmd)
@@ -9313,6 +9333,7 @@ async def rdm_patch(
     action: str,
     universe: int | None = None,
     address: int | None = None,
+    confirm_destructive: bool = False,
 ) -> str:
     """
     Patch or unmatch an RDM device on the grandMA2 console.
@@ -9327,10 +9348,16 @@ async def rdm_patch(
         action: "setpatch" or "unmatch".
         universe: Target universe number (required for setpatch).
         address: Target DMX address 1-512 (required for setpatch).
+        confirm_destructive: Must be True to proceed. Defaults to False (blocked).
 
     Returns:
         str: JSON with command_sent and raw_response.
     """
+    if not confirm_destructive:
+        return json.dumps({
+            "blocked": True,
+            "error": "rdm_patch is DESTRUCTIVE. Set confirm_destructive=True to proceed.",
+        }, indent=2)
     action = action.lower()
     if action == "setpatch":
         if universe is None or address is None:

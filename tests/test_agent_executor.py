@@ -108,15 +108,14 @@ class TestStepExecutor:
         assert s1.status == StepStatus.FAILED
         assert s2.status == StepStatus.SKIPPED
 
-    async def test_destructive_step_auto_confirmed(self):
-        """Destructive steps are auto-confirmed when no callback provided."""
+    async def test_destructive_step_no_callback_raises(self):
+        """Destructive steps raise RuntimeError when no callback provided."""
         executor = _make_executor()
         step = _make_step(risk=RiskTier.DESTRUCTIVE)
         step.tool_args["confirm_destructive"] = False
         ctx = RunContext(goal="test", plan=[step])
-        await executor.execute_plan(ctx)
-        assert step.status == StepStatus.COMPLETED
-        assert step.tool_args["confirm_destructive"] is True
+        with pytest.raises(RuntimeError, match="requires destructive confirmation"):
+            await executor.execute_plan(ctx)
 
     async def test_destructive_step_with_callback_confirm(self):
         executor = _make_executor()

@@ -251,7 +251,7 @@ class TestCallPluginTool:
         client = _mock_client()
         mock_get_client.return_value = client
 
-        result_str = await call_plugin_tool(1)
+        result_str = await call_plugin_tool(1, confirm_destructive=True)
         result = json.loads(result_str)
         assert result["command_sent"] == "Plugin 1"
 
@@ -263,7 +263,7 @@ class TestCallPluginTool:
         client = _mock_client()
         mock_get_client.return_value = client
 
-        result_str = await call_plugin_tool("MyPlugin")
+        result_str = await call_plugin_tool("MyPlugin", confirm_destructive=True)
         result = json.loads(result_str)
         assert result["command_sent"] == 'Plugin "MyPlugin"'
 
@@ -277,7 +277,7 @@ class TestRunLuaScript:
         client = _mock_client()
         mock_get_client.return_value = client
 
-        result_str = await run_lua_script('print("hi")')
+        result_str = await run_lua_script('print("hi")', confirm_destructive=True)
         result = json.loads(result_str)
         assert "Lua" in result["command_sent"]
 
@@ -291,7 +291,7 @@ class TestReloadAllPlugins:
         client = _mock_client()
         mock_get_client.return_value = client
 
-        result_str = await reload_all_plugins()
+        result_str = await reload_all_plugins(confirm_destructive=True)
         result = json.loads(result_str)
         assert result["command_sent"] == "ReloadPlugins"
 
@@ -405,7 +405,7 @@ class TestRdmPatch:
         client = _mock_client()
         mock_get_client.return_value = client
 
-        result_str = await rdm_patch(101, "setpatch", universe=1, address=1)
+        result_str = await rdm_patch(101, "setpatch", universe=1, address=1, confirm_destructive=True)
         result = json.loads(result_str)
         assert result["command_sent"] == "RdmSetpatch Fixture 101 Universe 1 Address 1"
 
@@ -417,7 +417,7 @@ class TestRdmPatch:
         client = _mock_client()
         mock_get_client.return_value = client
 
-        result_str = await rdm_patch(101, "unmatch")
+        result_str = await rdm_patch(101, "unmatch", confirm_destructive=True)
         result = json.loads(result_str)
         assert result["command_sent"] == "RdmUnmatch Fixture 101"
 

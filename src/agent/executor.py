@@ -83,11 +83,16 @@ class StepExecutor:
                         break
                     # Inject confirm_destructive=True for confirmed destructive steps
                     if "confirm_destructive" in step.tool_args:
-                        step.tool_args["confirm_destructive"] = True
+                        final_args = dict(step.tool_args)
+                        final_args["confirm_destructive"] = True
+                        step.tool_args = final_args
                 else:
-                    # No callback — auto-confirm
+                    # No callback — refuse destructive operations
                     if "confirm_destructive" in step.tool_args:
-                        step.tool_args["confirm_destructive"] = True
+                        raise RuntimeError(
+                            f"Step '{step.tool_name}' requires destructive confirmation "
+                            f"but no confirmation callback was provided"
+                        )
 
             if decision.action == StepDecision.DEFER_TO_DISCOVERY:
                 logger.info("Deferring to discovery: %s", step.description)

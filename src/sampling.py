@@ -23,6 +23,33 @@ from mcp.types import (
 
 logger = logging.getLogger(__name__)
 
+# Known MA2 system variable names — used to filter console state before LLM embedding
+_KNOWN_SYSTEM_VARS = frozenset({
+    "$VERSION", "$SHOWFILE", "$USER", "$USERRIGHTS", "$SELECTEDEXEC",
+    "$SELECTEDEXECCUE", "$SELECTEDFIXTURESCOUNT", "$FADERPAGE",
+    "$PRESET", "$FEATURE", "$ATTRIBUTE", "$DATE", "$TIME",
+    "$SHOWPATH", "$CHANNELPAGE", "$FIXTUREPAGE", "$GROUPPAGE",
+    "$PRESETPAGE", "$SEQUENCEPAGE", "$CUEPAGE", "$EFFECTPAGE",
+    "$MACRPAGE", "$PLUGINPAGE", "$EXECUTORPAGE", "$DMXUNIVERSE",
+    "$SELECTEDTYPE", "$SELECTEDEXECPAGE",
+})
+
+
+def _sanitize_console_state(state: dict[str, str]) -> dict[str, str]:
+    """Filter and sanitize console state for safe LLM prompt embedding."""
+    sanitized = {}
+    for key, value in state.items():
+        # Only allow known system variable names
+        if key.upper() not in _KNOWN_SYSTEM_VARS and not key.startswith("$"):
+            continue
+        # Truncate values to prevent prompt stuffing
+        val_str = str(value)[:200]
+        # Strip control characters
+        val_str = "".join(c for c in val_str if c.isprintable() or c in ("\n", "\t"))
+        sanitized[key] = val_str
+    return sanitized
+
+
 # Default model preferences: favor intelligence over speed/cost
 _DEFAULT_PREFS = ModelPreferences(
     intelligencePriority=0.8,
@@ -64,7 +91,8 @@ async def generate_cue_suggestions(
     if not await check_sampling_support(session):
         return None
 
-    state_summary = json.dumps(console_state, indent=2)
+    safe_state = _sanitize_console_state(console_state)
+    state_summary = json.dumps(safe_state, indent=2)
 
     result = await _create_message(
         session,
@@ -75,7 +103,8 @@ async def generate_cue_suggestions(
             "and timing. Reference MA2 tools by name."
         ),
         user_message=(
-            f"Current console state:\n```json\n{state_summary}\n```\n\n"
+            "Current console state:\n"
+            f"<console_data>\n{state_summary}\n</console_data>\n\n"
             f"Current sequence info:\n{sequence_info}\n\n"
             "Suggest 2-3 next programming steps."
         ),
@@ -103,7 +132,17 @@ async def generate_troubleshooting_advice(
     if not await check_sampling_support(session):
         return None
 
-    commands_str = "\n".join(f"  - {cmd}" for cmd in recent_commands[-10:])
+    # Sanitize command data: truncate, strip control chars
+    safe_commands = []
+    for cmd in recent_commands[-10:]:
+        sanitized = str(cmd)[:200]
+        sanitized = "".join(c for c in sanitized if c.isprintable() or c in ("\n", "\t"))
+        safe_commands.append(sanitized)
+    commands_str = "\n".join(f"  - {cmd}" for cmd in safe_commands)
+
+    # Sanitize error message
+    safe_error = str(error_message)[:500]
+    safe_error = "".join(c for c in safe_error if c.isprintable() or c in ("\n", "\t"))
 
     result = await _create_message(
         session,
@@ -112,8 +151,8 @@ async def generate_troubleshooting_advice(
             "based on the command history and suggest fixes. Be concise."
         ),
         user_message=(
-            f"Error: {error_message}\n\n"
-            f"Recent commands:\n{commands_str}\n\n"
+            f"Error: {safe_error}\n\n"
+            f"Recent commands:\n<console_data>\n{commands_str}\n</console_data>\n\n"
             "What went wrong and how to fix it?"
         ),
         max_tokens=300,
