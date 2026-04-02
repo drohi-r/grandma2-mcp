@@ -77,7 +77,7 @@ async def elicit_destructive_confirmation(
             schema=DestructiveConfirmation,
         )
 
-        if result.action == ElicitationAction.ACCEPT:
+        if str(result.action).lower() == "accept":
             return result.data.confirmed
         return False
 
@@ -104,7 +104,7 @@ async def elicit_target_selection(
             schema=TargetSelection,
         )
 
-        if result.action == ElicitationAction.ACCEPT:
+        if str(result.action).lower() == "accept":
             return (result.data.object_id, result.data.object_name)
         return None
 

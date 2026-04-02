@@ -100,7 +100,7 @@ def run_lua(script: str) -> str:
         >>> run_lua('print("hello")')
         'Lua "print(\\"hello\\")"'
     """
-    escaped = script.replace('"', '\\"')
+    escaped = script.replace("\\", "\\\\").replace('"', '\\"')
     return f'Lua "{escaped}"'
 
 
@@ -481,7 +481,8 @@ def lua_execute(script: str) -> str:
         >>> lua_execute("gma.echo('hello')")
         "Lua \\"gma.echo('hello')\\""
     """
-    return f'Lua "{script}"'
+    escaped = script.replace("\\", "\\\\").replace('"', '\\"')
+    return f'Lua "{escaped}"'
 
 
 # ============================================================================

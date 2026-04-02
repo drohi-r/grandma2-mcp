@@ -123,9 +123,6 @@ class WorkingMemory:
     active_page: int | None = None
     pending_cues: list[dict] = field(default_factory=list)
 
-    # ── Decision checkpoints (recompute-over-retain cache) ───────────
-    checkpoints: list[DecisionCheckpoint] = field(default_factory=list)
-
     # ── Step tracking ────────────────────────────────────────────────
     completed_steps: list[str] = field(default_factory=list)
     failed_steps: list[str] = field(default_factory=list)
