@@ -4547,8 +4547,12 @@ class TestListSequenceCuesTool:
         assert "sequence assigned" in data["error"]
 
     @pytest.mark.asyncio
-    async def test_no_sequence_or_executor_returns_error(self):
+    @patch("src.server.get_client")
+    async def test_no_sequence_or_executor_returns_error(self, mock_get_client):
         from src.server import list_sequence_cues
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(return_value="Ok")
+        mock_get_client.return_value = mock_client
         result = await list_sequence_cues()
         data = json.loads(result)
         assert "error" in data
@@ -5171,11 +5175,13 @@ class TestListPresetPoolTool:
     )
 
     @pytest.mark.asyncio
+    @patch("src.server.get_client")
     @patch("src.server.list_destination", new_callable=AsyncMock)
     @patch("src.server.navigate", new_callable=AsyncMock)
-    async def test_overview_no_args(self, mock_navigate, mock_list_dest):
+    async def test_overview_no_args(self, mock_navigate, mock_list_dest, mock_get_client):
         from src.server import list_preset_pool
 
+        mock_get_client.return_value = MagicMock()
         mock_navigate.return_value = MagicMock()
         mock_lst = MagicMock()
         mock_lst.raw_response = self.POOL_OVERVIEW_RAW
@@ -5191,11 +5197,13 @@ class TestListPresetPoolTool:
         assert "Global PresetPool" in data["description"]
 
     @pytest.mark.asyncio
+    @patch("src.server.get_client")
     @patch("src.server.list_destination", new_callable=AsyncMock)
     @patch("src.server.navigate", new_callable=AsyncMock)
-    async def test_color_pool_by_name(self, mock_navigate, mock_list_dest):
+    async def test_color_pool_by_name(self, mock_navigate, mock_list_dest, mock_get_client):
         from src.server import list_preset_pool
 
+        mock_get_client.return_value = MagicMock()
         mock_navigate.return_value = MagicMock()
         mock_lst = MagicMock()
         mock_lst.raw_response = self.COLOR_POOL_RAW
@@ -5210,11 +5218,13 @@ class TestListPresetPoolTool:
         assert data["cd_path"] == "17.1.4"
 
     @pytest.mark.asyncio
+    @patch("src.server.get_client")
     @patch("src.server.list_destination", new_callable=AsyncMock)
     @patch("src.server.navigate", new_callable=AsyncMock)
-    async def test_color_pool_by_number(self, mock_navigate, mock_list_dest):
+    async def test_color_pool_by_number(self, mock_navigate, mock_list_dest, mock_get_client):
         from src.server import list_preset_pool
 
+        mock_get_client.return_value = MagicMock()
         mock_navigate.return_value = MagicMock()
         mock_lst = MagicMock()
         mock_lst.raw_response = self.COLOR_POOL_RAW
@@ -5411,6 +5421,12 @@ class TestStoreMAtricksBuilder:
 
 class TestCreateMAtricksLibraryTool:
     """Tests for the create_matricks_library MCP tool."""
+
+    @pytest.fixture(autouse=True)
+    def _redirect_gma2_data_root(self, tmp_path, monkeypatch):
+        """Redirect GMA2_DATA_ROOT so matricks file writes work on macOS."""
+        (tmp_path / "matricks").mkdir(parents=True, exist_ok=True)
+        monkeypatch.setattr("src.server._GMA2_DATA_ROOT", str(tmp_path))
 
     @pytest.mark.asyncio
     async def test_blocked_without_confirm(self):

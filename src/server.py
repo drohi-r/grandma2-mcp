@@ -4550,9 +4550,11 @@ _IMPORT_TYPES = {
 
 # Type-specific subfolders (informational — MA2 routes automatically)
 # macros/ | effects/ | plugins/ | matricks/ | masks/ | importexport/ (default)
-_IMPORT_EXPORT_DATA_ROOT = (
-    r"C:\ProgramData\MA Lighting Technologies\grandma\gma2_V_3.9.60\importexport"
+_GMA2_DATA_ROOT = os.environ.get(
+    "GMA2_DATA_ROOT",
+    r"C:\ProgramData\MA Lighting Technologies\grandma\gma2_V_3.9.60",
 )
+_IMPORT_EXPORT_DATA_ROOT = os.path.join(_GMA2_DATA_ROOT, "importexport")
 
 
 @mcp.tool()
@@ -6074,9 +6076,7 @@ async def create_matricks_library(
     from datetime import datetime
     from pathlib import Path
 
-    matricks_dir = Path(
-        "C:/ProgramData/MA Lighting Technologies/grandma/gma2_V_3.9.60/matricks"
-    )
+    matricks_dir = Path(_GMA2_DATA_ROOT) / "matricks"
     xml_filename = "matricks_combinatorial_library"
 
     # 25-color scheme: Wings=hue (5 hues), Groups=brightness (5 levels)
@@ -6292,10 +6292,7 @@ async def create_filter_library(
         FILTER_VTE_COMBOS,
     )
 
-    importexport_dir = Path(
-        "C:/ProgramData/MA Lighting Technologies/grandma/"
-        "gma2_V_3.9.60/importexport/filters"
-    )
+    importexport_dir = Path(_GMA2_DATA_ROOT) / "importexport" / "filters"
 
     # Use provided fixture attributes or fall back to hardcoded defaults
     attrs_source = fixture_attributes if fixture_attributes else FILTER_ATTRIBUTES

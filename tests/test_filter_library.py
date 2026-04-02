@@ -6,11 +6,22 @@ and the create_filter_library MCP tool.
 """
 
 import json
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.commands.constants import FILTER_ATTRIBUTES, FILTER_COLORS, FILTER_VTE_COMBOS
+
+
+@pytest.fixture(autouse=True)
+def _gma2_data_root_tmpdir(tmp_path, monkeypatch):
+    """Redirect GMA2_DATA_ROOT to a temp dir so filesystem writes work on any OS."""
+    (tmp_path / "importexport" / "filters").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "matricks").mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("GMA2_DATA_ROOT", str(tmp_path))
+    # Also patch the module-level variable that was already read at import time
+    monkeypatch.setattr("src.server._GMA2_DATA_ROOT", str(tmp_path))
 
 # ============================================================
 # Filter Attribute Constants Tests

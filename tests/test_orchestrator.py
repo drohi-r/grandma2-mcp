@@ -427,6 +427,13 @@ def _make_mock_orchestrator(snapshot=None):
 class TestSnapshotWiring:
     """Verify that server tools update _orchestrator.last_snapshot after telnet success."""
 
+    @pytest.fixture(autouse=True)
+    def _redirect_gma2_data_root(self, tmp_path, monkeypatch):
+        """Redirect GMA2_DATA_ROOT so filter/matricks file writes work on macOS."""
+        (tmp_path / "importexport" / "filters").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "matricks").mkdir(parents=True, exist_ok=True)
+        monkeypatch.setattr("src.server._GMA2_DATA_ROOT", str(tmp_path))
+
     @pytest.mark.asyncio
     @patch("src.server._orchestrator")
     @patch("src.server.get_client")

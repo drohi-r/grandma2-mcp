@@ -240,8 +240,13 @@ def find_optimal_k(
         if k >= n or k < 2:
             continue
         labels, _, _ = kmeans(X, k, seed=seed)
-        score = silhouette_score(X, labels)
-        scores[k] = score
+        sil = silhouette_score(X, labels)
+        # Penalize k values that create many near-empty clusters (<3 members).
+        # This prevents over-fragmentation while still allowing one outlier cluster.
+        _, counts = np.unique(labels, return_counts=True)
+        small_count = int(np.sum(counts < 3))
+        penalty = 0.03 * max(0, small_count - 1)  # allow 1 small cluster for free
+        scores[k] = sil - penalty
 
     if not scores:
         return 2, {2: 0.0}
