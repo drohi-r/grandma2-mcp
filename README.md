@@ -1234,7 +1234,7 @@ ma2-onPC-MCP/
 ├── doc/                                    # Command builders ref + cd-tree docs
 ├── vscode-mcp-provider/                    # VS Code MCP extension
 └── .claude/                                # Skills (playbooks) + scoped rules
-    ├── skills/                             # 7 agent instruction modules
+    ├── skills/                             # 39 agent instruction modules
     └── rules/                              # 5 scoped rule files (loaded on demand)
 ```
 
