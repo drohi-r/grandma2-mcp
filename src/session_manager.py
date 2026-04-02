@@ -219,7 +219,15 @@ class SessionManager:
         password: str,
     ) -> None:
         await _safe_disconnect(session.client)
-        session.client = await self._create_client(username, password)
+        try:
+            session.client = await asyncio.wait_for(
+                self._create_client(username, password),
+                timeout=10.0,
+            )
+        except TimeoutError:
+            raise RuntimeError(
+                f"Reconnect timed out for session {session.identity!r}"
+            ) from None
         session.username = username
         session.touch()
 

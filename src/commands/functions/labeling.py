@@ -33,7 +33,7 @@ def label_group(group_id: int, name: str) -> str:
     Returns:
         str: MA command to label a group
     """
-    return f'label group {group_id} "{name}"'
+    return f"label group {group_id} {quote_name(name)}"
 
 
 def label_preset(preset_type: str, preset_id: int, name: str) -> str:
@@ -49,7 +49,7 @@ def label_preset(preset_type: str, preset_id: int, name: str) -> str:
         str: MA command to label a preset
     """
     type_num = PRESET_TYPES.get(preset_type.lower(), 1)
-    return f'label preset {type_num}.{preset_id} "{name}"'
+    return f"label preset {type_num}.{preset_id} {quote_name(name)}"
 
 
 def label(

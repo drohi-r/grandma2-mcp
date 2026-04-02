@@ -100,16 +100,21 @@ class WorkflowMemory:
                 (category,),
             ).fetchall()
 
-        return [
-            {
+        results = []
+        for r in rows:
+            try:
+                value = json.loads(r["value_json"])
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("Corrupt value_json for convention %s/%s — skipping", r["category"], r["key"])
+                continue
+            results.append({
                 "category": r["category"],
                 "key": r["key"],
-                "value": json.loads(r["value_json"]),
+                "value": value,
                 "created_at": r["created_at"],
                 "updated_at": r["updated_at"],
-            }
-            for r in rows
-        ]
+            })
+        return results
 
     # ---------------------------------------------------------------- recipes
 
@@ -141,16 +146,19 @@ class WorkflowMemory:
                 (name,),
             ).fetchall()
         elif tags:
-            # Match recipes that have ANY of the requested tags
-            ", ".join("?" for _ in tags)
-            # SQLite JSON: check if tags_json contains any of the given tags
+            # Match recipes that have ANY of the requested tags.
+            # Escape LIKE wildcards in tag values to prevent injection.
+            def _escape_like(s: str) -> str:
+                return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+            escaped_tags = [_escape_like(t) for t in tags]
             conditions = " OR ".join(
-                "tags_json LIKE '%' || ? || '%'" for _ in tags
+                "tags_json LIKE '%' || ? || '%' ESCAPE '\\'" for _ in escaped_tags
             )
             rows = self._conn.execute(
                 f"SELECT name, steps_json, tags_json, use_count, created_at, last_used_at "
                 f"FROM recipes WHERE {conditions}",
-                tags,
+                escaped_tags,
             ).fetchall()
         else:
             rows = self._conn.execute(
@@ -158,17 +166,23 @@ class WorkflowMemory:
                 "FROM recipes"
             ).fetchall()
 
-        return [
-            {
+        results = []
+        for r in rows:
+            try:
+                steps = json.loads(r["steps_json"])
+                tags = json.loads(r["tags_json"])
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("Corrupt JSON in recipe %r — skipping", r["name"])
+                continue
+            results.append({
                 "name": r["name"],
-                "steps": json.loads(r["steps_json"]),
-                "tags": json.loads(r["tags_json"]),
+                "steps": steps,
+                "tags": tags,
                 "use_count": r["use_count"],
                 "created_at": r["created_at"],
                 "last_used_at": r["last_used_at"],
-            }
-            for r in rows
-        ]
+            })
+        return results
 
     def increment_recipe_usage(self, name: str) -> None:
         """Increment use_count and set last_used_at for a recipe."""
@@ -212,23 +226,30 @@ class WorkflowMemory:
                 (limit,),
             ).fetchall()
 
-        return [
-            {
+        results = []
+        for r in rows:
+            try:
+                trace = json.loads(r["trace_json"])
+            except (json.JSONDecodeError, TypeError):
+                logger.warning("Corrupt trace_json for run %r — skipping", r["run_id"])
+                continue
+            results.append({
                 "run_id": r["run_id"],
                 "goal": r["goal"],
                 "result": r["result"],
-                "trace": json.loads(r["trace_json"]),
+                "trace": trace,
                 "created_at": r["created_at"],
-            }
-            for r in rows
-        ]
+            })
+        return results
 
     def search_runs_by_goal(self, keyword: str, limit: int = 10) -> list[dict[str, Any]]:
         """Search run history by goal keyword."""
+        # Escape LIKE wildcards in user-supplied keyword
+        escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         rows = self._conn.execute(
             "SELECT run_id, goal, result, created_at "
-            "FROM run_history WHERE goal LIKE ? ORDER BY created_at DESC LIMIT ?",
-            (f"%{keyword}%", limit),
+            "FROM run_history WHERE goal LIKE ? ESCAPE '\\' ORDER BY created_at DESC LIMIT ?",
+            (f"%{escaped}%", limit),
         ).fetchall()
 
         return [

@@ -17,7 +17,10 @@ the full ancestor chain.
 
 from __future__ import annotations
 
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 import sqlite3
 import time
 import uuid
@@ -401,6 +404,14 @@ def _load_filesystem_skill(slug: str) -> Skill | None:
     raw = skill_file.read_text(encoding="utf-8")
     meta, body = _parse_front_matter(raw)
     now = time.time()
+    safety_scope = meta.get("safety_scope", "SAFE_READ").upper()
+    if safety_scope not in ("SAFE_READ", "SAFE_WRITE", "DESTRUCTIVE"):
+        logger.warning(
+            "Skill %r has unknown safety_scope %r — defaulting to SAFE_READ",
+            slug, safety_scope,
+        )
+        safety_scope = "SAFE_READ"
+    approved = safety_scope != "DESTRUCTIVE"
     return Skill(
         id=f"fs:{slug}",
         version=1,
@@ -409,12 +420,12 @@ def _load_filesystem_skill(slug: str) -> Skill | None:
         description=meta.get("description", ""),
         body=body,
         quality_score=1.0,
-        safety_scope="SAFE_READ",
+        safety_scope=safety_scope,
         applicable_context=meta.get("description", ""),
         created_at=now,
         updated_at=now,
         source_session_id="",
-        approved=True,
+        approved=approved,
     )
 
 

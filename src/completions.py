@@ -9,6 +9,7 @@ fixture groups, preset types, and prompt arguments.
 from __future__ import annotations
 
 import logging
+import os
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import (
@@ -21,6 +22,10 @@ from mcp.types import (
 from src.commands.constants import PRESET_TYPES
 
 logger = logging.getLogger(__name__)
+
+# Configurable range limits via env vars
+_MAX_SEQUENCES = int(os.environ.get("GMA_MAX_SEQUENCES", "50"))
+_MAX_GROUPS = int(os.environ.get("GMA_MAX_GROUPS", "20"))
 
 # Known MA2 fixture types for prompt autocompletion
 _FIXTURE_TYPES = [
@@ -73,7 +78,7 @@ def _complete_resource(
     if "sequences" in uri and argument.name == "seq_id":
         # Suggest common sequence ID ranges
         prefix = argument.value or ""
-        candidates = [str(i) for i in range(1, 51)]
+        candidates = [str(i) for i in range(1, _MAX_SEQUENCES + 1)]
         matches = [c for c in candidates if c.startswith(prefix)][:100]
         return Completion(values=matches, total=len(matches), hasMore=False)
 
@@ -91,7 +96,7 @@ def _complete_prompt(
 
     if name == "program-color-chase":
         if arg_name == "fixture_group":
-            candidates = [str(i) for i in range(1, 21)]
+            candidates = [str(i) for i in range(1, _MAX_GROUPS + 1)]
             matches = [c for c in candidates if c.startswith(prefix)]
             return Completion(values=matches, total=len(matches), hasMore=False)
         if arg_name == "color_count":
@@ -114,7 +119,7 @@ def _complete_prompt(
 
     elif name == "create-cue-sequence":
         if arg_name == "sequence_id":
-            candidates = [str(i) for i in range(1, 51)]
+            candidates = [str(i) for i in range(1, _MAX_SEQUENCES + 1)]
             matches = [c for c in candidates if c.startswith(prefix)]
             return Completion(values=matches, total=len(matches), hasMore=False)
         if arg_name == "cue_count":

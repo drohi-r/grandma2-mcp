@@ -18,6 +18,7 @@ This module is the I/O boundary for navigation operations.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from dataclasses import dataclass
@@ -348,6 +349,7 @@ async def scan_indexes(
     stop_after_failures: int = 3,
     timeout: float = 2.0,
     delay: float = 0.3,
+    lock: asyncio.Lock | None = None,
 ) -> list[IndexScanEntry]:
     """Scan numeric indexes via cd N → list → cd <reset_to>.
 
@@ -381,80 +383,85 @@ async def scan_indexes(
     Returns:
         List of :class:`IndexScanEntry`, one per index that returned entries.
     """
-    results: list[IndexScanEntry] = []
-    consecutive_empty = 0
+    # Guard the entire cd+list+reset sequence against concurrent callers
+    # sharing the same Telnet session.
+    _lock = lock or asyncio.Lock()
 
-    # Navigate to reset destination and record its location as the base
-    base_nav = await navigate(client, reset_to, timeout=timeout, delay=delay)
-    base_location = base_nav.parsed_prompt.location
-    logger.info("scan_indexes: base location = %r", base_location)
+    async with _lock:
+        results: list[IndexScanEntry] = []
+        consecutive_empty = 0
 
-    for idx in range(1, max_index + 1):
-        # cd N
-        nav = await navigate(client, str(idx), timeout=timeout, delay=delay)
-        after_location = nav.parsed_prompt.location
-        logger.info("scan_indexes: cd %d → location=%s", idx, after_location)
+        # Navigate to reset destination and record its location as the base
+        base_nav = await navigate(client, reset_to, timeout=timeout, delay=delay)
+        base_location = base_nav.parsed_prompt.location
+        logger.info("scan_indexes: base location = %r", base_location)
 
-        # If location didn't change, navigation failed (index doesn't exist)
-        if after_location == base_location:
-            logger.info(
-                "scan_indexes: index %d navigation failed (stayed at base), skipping list",
-                idx,
-            )
-            # Reset and count as empty
+        for idx in range(1, max_index + 1):
+            # cd N
+            nav = await navigate(client, str(idx), timeout=timeout, delay=delay)
+            after_location = nav.parsed_prompt.location
+            logger.info("scan_indexes: cd %d → location=%s", idx, after_location)
+
+            # If location didn't change, navigation failed (index doesn't exist)
+            if after_location == base_location:
+                logger.info(
+                    "scan_indexes: index %d navigation failed (stayed at base), skipping list",
+                    idx,
+                )
+                # Reset and count as empty
+                await navigate(client, reset_to, timeout=timeout, delay=delay)
+                consecutive_empty += 1
+                if consecutive_empty >= stop_after_failures:
+                    logger.info(
+                        "scan_indexes: stopping after %d consecutive failures",
+                        stop_after_failures,
+                    )
+                    break
+                continue
+
+            # list
+            lst = await list_destination(client, timeout=timeout, delay=delay)
+            entries = lst.parsed_list.entries if lst.parsed_list else ()
+
+            # Supplement: detect rows the tabular parser misses (PresetType/Feature/
+            # Attribute/SubAttribute listings that have only one numeric ID column).
+            if not entries and lst.raw_response:
+                _TREE_ROW = re.compile(
+                    r"^\s*(PresetType|Feature|Attribute|SubAttribute)\s+\d+",
+                    re.IGNORECASE | re.MULTILINE,
+                )
+                if _TREE_ROW.search(lst.raw_response):
+                    # Node has children — count them as a synthetic non-empty result
+                    matches = _TREE_ROW.findall(lst.raw_response)
+                    logger.info(
+                        "scan_indexes: index %d has %d tree-row children (preset-tree format)",
+                        idx, len(matches),
+                    )
+                    entries = (None,) * len(matches)  # type: ignore[assignment]
+
+            # Reset to base location
             await navigate(client, reset_to, timeout=timeout, delay=delay)
-            consecutive_empty += 1
-            if consecutive_empty >= stop_after_failures:
+
+            if entries:
+                consecutive_empty = 0
+                results.append(IndexScanEntry(
+                    index=idx,
+                    location=after_location,
+                    object_type=nav.parsed_prompt.object_type,
+                    entries=entries,
+                ))
+            else:
+                consecutive_empty += 1
                 logger.info(
-                    "scan_indexes: stopping after %d consecutive failures",
-                    stop_after_failures,
+                    "scan_indexes: index %d produced no entries (%d consecutive)",
+                    idx, consecutive_empty,
                 )
-                break
-            continue
+                if consecutive_empty >= stop_after_failures:
+                    logger.info(
+                        "scan_indexes: stopping after %d consecutive empty indexes",
+                        stop_after_failures,
+                    )
+                    break
 
-        # list
-        lst = await list_destination(client, timeout=timeout, delay=delay)
-        entries = lst.parsed_list.entries if lst.parsed_list else ()
-
-        # Supplement: detect rows the tabular parser misses (PresetType/Feature/
-        # Attribute/SubAttribute listings that have only one numeric ID column).
-        if not entries and lst.raw_response:
-            _TREE_ROW = re.compile(
-                r"^\s*(PresetType|Feature|Attribute|SubAttribute)\s+\d+",
-                re.IGNORECASE | re.MULTILINE,
-            )
-            if _TREE_ROW.search(lst.raw_response):
-                # Node has children — count them as a synthetic non-empty result
-                matches = _TREE_ROW.findall(lst.raw_response)
-                logger.info(
-                    "scan_indexes: index %d has %d tree-row children (preset-tree format)",
-                    idx, len(matches),
-                )
-                entries = (None,) * len(matches)  # type: ignore[assignment]
-
-        # Reset to base location
-        await navigate(client, reset_to, timeout=timeout, delay=delay)
-
-        if entries:
-            consecutive_empty = 0
-            results.append(IndexScanEntry(
-                index=idx,
-                location=after_location,
-                object_type=nav.parsed_prompt.object_type,
-                entries=entries,
-            ))
-        else:
-            consecutive_empty += 1
-            logger.info(
-                "scan_indexes: index %d produced no entries (%d consecutive)",
-                idx, consecutive_empty,
-            )
-            if consecutive_empty >= stop_after_failures:
-                logger.info(
-                    "scan_indexes: stopping after %d consecutive empty indexes",
-                    stop_after_failures,
-                )
-                break
-
-    logger.info("scan_indexes: done — %d indexes with entries", len(results))
-    return results
+        logger.info("scan_indexes: done — %d indexes with entries", len(results))
+        return results

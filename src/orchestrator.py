@@ -514,15 +514,22 @@ class Orchestrator:
                 )
             finally:
                 _current_session_id.reset(_tok)
+            interrupted = False
             for step, res in zip(ready, batch, strict=False):
-                if isinstance(res, BaseException):
-                    step_res: StepResult = StepResult(step_name=step.name, success=False, error=str(res))
+                if isinstance(res, (KeyboardInterrupt, SystemExit)):
+                    logger.warning("Interrupted during step %r — stopping orchestrator", step.name)
+                    interrupted = True
+                    step_res: StepResult = StepResult(step_name=step.name, success=False, error=f"Interrupted: {res!r}")
+                elif isinstance(res, BaseException):
+                    step_res = StepResult(step_name=step.name, success=False, error=str(res))
                 else:
                     step_res = res  # type: ignore[assignment]
                 results.append(step_res)
                 if step_res.success:
                     completed.add(step.name)
                 remaining.remove(step)
+            if interrupted:
+                break
 
         return results
 

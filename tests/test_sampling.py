@@ -6,7 +6,9 @@ import pytest
 
 from src.sampling import (
     _DEFAULT_PREFS,
+    _KNOWN_SYSTEM_VARS,
     _extract_text,
+    _sanitize_console_state,
     check_sampling_support,
     generate_cue_suggestions,
     generate_lua_script,

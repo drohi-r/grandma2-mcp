@@ -171,6 +171,14 @@ class GMA2TelnetClient:
                 timeout=1.0,
             )
             logger.debug("Login response: %d bytes received", len(response) if response else 0)
+            # Check for known error patterns in the login response
+            if response:
+                text = (response.decode("utf-8", errors="replace") if isinstance(response, bytes) else response).lower()
+                _ERROR_PATTERNS = ("error #", "login failed", "invalid", "denied", "not allowed")
+                for pattern in _ERROR_PATTERNS:
+                    if pattern in text:
+                        logger.error("Login rejected — response contains %r: %s", pattern, text.strip())
+                        return False
             logger.info("Login completed (response received)")
             return True
         except TimeoutError:
