@@ -230,6 +230,8 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     # ── Companion integration ───────────────────────────────────────────
     "generate_companion_config":    MA2Right.NONE,
     "companion_button_press":       MA2Right.PLAYBACK,
+    # ── BPM sync ────────────────────────────────────────────────────────
+    "set_bpm":                      MA2Right.PLAYBACK,
 }
 
 # MA2 console error code for rights denial

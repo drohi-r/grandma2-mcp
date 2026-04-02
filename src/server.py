@@ -429,10 +429,10 @@ _vocab_spec = build_v39_spec()
 # Create MCP server
 mcp = FastMCP(
     name="grandMA2-MCP",
-    instructions="""grandMA2 MCP server — 198 tools, 13 resources, 10 prompts.
+    instructions="""grandMA2 MCP server — 199 tools, 13 resources, 10 prompts.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
-Use ma2://docs/tool-taxonomy resource to browse all 198 tools by category.
+Use ma2://docs/tool-taxonomy resource to browse all 199 tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
@@ -7753,7 +7753,7 @@ async def _tool_caller(tool_name: str, inputs: dict):
     """
     Call any registered MCP tool function by name.
     Looks up the function from this module's global namespace at call time,
-    so all 164 tool definitions above are available.
+    so all 165 tool definitions above are available.
     """
     fn = sys.modules[__name__].__dict__.get(tool_name)
     if fn is None:
@@ -8383,6 +8383,65 @@ async def companion_button_press(
 
 
 # ============================================================
+# BPM Sync / ShowKontrol Integration
+# ============================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.EXECUTOR_CTRL)
+@_handle_errors
+async def set_bpm(
+    bpm: float,
+    speed_master: int = 1,
+) -> str:
+    """
+    Set the BPM on a grandMA2 Speed Master (SAFE_WRITE).
+
+    Designed for live BPM sync from external sources like ShowKontrol,
+    Beat Link Trigger, Ableton, or any system that provides real-time BPM.
+    Sends the SpecialMaster command to the console via Telnet.
+
+    The BPM value directly controls effect speed for any executor assigned
+    to this speed master. Common workflow: ShowKontrol reads CDJ BPM →
+    calls this tool → MA2 effects follow the DJ's tempo in real time.
+
+    Args:
+        bpm: Beats per minute (1-300). Fractional values supported (e.g. 128.5).
+        speed_master: Which speed master to control (1-16, default 1).
+
+    Returns:
+        str: JSON with command_sent, raw_response, bpm, speed_master.
+
+    Examples:
+        - Set 128 BPM on speed master 1: set_bpm(bpm=128)
+        - Set 140 BPM on speed master 3: set_bpm(bpm=140, speed_master=3)
+    """
+    if not (1 <= bpm <= 300):
+        return json.dumps({
+            "error": f"BPM must be between 1 and 300, got {bpm}",
+            "blocked": True,
+        }, indent=2)
+    if not (1 <= speed_master <= 16):
+        return json.dumps({
+            "error": f"Speed master must be 1-16, got {speed_master}",
+            "blocked": True,
+        }, indent=2)
+
+    client = await get_client()
+    cmd = f"SpecialMaster 3.{speed_master} At {bpm}"
+    raw = await client.send_command_with_response(cmd)
+
+    return json.dumps({
+        "command_sent": cmd,
+        "raw_response": raw,
+        "bpm": bpm,
+        "speed_master": speed_master,
+        "risk_tier": "SAFE_WRITE",
+        "tip": f"Assign executors to Speed Master {speed_master} with: assign executor X /speedmaster=speed{speed_master}",
+    }, indent=2)
+
+
+# ============================================================
 # MCP Resources
 # Static and semi-static context exposed as URI-addressable docs
 # ============================================================
@@ -8426,7 +8485,7 @@ def resource_vocab_summary() -> str:
 @mcp.resource("ma2://docs/tool-taxonomy")
 def resource_tool_taxonomy() -> str:
     """
-    ML-generated tool taxonomy — 198 tools clustered into 14 categories.
+    ML-generated tool taxonomy — 199 tools clustered into 14 categories.
 
     Each entry includes tool name, category, and docstring summary.
     Use this resource to understand the tool landscape before calling
