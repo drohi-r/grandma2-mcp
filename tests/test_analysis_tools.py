@@ -456,6 +456,24 @@ class TestComparePatchToShowExpectation:
         assert data["fit_status"] == "mismatch"
         assert data["missing"][0]["fixture_type"] == "Mac Aura XB"
 
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_prefers_most_specific_fixture_type_match(self, mock_get_client):
+        from src.server import compare_patch_to_show_expectation
+
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(
+            return_value="101 Mac Aura XB\n102 Mac Aura\n"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await compare_patch_to_show_expectation("Mac Aura=1, Mac Aura XB=1")
+        data = json.loads(result)
+
+        assert data["fit_status"] == "match"
+        assert data["actual"]["Mac Aura XB"] == 1
+        assert data["actual"]["Mac Aura"] == 1
+
 
 class TestSnapshotProgrammerState:
     @pytest.mark.asyncio

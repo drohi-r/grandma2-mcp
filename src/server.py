@@ -423,6 +423,11 @@ _GMA_USER = os.getenv("GMA_USER", "administrator")
 _GMA_PASSWORD = os.getenv("GMA_PASSWORD", "admin")
 _GMA_SAFETY_LEVEL = os.getenv("GMA_SAFETY_LEVEL", "standard").lower()
 
+
+def _osc_allowed_hosts() -> set[str]:
+    raw = os.getenv("GMA_OSC_ALLOWED_HOSTS", "localhost,127.0.0.1,::1")
+    return {host.strip().lower() for host in raw.split(",") if host.strip()}
+
 # Build vocab spec once for token classification / safety gating
 _vocab_spec = build_v39_spec()
 
@@ -9733,12 +9738,25 @@ async def compare_patch_to_show_expectation(
     raw = await (await get_client()).send_command_with_response("list fixture")
     lines = [line.strip() for line in raw.splitlines() if line.strip()]
 
+    normalized_expected = {
+        fixture_type: re.sub(r"\s+", " ", fixture_type.strip().lower())
+        for fixture_type in expected
+    }
+    expected_by_specificity = sorted(
+        expected,
+        key=lambda fixture_type: (-len(normalized_expected[fixture_type]), fixture_type.lower()),
+    )
+
     actual: dict[str, int] = {}
     unmatched_lines: list[str] = []
     for line in lines:
+        fixture_match = re.match(r"^\s*(\d+)\s+(.+?)\s*$", line)
+        candidate = fixture_match.group(2) if fixture_match else line
+        normalized_candidate = re.sub(r"\s+", " ", candidate.strip().lower())
         matched = False
-        for fixture_type in expected:
-            if fixture_type.lower() in line.lower():
+        for fixture_type in expected_by_specificity:
+            escaped = re.escape(normalized_expected[fixture_type])
+            if re.search(rf"(?<!\w){escaped}(?!\w)", normalized_candidate):
                 actual[fixture_type] = actual.get(fixture_type, 0) + 1
                 matched = True
                 break
@@ -10042,6 +10060,19 @@ async def send_osc(
     """
     import socket
     import struct
+
+    allowed_hosts = _osc_allowed_hosts()
+    normalized_host = host.strip().lower()
+    if "*" not in allowed_hosts and normalized_host not in allowed_hosts:
+        return json.dumps({
+            "status": "blocked",
+            "error": f"Host {host!r} is not allowed. Set GMA_OSC_ALLOWED_HOSTS to permit it.",
+            "host": host,
+            "port": port,
+            "allowed_hosts": sorted(allowed_hosts),
+            "blocked": True,
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
 
     def _build_osc_message(addr: str, val: float | int | str) -> bytes:
         """Build a minimal OSC message packet."""
