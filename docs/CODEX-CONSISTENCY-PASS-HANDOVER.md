@@ -3,7 +3,7 @@ title: Codex Consistency Pass Handover — MA2 Agent
 description: Targeted documentation and metadata consistency cleanup summary for MA2 Agent
 version: 1.0.0
 created: 2026-04-02T04:16:48Z
-last_updated: 2026-04-02T04:31:14Z
+last_updated: 2026-04-02T04:41:11Z
 ---
 
 # Codex Consistency Pass Handover — MA2 Agent
@@ -65,6 +65,9 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - `vscode-mcp-provider/package.json`
   Reason: updated extension display metadata and provider label to the MA2 Agent brand without changing the stable extension package identifier.
   Class: stale branding.
+- `vscode-mcp-provider/package-lock.json`
+  Reason: aligned lockfile version metadata with the extension package version after the runtime branding/version sync.
+  Class: packaging metadata sync.
 - `vscode-mcp-provider/src/extension.ts`
   Reason: updated the VS Code MCP server display label to the MA2 Agent brand.
   Class: stale branding.
@@ -78,7 +81,7 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
   Reason: replaced the stale `run_orchestrated_task` entry with the real agent-harness entrypoint.
   Class: stale tool entrypoint reference.
 - `tests/test_agent_harness_tools.py`
-  Reason: added targeted coverage for `run_agent_goal` and `plan_agent_goal` auth and confirmation behavior.
+  Reason: added targeted coverage for the published automation entrypoints, including MCP registration, auth, and confirmation behavior.
   Class: regression test coverage.
 - `vscode-mcp-provider/package.json`
   Reason: aligned the extension runtime version with the project’s current 1.0.0 release while preserving the stable extension package identifier.
@@ -101,6 +104,8 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - destructive confirmation semantics bug
 - runtime branding drift
 - stale test count after adding regression coverage
+- package metadata mismatch
+- orchestration surface ambiguity
 
 ## 5. Notable before/after corrections
 
@@ -116,6 +121,8 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - `run_agent_goal(auto_confirm=False)` effectively auto-confirmed anyway -> now passes no confirmation callback unless `auto_confirm=True`
 - FastMCP runtime name `grandMA2-MCP` -> `MA2 Agent`
 - VS Code extension version `0.0.1` -> `1.0.0`
+- VS Code extension lockfile version `0.0.1` -> `1.0.0`
+- `run_task` / `decompose_task` as an implicit top-level path -> documented as the lower-level rule-based path, with `plan_agent_goal` / `run_agent_goal` called out as the preferred high-level path
 
 ## 6. What was intentionally left unchanged
 
@@ -130,6 +137,7 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - Review older audit documents for deeper content drift beyond counts if they are intended to stay user-facing long term; this pass corrected the obvious current-state inconsistencies but did not rewrite whole audit narratives.
 - Review whether `doc/tool-surface-tiers.md` should be expanded later into a fully refreshed 210-tool classification document; only the stale current-state framing was normalized here.
 - Review whether `doc/cd-tree-mcp-tool-correlation-matrix.md` should later be fully regenerated from source if maintainers want every category subtotal refreshed, not just the stale headline math.
+- If the VS Code provider will be published externally, run a formal packaging/release pass beyond the local `npm install` + `npm run compile` verification completed in this session.
 
 ## 8. Final repo truth summary
 

@@ -3,7 +3,7 @@ title: MA2 Agent
 description: AI agent for grandMA2 lighting consoles — 210 MCP tools via Telnet
 version: 1.0.0
 created: 2025-11-04T17:05:43Z
-last_updated: 2026-04-02T04:31:14Z
+last_updated: 2026-04-02T04:41:11Z
 ---
 
 <p align="center">
@@ -570,11 +570,15 @@ python -m scripts.create_matricks_library --color-only
 </details>
 
 <details>
-<summary><strong>🤖 Orchestration & Console State</strong> — 33 tools</summary>
+<summary><strong>🤖 Orchestration & Console State</strong> — 34 tools</summary>
 
 These tools form the **agentic layer** (`src/server_orchestration_tools.py`). They enable
 multi-step task execution with memory, risk-tier isolation, and zero-telnet state queries
 via a `ConsoleStateSnapshot` cache that closes 19 show-memory gaps.
+
+For the higher-level agent harness in `src/server.py`, prefer `plan_agent_goal` to preview
+and `run_agent_goal` to execute. Use `decompose_task` / `run_task` when you specifically
+want the lower-level rule-based orchestration surface in `src/server_orchestration_tools.py`.
 
 #### Task Orchestration (Tools 110–118)
 

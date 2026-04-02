@@ -3,7 +3,7 @@ title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
 version: 1.0.0
 created: 2026-03-01T23:37:51Z
-last_updated: 2026-04-02T04:31:14Z
+last_updated: 2026-04-02T04:41:11Z
 ---
 
 # Project Rules
@@ -160,7 +160,11 @@ AgentRuntime (runtime.py)
   → ExecutionTrace (trace.py) — JSON audit artifacts
 ```
 
-MCP tools added: `run_agent_goal(goal, auto_confirm, dry_run)`, `plan_agent_goal(goal)`.
+Preferred top-level automation path: `plan_agent_goal(goal)` to preview, then
+`run_agent_goal(goal, auto_confirm, dry_run)` to execute through the richer agent harness.
+
+Lower-level rule-based orchestration remains available via `decompose_task(goal, ...)`
+and `run_task(goal, ...)` in `src/server_orchestration_tools.py`.
 
 **Note:** `DomainPlanner` uses its own `PlanStep` model. Use `src/agent_bridge.py` (see below) to convert between `PlanStep` and main's `SubTask` for cross-system interop.
 

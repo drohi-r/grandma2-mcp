@@ -46,6 +46,14 @@ class _FakeRuntime:
 
 @pytest.mark.asyncio
 class TestAgentHarnessTools:
+    async def test_published_entrypoints_registered_on_mcp(self):
+        from src.server import mcp
+
+        registry = getattr(mcp._tool_manager, "_tools", {})
+
+        for tool_name in ("plan_agent_goal", "run_agent_goal", "decompose_task", "run_task"):
+            assert tool_name in registry
+
     @patch("src.agent.runtime.AgentRuntime", _FakeRuntime)
     async def test_run_agent_goal_without_auto_confirm_passes_no_callback(self):
         from src.server import run_agent_goal

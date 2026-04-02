@@ -436,8 +436,8 @@ Use ma2://docs/tool-taxonomy resource to browse all 210 tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
-  Plan     → inspect + list_system_variables + suggest_tool_for_task
-  Execute  → run_task (rule-based orchestration) or run_agent_goal (agent harness)
+  Plan     → plan_agent_goal (preferred) or inspect + list_system_variables + suggest_tool_for_task
+  Execute  → run_agent_goal (preferred agent harness) or run_task (lower-level rule-based orchestration)
 
 SAFETY: DESTRUCTIVE tools require confirm_destructive=True.
 Rights: read ma2://docs/rights-matrix before any mutating operation.

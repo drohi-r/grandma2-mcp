@@ -55,10 +55,13 @@ def register_orchestration_tools(
         preset: str = "",
     ) -> str:
         """
-        Break a high-level lighting goal into an ordered multi-agent plan.
+        Break a high-level lighting goal into an ordered rule-based plan.
 
         Returns the plan summary and full step list so you can review
         before executing. Call run_task to actually execute.
+
+        For the richer agent harness in src/server.py, prefer
+        plan_agent_goal and run_agent_goal.
 
         Args:
             goal:     Natural-language intent, e.g. 'blue wash on movers'
@@ -112,10 +115,12 @@ def register_orchestration_tools(
         auto_confirm_destructive: bool = False,
     ) -> str:
         """
-        Execute a full multi-agent task from a natural-language goal.
+        Execute a full rule-based orchestration task from a natural-language goal.
 
         Orchestrates sub-agents with risk-tier isolation, working memory,
         and per-step evaluation.
+
+        For the richer agent harness in src/server.py, prefer run_agent_goal.
 
         Args:
             goal: Natural-language show intent
