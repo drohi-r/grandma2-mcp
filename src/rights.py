@@ -234,6 +234,17 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "set_bpm":                      MA2Right.PLAYBACK,
     # ── OSC output ──────────────────────────────────────────────────────
     "send_osc":                     MA2Right.PLAYBACK,
+    # ── Analysis & intelligence tools ───────────────────────────────────
+    "find_preset_usages":           MA2Right.NONE,
+    "diff_cues":                    MA2Right.NONE,
+    "get_page_map":                 MA2Right.NONE,
+    "lint_macro":                   MA2Right.NONE,
+    "detect_programmer_contamination": MA2Right.NONE,
+    "preview_preset_update_impact": MA2Right.NONE,
+    "detect_tracking_leaks":        MA2Right.NONE,
+    "audit_page_consistency":       MA2Right.NONE,
+    "plan_fixture_swap":            MA2Right.NONE,
+    "incident_snapshot":            MA2Right.NONE,
 }
 
 # MA2 console error code for rights denial

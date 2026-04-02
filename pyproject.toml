@@ -1,7 +1,7 @@
 [project]
 name = "ma2-agent"
 version = "1.0.0"
-description = "AI agent for grandMA2 lighting consoles — 200 MCP tools via Telnet (fork of ma2-onPC-MCP)"
+description = "AI agent for grandMA2 lighting consoles — 210 MCP tools via Telnet (fork of ma2-onPC-MCP)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"

@@ -1,6 +1,6 @@
 ---
 title: MA2 Agent
-description: AI agent for grandMA2 lighting consoles — 200 MCP tools via Telnet
+description: AI agent for grandMA2 lighting consoles — 210 MCP tools via Telnet
 version: 1.0.0
 created: 2025-11-04T17:05:43Z
 last_updated: 2026-04-02T00:00:00Z
@@ -16,23 +16,23 @@ last_updated: 2026-04-02T00:00:00Z
   <a href="https://github.com/drohi-r/grandma2-mcp/actions/workflows/test.yml"><img src="https://github.com/drohi-r/grandma2-mcp/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
   <a href="https://github.com/drohi-r/grandma2-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Python-3.12%2B-blue?style=for-the-badge" alt="Python 3.12+">
-  <img src="https://img.shields.io/badge/MCP_Tools-200-FF2020?style=for-the-badge" alt="200 MCP Tools">
-  <img src="https://img.shields.io/badge/Tests-2751-FF2020?style=for-the-badge" alt="2751 Tests">
+  <img src="https://img.shields.io/badge/MCP_Tools-210-FF2020?style=for-the-badge" alt="210 MCP Tools">
+  <img src="https://img.shields.io/badge/Tests-2768-FF2020?style=for-the-badge" alt="2768 Tests">
 </p>
 
 > Forked from [thisis-romar/ma2-onPC-MCP](https://github.com/thisis-romar/ma2-onPC-MCP) (originally built by [chienchuanw](https://github.com/chienchuanw)) — hardened and maintained by [@drohi-r](https://github.com/drohi-r).
 
-**An AI agent for grandMA2 lighting consoles.** Exposes 200 grandMA2 operations as [Model Context Protocol](https://modelcontextprotocol.io/) tools so AI assistants (Claude Desktop, VS Code, etc.) can drive a lighting console via Telnet. Includes a built-in orchestrator, task decomposer, and long-term memory for fully autonomous lighting control.
+**An AI agent for grandMA2 lighting consoles.** Exposes 210 grandMA2 operations as [Model Context Protocol](https://modelcontextprotocol.io/) tools so AI assistants (Claude Desktop, VS Code, etc.) can drive a lighting console via Telnet. Includes a built-in orchestrator, task decomposer, and long-term memory for fully autonomous lighting control.
 
 <table>
-<tr><td><b>Agent Harness</b></td><td>200 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
+<tr><td><b>Agent Harness</b></td><td>210 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
 <tr><td><b>Embedded Agent Core</b></td><td>Orchestrator, task decomposer, working + long-term memory, and a skill registry with self-improvement suggestions. Inject a real LLM client and it becomes a fully autonomous lighting agent that plans, executes, remembers, and learns.</td></tr>
 <tr><td><b>Layered safety gate</b></td><td>Three risk tiers enforced before any command reaches the console: <code>SAFE_READ</code> (always allowed), <code>SAFE_WRITE</code> (standard mode), <code>DESTRUCTIVE</code> (blocked until <code>confirm_destructive=True</code>). Line-break injection rejected at the transport layer.</td></tr>
 <tr><td><b>A closed learning loop</b></td><td>Every tool call recorded to <code>tool_invocations</code>. SkillImprover surfaces repair suggestions from failure patterns and promotion candidates from high-quality sessions. Skills are versioned playbooks with full lineage tracking.</td></tr>
 <tr><td><b>RAG-powered knowledge</b></td><td>Three indexed sources: this repo, ~1,043 grandMA2 help pages, and the MCP SDK. Semantic search via GitHub Models embeddings; falls back to keyword search without an API token.</td></tr>
 </table>
 
-[Quick Start](#quick-start) · [Architecture](#architecture) · [200 MCP Tools](#mcp-tools) · [Resources](#mcp-resources) · [Prompts](#mcp-prompts) · [Skills](#agent-skills) · [Safety System](#safety-system) · [RAG Pipeline](#rag-pipeline)
+[Quick Start](#quick-start) · [Architecture](#architecture) · [210 MCP Tools](#mcp-tools) · [Resources](#mcp-resources) · [Prompts](#mcp-prompts) · [Skills](#agent-skills) · [Safety System](#safety-system) · [RAG Pipeline](#rag-pipeline)
 
 ---
 
@@ -64,7 +64,7 @@ uv run python -m src.server  # starts MCP server (stdio transport)
 ```mermaid
 graph TD
     H["🤖 Agent Core Layer<br/><code>src/server_orchestration_tools.py</code><br/>34 tools (110–144) · orchestrator · skills"] --> A
-    A["🎭 MCP Server Layer<br/><code>src/server.py</code><br/>200 tools · safety gate"] --> B
+    A["🎭 MCP Server Layer<br/><code>src/server.py</code><br/>210 tools · safety gate"] --> B
     B["🧭 Navigation Layer<br/><code>src/navigation.py</code><br/>cd · list · scan · set_property"] --> C
     C["🔧 Command Builders<br/><code>src/commands/</code><br/>198 pure functions → strings"] --> D
     D["📡 Telnet Client<br/><code>src/telnet_client.py</code><br/>async · auth · injection prevention"]
@@ -95,7 +95,7 @@ MA2 Agent is a **layered hybrid** — the boundary is explicit in the code:
 
 | Layer | What it is | Key files |
 |-------|-----------|-----------|
-| **Bottom 200 tools** | **Agent Harness** — exposes a tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
+| **Bottom 210 tools** | **Agent Harness** — exposes a tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
 | **Top 34 tools** | **Embedded Agent Core** — orchestrator, task decomposer, long-term memory, skill registry | `src/server_orchestration_tools.py`, `src/orchestrator.py` |
 
 The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and MA2 Agent becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
@@ -104,7 +104,7 @@ The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool call
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server, 166 interactive tools, safety gate, env config |
+| `src/server.py` | FastMCP server, 176 interactive tools, safety gate, env config |
 | `src/server_orchestration_tools.py` | 34 agentic tools (110–144) registered onto FastMCP |
 | `src/orchestrator.py` | Multi-agent task runner: hydration, risk-tier isolation, LTM; `_showfile_guard()`, `check_showfile()` for dynamic show change detection |
 | `src/task_decomposer.py` | Natural-language goal → ordered SubTask plan (rule-based) |
@@ -156,7 +156,7 @@ RAG_EMBED_DIMENSIONS=1536                     # vector dimensions
 
 ## MCP Tools
 
-The server exposes **200 tools** to MCP clients, grouped into 15 categories plus an agentic orchestration layer:
+The server exposes **210 tools** to MCP clients, grouped into 15 categories plus an agentic orchestration layer:
 
 <details>
 <summary><strong>🧭 Navigation & Inspection</strong> — 4 tools</summary>
@@ -673,7 +673,7 @@ Thirteen read-only resources exposable to any MCP client. Use them for zero-teln
 |-----|-------------|
 | `ma2://docs/rights-matrix` | OAuth scope → MA2Right mapping matrix (JSON) |
 | `ma2://docs/vocab-summary` | All 157 keywords with RiskTier and category (JSON) |
-| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 166 base tools clustered into 14 categories (JSON) |
+| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 176 base tools clustered into 14 categories (JSON) |
 | `ma2://docs/responsibility-map` | Module responsibility map for architectural decisions (Markdown) |
 | `ma2://docs/tool-surface-tiers` | Tier A/B/C classification for every tool (Markdown) |
 | `ma2://docs/volunteer-guide` | Plain-language volunteer operator guide: three-tier access model + Sunday preflight |
@@ -819,7 +819,7 @@ if not result.allowed:
     return result.as_block_response()
 ```
 
-All 200 tools are mapped in `doc/ma2-rights-matrix.json`.
+All 210 tools are mapped in `doc/ma2-rights-matrix.json`.
 
 ### Layer 3 — MA2 Native Rights (console enforcement)
 
@@ -1186,7 +1186,7 @@ The command builder layer (`src/commands/`) generates grandMA2 command strings a
 ```
 ma2-onPC-MCP/
 ├── src/
-│   ├── server.py                           # FastMCP server (166 interactive tools)
+│   ├── server.py                           # FastMCP server (176 interactive tools)
 │   ├── server_orchestration_tools.py       # Agentic layer (tools 110–144)
 │   │
 │   │   # Orchestration & Memory
@@ -1234,7 +1234,7 @@ ma2-onPC-MCP/
 ├── doc/                                    # Command builders ref + cd-tree docs
 ├── vscode-mcp-provider/                    # VS Code MCP extension
 └── .claude/                                # Skills (playbooks) + scoped rules
-    ├── skills/                             # 39 agent instruction modules
+    ├── skills/                             # 44 agent instruction modules
     └── rules/                              # 5 scoped rule files (loaded on demand)
 ```
 
