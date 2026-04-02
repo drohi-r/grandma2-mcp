@@ -19,9 +19,9 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - Project name: MA2 Agent
 - Version: 1.0.0
 - Public repo: `drohi-r/grandma2-mcp`
-- Tool totals: 210 tools = 176 server tools + 34 orchestration tools
-- Skills: 44
-- Tests: 2773 total = 2631 passing, 142 skipped, 0 failed
+- Tool totals: 218 tools = 184 server tools + 34 orchestration tools
+- Skills: 45
+- Tests: 2783 total = 2641 passing, 142 skipped, 0 failed
 - Recent additions accounted for: 10 analysis/intelligence tools and 5 new skills from the latest development push
 - Repo/MCP work attribution kept accurate to Claude Code where already documented
 - Factual Sonnet -> Opus correction rule preserved, but no such correction was needed in the files edited during this pass
@@ -74,9 +74,18 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - `docs/CODEX-CONSISTENCY-PASS-HANDOVER.md`
   Reason: created the required handoff artifact for Opus / maintainers.
   Class: handoff documentation.
+- `.claude/skills/auto-layout-color-picker/SKILL.md`
+  Reason: added a new skill for the installed auto-layout color picker plugin workflow so operators can preflight ranges, validate groups/images, and run the picker safely.
+  Class: new skill addition, current skill catalog expansion.
 - `src/server.py`
-  Reason: fixed `run_agent_goal` confirmation behavior, added explicit scope gating to agent-harness entrypoints, corrected the stale top-level execution hint in the FastMCP instructions, and aligned the runtime server name with the MA2 Agent brand.
-  Class: confirmation semantics fix, auth gating fix, stale tool entrypoint reference, runtime branding fix.
+  Reason: fixed `run_agent_goal` confirmation behavior, added explicit scope gating to agent-harness entrypoints, corrected the stale top-level execution hint in the FastMCP instructions, aligned the runtime server name with the MA2 Agent brand, and added 8 new analysis/recovery tools.
+  Class: confirmation semantics fix, auth gating fix, stale tool entrypoint reference, runtime branding fix, new tool addition.
+- `src/rights.py`
+  Reason: mapped the newly added analysis/recovery tools into the MA2 rights model.
+  Class: rights mapping sync.
+- `tests/test_analysis_tools.py`
+  Reason: added regression coverage for the new analysis/recovery tools.
+  Class: regression test coverage.
 - `doc/tool-surface-tiers.md`
   Reason: replaced the stale `run_orchestrated_task` entry with the real agent-harness entrypoint.
   Class: stale tool entrypoint reference.
@@ -95,6 +104,8 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - stale skill count
 - stale test count
 - stale skill catalog
+- new skill addition
+- new tool addition
 - stale tool catalog summary
 - architecture math mismatch
 - inclusive numeric range mistake
@@ -109,9 +120,9 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 
 ## 5. Notable before/after corrections
 
-- `39 skills` -> `44 skills`
-- `200 tools (166 server + 34 orchestration)` -> `210 tools (176 server + 34 orchestration)`
-- `2751 tests (2609 passing, 142 skipped, 0 failed)` -> `2773 tests (2631 passing, 142 skipped, 0 failed)`
+- `39 skills` -> `45 skills`
+- `200 tools (166 server + 34 orchestration)` -> `218 tools (184 server + 34 orchestration)`
+- `2751 tests (2609 passing, 142 skipped, 0 failed)` -> `2783 tests (2641 passing, 142 skipped, 0 failed)`
 - `/path/to/ma2-onPC-MCP` -> `/path/to/grandma2-mcp`
 - `ma2-onPC-MCP/` -> `grandma2-mcp/`
 - README skill catalog missing 10 actual skill directories -> README skill catalog expanded to match all 44 current skills
@@ -123,6 +134,7 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 - VS Code extension version `0.0.1` -> `1.0.0`
 - VS Code extension lockfile version `0.0.1` -> `1.0.0`
 - `run_task` / `decompose_task` as an implicit top-level path -> documented as the lower-level rule-based path, with `plan_agent_goal` / `run_agent_goal` called out as the preferred high-level path
+- no color-picker-specific quick-setup skill -> added `auto-layout-color-picker` for the installed plugin workflow
 
 ## 6. What was intentionally left unchanged
 
@@ -141,4 +153,4 @@ Follow-up: after the consistency pass, a narrow MCP server correctness fix was a
 
 ## 8. Final repo truth summary
 
-MA2 Agent is the current project identity at version 1.0.0 in public repo `drohi-r/grandma2-mcp`. The current documented totals are 210 tools overall, split into 176 server tools and 34 orchestration tools, with 44 skills and 2773 tests total (2631 passing, 142 skipped, 0 failed). Current-facing docs now point to the present repo identity while preserving the required upstream attribution chain `chienchuanw -> thisis-romar -> drohi-r`.
+MA2 Agent is the current project identity at version 1.0.0 in public repo `drohi-r/grandma2-mcp`. The current documented totals are 218 tools overall, split into 184 server tools and 34 orchestration tools, with 45 skills and 2783 tests total (2641 passing, 142 skipped, 0 failed). Current-facing docs now point to the present repo identity while preserving the required upstream attribution chain `chienchuanw -> thisis-romar -> drohi-r`.

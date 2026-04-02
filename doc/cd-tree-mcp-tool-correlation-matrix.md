@@ -14,7 +14,7 @@ This document maps every MCP tool to the grandMA2 console object tree branch
 it operates on. Use this to know which `cd` + `list` path to inspect when
 verifying that an MCP tool actually created/modified/deleted the expected object.
 
-## Quick Reference: 210 MCP Tools → Tree Branches (176 server + 34 orchestration)
+## Quick Reference: 218 MCP Tools → Tree Branches (184 server + 34 orchestration)
 
 ### Navigation & Inspection Tools (6)
 

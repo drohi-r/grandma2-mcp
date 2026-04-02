@@ -1,34 +1,82 @@
-<svg width="900" height="200" viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg">
+<svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">MA2 Agent banner</title>
+  <desc id="desc">Dark production-style banner with warm red orange accents and bold MA2 Agent lettering.</desc>
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0a0a0a"/>
-      <stop offset="100%" stop-color="#1a0a0a"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#050505"/>
+      <stop offset="0.55" stop-color="#0D0D0D"/>
+      <stop offset="1" stop-color="#141414"/>
     </linearGradient>
-    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FF2020"/>
-      <stop offset="50%" stop-color="#FF4444"/>
-      <stop offset="100%" stop-color="#CC0000"/>
+    <linearGradient id="accent" x1="1040" y1="90" x2="1520" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF7A1A"/>
+      <stop offset="0.5" stop-color="#FF4D2D"/>
+      <stop offset="1" stop-color="#C81D25"/>
     </linearGradient>
-    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FF202000"/>
-      <stop offset="20%" stop-color="#FF2020"/>
-      <stop offset="80%" stop-color="#FF2020"/>
-      <stop offset="100%" stop-color="#FF202000"/>
+    <linearGradient id="lineAccent" x1="260" y1="0" x2="1120" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF7A1A"/>
+      <stop offset="1" stop-color="#FF4D2D"/>
     </linearGradient>
+    <filter id="glow" x="980" y="40" width="620" height="440" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
   </defs>
 
-  <!-- Background -->
-  <rect width="900" height="200" fill="url(#bgGrad)"/>
+  <rect width="1600" height="520" fill="url(#bg)"/>
 
-  <!-- Top accent line -->
-  <rect x="150" y="40" width="600" height="1" fill="url(#accentLine)" opacity="0.4"/>
+  <g opacity="0.12" stroke="#FFFFFF">
+    <path d="M0 96H1600"/>
+    <path d="M0 160H1600"/>
+    <path d="M0 224H1600"/>
+    <path d="M0 288H1600"/>
+    <path d="M0 352H1600"/>
+    <path d="M0 416H1600"/>
+    <path d="M160 0V520"/>
+    <path d="M320 0V520"/>
+    <path d="M480 0V520"/>
+    <path d="M640 0V520"/>
+    <path d="M800 0V520"/>
+    <path d="M960 0V520"/>
+    <path d="M1120 0V520"/>
+    <path d="M1280 0V520"/>
+    <path d="M1440 0V520"/>
+  </g>
 
-  <!-- Main title — clean flat design, no 3D shadow -->
-  <text x="450" y="115" font-family="'Helvetica Neue', Arial, sans-serif" font-size="72" font-weight="800" text-anchor="middle" letter-spacing="12" fill="url(#textGrad)">MA2 AGENT</text>
+  <g opacity="0.16">
+    <path d="M0 462L352 110" stroke="#FFFFFF" stroke-width="1.5"/>
+    <path d="M132 520L612 40" stroke="#FFFFFF" stroke-width="1.5"/>
+    <path d="M1048 520L1556 12" stroke="#FFFFFF" stroke-width="1.5"/>
+  </g>
 
-  <!-- Bottom accent line -->
-  <rect x="150" y="135" width="600" height="1" fill="url(#accentLine)" opacity="0.4"/>
+  <rect x="78" y="76" width="112" height="7" rx="3.5" fill="url(#lineAccent)"/>
+  <rect x="78" y="437" width="332" height="7" rx="3.5" fill="url(#lineAccent)"/>
 
-  <!-- Subtitle -->
-  <text x="450" y="165" font-family="'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="300" text-anchor="middle" letter-spacing="4" fill="#666666">GRANDMA2 CONSOLE AGENT  &#183;  210 MCP TOOLS  &#183;  AI-NATIVE</text>
+  <g opacity="0.12" filter="url(#glow)">
+    <circle cx="1290" cy="260" r="150" fill="#FF5A24"/>
+  </g>
+
+  <g opacity="0.96">
+    <path d="M1122 98H1468V422H1122V98Z" fill="#0B0B0B" stroke="#2A2A2A" stroke-width="2"/>
+    <path d="M1148 124H1442V396H1148V124Z" fill="none" stroke="url(#accent)" stroke-width="2"/>
+    <path d="M1180 156H1410V364H1180V156Z" fill="#101010"/>
+    <path d="M1180 156H1296L1410 270V364H1180V156Z" fill="url(#accent)" opacity="0.95"/>
+    <path d="M1180 364L1410 156" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
+    <path d="M1180 260H1410" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
+    <path d="M1296 156V364" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
+  </g>
+
+  <text x="78" y="170" fill="#F3EEE8" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="8">
+    PRECISION LIGHTING CONTROL
+  </text>
+
+  <text x="78" y="286" fill="#F8F2EC" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="138" font-weight="900" letter-spacing="4">
+    MA2 AGENT
+  </text>
+
+  <text x="84" y="346" fill="#BEB7B0" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="5">
+    GRANDMA2 WORKFLOW • PLAYBACK • PROGRAMMING • LIVE PRODUCTION
+  </text>
+
+  <text x="84" y="426" fill="#E2602E" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="6">
+    SHOWFILE INTELLIGENCE / RUNTIME AUTOMATION / CONSOLE-SAFE EXECUTION
+  </text>
 </svg>

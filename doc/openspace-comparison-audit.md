@@ -23,7 +23,7 @@ All findings were verified directly against the repository source as of 2026-03-
 
 ### MA2 Agent
 
-An MCP server that exposes **210 tools** so AI assistants can control a grandMA2 lighting console
+An MCP server that exposes **218 tools** so AI assistants can control a grandMA2 lighting console
 via Telnet. Its own README describes it as:
 
 > "an agent-ready, syntax-aware Telnet control server for MA Lighting grandMA2 consoles"
@@ -59,10 +59,10 @@ The core claim is that agents improve themselves without human intervention.
 | Skill evolution dashboard | ❌ Absent | No React dashboard |
 | CloudSkill community / registry | ❌ Absent | RAG store is local SQLite only (`rag/store/rag.db`) |
 | Token efficiency tracking | ⚠️ Partial | Session-level `token_spend` / `charge_tokens()` / `token_report()` in `WorkingMemory` (`src/agent_memory.py:96,210–220`). Per-MCP-tool invocation instrumentation is absent. |
-| MCP integration | ✅ Excellent | 210 tools (176 in `server.py` + 34 in `src/server_orchestration_tools.py`), stdio transport, Claude Desktop + VS Code configs |
+| MCP integration | ✅ Excellent | 218 tools (184 in `server.py` + 34 in `src/server_orchestration_tools.py`), stdio transport, Claude Desktop + VS Code configs |
 | Python 3.12 | ✅ Yes | `.python-version` file |
 | MIT license | ⚠️ No — Apache 2.0 | `LICENSE` file |
-| Benchmark / metrics pipeline | ❌ Absent | 2773 tests exist but no performance-benchmark loop |
+| Benchmark / metrics pipeline | ❌ Absent | 2783 tests exist but no performance-benchmark loop |
 
 ---
 
@@ -87,7 +87,7 @@ this. For a system controlling live physical hardware, this safety model is more
 
 ### 3.2 MCP tool quality
 
-210 tools across 15 server categories plus a 34-tool orchestration layer, pure-function command builders in `src/commands/`,
+218 tools across 15 server categories plus a 34-tool orchestration layer, pure-function command builders in `src/commands/`,
 structured schemas, VS Code extension, Claude Desktop config. This is production-grade MCP work.
 
 ### 3.3 RAG pipeline

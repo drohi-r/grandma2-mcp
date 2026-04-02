@@ -8,7 +8,7 @@ last_updated: 2026-04-02T04:16:48Z
 
 # Tool Surface Tiers
 
-The transcript's core observation: **210 tools always visible to the parent planner is a context budget risk**. This document classifies the current tool surface into three tiers to guide future dynamic tool loading.
+The transcript's core observation: **218 tools always visible to the parent planner is a context budget risk**. This document classifies the current tool surface into three tiers to guide future dynamic tool loading.
 
 ---
 

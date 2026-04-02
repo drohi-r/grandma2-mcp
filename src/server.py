@@ -429,10 +429,10 @@ _vocab_spec = build_v39_spec()
 # Create MCP server
 mcp = FastMCP(
     name="MA2 Agent",
-    instructions="""grandMA2 MCP server — 210 tools, 13 resources, 10 prompts.
+    instructions="""grandMA2 MCP server — 218 tools, 13 resources, 10 prompts.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
-Use ma2://docs/tool-taxonomy resource to browse all 210 tools by category.
+Use ma2://docs/tool-taxonomy resource to browse all 218 tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
@@ -9304,6 +9304,703 @@ async def incident_snapshot() -> str:
 
 
 # ============================================================
+# Extended Analysis & Recovery Tools
+# Lineage, dependency mapping, patch-fit validation, and drafts
+# ============================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def trace_attribute_lineage(
+    attribute: str,
+    fixture_id: int | None = None,
+    sequence_id: int | None = None,
+    max_sequences: int = 5,
+    max_cues_per_sequence: int = 10,
+) -> str:
+    """
+    Trace likely sources of an attribute's current value (SAFE_READ).
+
+    This is a best-effort lineage tool for debugging "why is this here?"
+    scenarios. It combines live snapshot context with cue text scans to find
+    candidate sequence/cue sources mentioning the attribute and, optionally,
+    the target fixture.
+
+    Args:
+        attribute: Attribute name to search for (e.g. "Dimmer", "ColorRGB1").
+        fixture_id: Optional fixture ID to narrow the lineage search.
+        sequence_id: Optional sequence to inspect directly.
+        max_sequences: Max sequences to inspect when sequence_id is omitted.
+        max_cues_per_sequence: Max cues per sequence to inspect.
+
+    Returns:
+        str: JSON with live_context, candidate_sources, inspected_sequences, summary.
+    """
+    attribute = (attribute or "").strip()
+    if not attribute:
+        return json.dumps({
+            "error": "attribute is required.",
+            "blocked": True,
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    client = await get_client()
+    snap = getattr(_orchestrator, "last_snapshot", None)
+
+    attr_re = re.compile(rf"\b{re.escape(attribute)}\b", re.IGNORECASE)
+    fixture_re = re.compile(rf"\b(Fixture|Fix)\s+{fixture_id}\b", re.IGNORECASE) if fixture_id is not None else None
+
+    sequence_ids: list[int] = []
+    if sequence_id is not None:
+        sequence_ids = [sequence_id]
+    elif snap and getattr(snap, "executor_state", None):
+        sequence_ids = sorted({
+            state.sequence_id
+            for state in snap.executor_state.values()
+            if getattr(state, "sequence_id", None) is not None
+        })[:max_sequences]
+    if not sequence_ids and snap and getattr(snap, "sequences", None):
+        sequence_ids = [seq.id for seq in snap.sequences[:max_sequences] if hasattr(seq, "id")]
+    if not sequence_ids:
+        raw = await client.send_command_with_response("list sequence")
+        for match in re.finditer(r"^\s*(\d+)\s", raw, re.MULTILINE):
+            sequence_ids.append(int(match.group(1)))
+            if len(sequence_ids) >= max_sequences:
+                break
+
+    candidate_sources: list[dict] = []
+    for seq_id in sequence_ids:
+        cue_list = await client.send_command_with_response(f"list cue sequence {seq_id}")
+        cue_ids: list[str] = []
+        for match in re.finditer(r"^\s*(\d+(?:\.\d+)?)\s", cue_list, re.MULTILINE):
+            cue_ids.append(match.group(1))
+            if len(cue_ids) >= max_cues_per_sequence:
+                break
+
+        for cue_id in cue_ids:
+            cue_raw = await client.send_command_with_response(f"list cue {cue_id} sequence {seq_id}")
+            matched_lines = []
+            for line in cue_raw.splitlines():
+                if not attr_re.search(line):
+                    continue
+                if fixture_re and not fixture_re.search(line):
+                    continue
+                matched_lines.append(line.strip()[:200])
+
+            if matched_lines:
+                candidate_sources.append({
+                    "sequence_id": seq_id,
+                    "cue_id": cue_id,
+                    "matched_lines": matched_lines[:5],
+                    "match_count": len(matched_lines),
+                })
+        await asyncio.sleep(0.02)
+
+    live_context = {
+        "selected_fixture_count": getattr(snap, "selected_fixture_count", 0) if snap else None,
+        "active_filter": getattr(snap, "active_filter", None) if snap else None,
+        "active_world": getattr(snap, "active_world", None) if snap else None,
+        "console_modes": getattr(snap, "console_modes", {}) if snap else {},
+        "selected_executor": getattr(snap, "selected_exec", "") if snap else "",
+        "selected_executor_cue": getattr(snap, "selected_exec_cue", "") if snap else "",
+        "active_executors": [
+            {"id": exec_id, "sequence_id": state.sequence_id}
+            for exec_id, state in ((getattr(snap, "executor_state", {}) or {}).items() if snap else [])
+            if getattr(state, "sequence_id", None) is not None
+        ][:10],
+    }
+
+    if candidate_sources:
+        summary = (
+            f"Found {len(candidate_sources)} candidate cue source(s) mentioning "
+            f"attribute '{attribute}'."
+        )
+    else:
+        summary = (
+            f"No cue text matches found for attribute '{attribute}'. "
+            "Inspect live programmer, parks, world/filter state, and active executors."
+        )
+
+    return json.dumps({
+        "attribute": attribute,
+        "fixture_id": fixture_id,
+        "inspected_sequences": sequence_ids,
+        "candidate_sources": candidate_sources,
+        "live_context": live_context,
+        "summary": summary,
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def find_executor_dependencies(
+    page: int,
+    executor_id: int,
+) -> str:
+    """
+    Inspect a playback executor and extract likely dependencies (SAFE_READ).
+
+    Args:
+        page: Executor page number.
+        executor_id: Executor number on the page.
+
+    Returns:
+        str: JSON with assignment info, dependency fields, and warnings.
+    """
+    client = await get_client()
+    raw = await client.send_command_with_response(f"list executor {page}.{executor_id}")
+    if "NO OBJECTS" in raw.upper() or not raw.strip():
+        return json.dumps({
+            "error": f"Executor {page}.{executor_id} is empty or not found.",
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    def _extract(pattern: str) -> str | None:
+        match = re.search(pattern, raw, re.IGNORECASE)
+        return match.group(1).strip().strip('"') if match else None
+
+    dependencies = {
+        "sequence_id": _extract(r"\b(?:Sequence|Seq)\s*[=:]?\s*(\d+)"),
+        "macro_id": _extract(r"\bMacro\s*[=:]?\s*(\d+)"),
+        "effect_id": _extract(r"\bEffect\s*[=:]?\s*(\d+)"),
+        "trigger": _extract(r"\b(?:Trigger|Trig)\s*[=:]?\s*([A-Za-z0-9_]+)"),
+        "priority": _extract(r"\b(?:Priority|Prio)\s*[=:]?\s*([A-Za-z0-9_]+)"),
+        "fader_function": _extract(r"\bFader\s*[=:]?\s*([A-Za-z0-9_]+)"),
+        "button_function": _extract(r"\bButton(?:Function)?\s*[=:]?\s*([A-Za-z0-9_]+)"),
+        "speed_master": _extract(r"\bSpeed(?:Master)?\s*[=:]?\s*([A-Za-z0-9_.-]+)"),
+        "world": _extract(r"\bWorld\s*[=:]?\s*([A-Za-z0-9_.-]+)"),
+        "filter": _extract(r"\bFilter\s*[=:]?\s*([A-Za-z0-9_.-]+)"),
+    }
+
+    snap = getattr(_orchestrator, "last_snapshot", None)
+    snapshot_detail = None
+    if snap and getattr(snap, "executor_state", None):
+        snapshot_state = next(
+            (
+                state for state in snap.executor_state.values()
+                if getattr(state, "page", None) == page and getattr(state, "id", None) == executor_id
+            ),
+            None,
+        )
+        if snapshot_state is not None:
+            snapshot_detail = {
+                "sequence_id": snapshot_state.sequence_id,
+                "label": snapshot_state.label,
+                "priority": snapshot_state.priority,
+                "button_function": snapshot_state.button_function,
+                "fader_function": snapshot_state.fader_function,
+                "ooo": snapshot_state.ooo,
+                "kill_protect": snapshot_state.kill_protect,
+                "auto_start": snapshot_state.auto_start,
+            }
+            if dependencies["sequence_id"] is None and snapshot_state.sequence_id is not None:
+                dependencies["sequence_id"] = str(snapshot_state.sequence_id)
+
+    warnings = []
+    if dependencies["sequence_id"] is None and dependencies["macro_id"] is None and dependencies["effect_id"] is None:
+        warnings.append("No sequence, macro, or effect assignment parsed from executor listing.")
+    if dependencies["speed_master"] is None and dependencies["effect_id"] is not None:
+        warnings.append("Effect assignment found but no speed master parsed from listing.")
+
+    return json.dumps({
+        "page": page,
+        "executor_id": executor_id,
+        "dependencies": dependencies,
+        "snapshot_detail": snapshot_detail,
+        "warnings": warnings,
+        "raw_excerpt": raw.splitlines()[:20],
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def find_unused_objects(
+    object_type: str,
+    max_objects: int = 25,
+    preset_type: str | None = None,
+) -> str:
+    """
+    Find likely unused object candidates using grounded heuristics (SAFE_READ).
+
+    Supported types:
+      - sequence: not assigned to any hydrated executor
+      - macro: not referenced by another macro and not currently active
+      - preset: no cue references found via find_preset_usages
+
+    Args:
+        object_type: One of "sequence", "macro", or "preset".
+        max_objects: Max objects to inspect.
+        preset_type: Required for object_type="preset".
+
+    Returns:
+        str: JSON with candidate_unused list and heuristic notes.
+    """
+    object_type = (object_type or "").strip().lower()
+    if object_type not in {"sequence", "macro", "preset"}:
+        return json.dumps({
+            "error": "Unsupported object_type. Use 'sequence', 'macro', or 'preset'.",
+            "blocked": True,
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    client = await get_client()
+    snap = getattr(_orchestrator, "last_snapshot", None)
+    candidate_unused: list[dict] = []
+    inspected = 0
+
+    if object_type == "sequence":
+        raw = await client.send_command_with_response("list sequence")
+        seq_ids: list[int] = []
+        for match in re.finditer(r"^\s*(\d+)\s*(.*)$", raw, re.MULTILINE):
+            seq_ids.append(int(match.group(1)))
+            if len(seq_ids) >= max_objects:
+                break
+        assigned = {
+            state.sequence_id
+            for state in ((getattr(snap, "executor_state", {}) or {}).values() if snap else [])
+            if getattr(state, "sequence_id", None) is not None
+        }
+        for seq_id in seq_ids:
+            inspected += 1
+            if seq_id not in assigned:
+                candidate_unused.append({
+                    "id": seq_id,
+                    "reason": "Not assigned to any hydrated executor.",
+                })
+
+    elif object_type == "macro":
+        raw = await client.send_command_with_response("list macro")
+        macro_ids: list[int] = []
+        for match in re.finditer(r"^\s*(\d+)\s", raw, re.MULTILINE):
+            macro_ids.append(int(match.group(1)))
+            if len(macro_ids) >= max_objects:
+                break
+
+        referenced: set[int] = set()
+        active_macros = set(getattr(snap, "active_macros", []) or []) if snap else set()
+        for macro_id in macro_ids:
+            body = await client.send_command_with_response(f"list macro {macro_id}")
+            inspected += 1
+            for ref in re.finditer(r"\bGo\s+Macro\s+(\d+)\b", body, re.IGNORECASE):
+                referenced.add(int(ref.group(1)))
+            await asyncio.sleep(0.01)
+
+        for macro_id in macro_ids:
+            if macro_id not in referenced and macro_id not in active_macros:
+                candidate_unused.append({
+                    "id": macro_id,
+                    "reason": "No inbound macro jump reference found and macro is not active in snapshot.",
+                })
+
+    else:
+        if not preset_type:
+            return json.dumps({
+                "error": "preset_type is required when object_type='preset'.",
+                "blocked": True,
+                "risk_tier": "SAFE_READ",
+            }, indent=2)
+
+        pool_raw = await list_preset_pool(preset_type=preset_type)
+        pool_data = json.loads(pool_raw)
+        entries = pool_data.get("entries", [])[:max_objects]
+        for entry in entries:
+            inspected += 1
+            usage_raw = await find_preset_usages(preset_type=preset_type, preset_id=entry["id"], max_sequences=25)
+            usage_data = json.loads(usage_raw)
+            if usage_data.get("total_references", 0) == 0:
+                candidate_unused.append({
+                    "id": entry["id"],
+                    "name": entry.get("name", ""),
+                    "reason": "No cue references found in sampled sequences.",
+                })
+            await asyncio.sleep(0.01)
+
+    return json.dumps({
+        "object_type": object_type,
+        "preset_type": preset_type,
+        "inspected": inspected,
+        "candidate_unused": candidate_unused,
+        "heuristic_only": True,
+        "notes": [
+            "This tool returns candidates, not authoritative deletion approval.",
+            "Hydrate console state first for stronger sequence/macro signal.",
+        ],
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def validate_universal_preset_coverage(
+    preset_type: str,
+    start_id: int,
+    end_id: int,
+) -> str:
+    """
+    Check whether a universal preset slot range is populated cleanly (SAFE_READ).
+
+    Args:
+        preset_type: Preset type name (e.g. "color", "position").
+        start_id: First preset slot in the expected range.
+        end_id: Last preset slot in the expected range.
+
+    Returns:
+        str: JSON with occupied slots, missing slots, coverage percent, and recommendation.
+    """
+    if start_id <= 0 or end_id < start_id:
+        return json.dumps({
+            "error": f"Invalid preset range {start_id}-{end_id}.",
+            "blocked": True,
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    pool_raw = await list_preset_pool(preset_type=preset_type)
+    pool_data = json.loads(pool_raw)
+    if "error" in pool_data:
+        return pool_raw
+
+    entries = pool_data.get("entries", [])
+    occupied_ids = sorted(
+        entry["id"] for entry in entries
+        if isinstance(entry.get("id"), int) and start_id <= entry["id"] <= end_id
+    )
+    expected_ids = list(range(start_id, end_id + 1))
+    missing_ids = [pid for pid in expected_ids if pid not in occupied_ids]
+    coverage_pct = (len(occupied_ids) / len(expected_ids)) * 100 if expected_ids else 0.0
+
+    if not missing_ids:
+        recommendation = "Requested universal preset range is fully populated."
+    elif coverage_pct >= 75:
+        recommendation = "Coverage is mostly complete, but fill the missing slots before touring or cloning."
+    else:
+        recommendation = "Coverage is sparse — build or import a more complete universal preset range."
+
+    return json.dumps({
+        "preset_type": preset_type,
+        "range_start": start_id,
+        "range_end": end_id,
+        "occupied_ids": occupied_ids,
+        "missing_ids": missing_ids,
+        "coverage_percent": round(coverage_pct, 1),
+        "recommendation": recommendation,
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def compare_patch_to_show_expectation(
+    expected_fixture_types: str,
+) -> str:
+    """
+    Compare the current patch against expected fixture-type counts (SAFE_READ).
+
+    Args:
+        expected_fixture_types: Comma-separated "Fixture Type=Count" entries.
+            Example: "Mac Aura XB=8, Viper Profile=4"
+
+    Returns:
+        str: JSON with expected vs actual counts, missing types, and fit status.
+    """
+    expected: dict[str, int] = {}
+    for chunk in expected_fixture_types.split(","):
+        item = chunk.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            return json.dumps({
+                "error": f"Invalid expected_fixture_types entry: {item!r}. Use 'Type=Count'.",
+                "blocked": True,
+                "risk_tier": "SAFE_READ",
+            }, indent=2)
+        name, count_str = item.rsplit("=", 1)
+        try:
+            expected[name.strip()] = int(count_str.strip())
+        except ValueError:
+            return json.dumps({
+                "error": f"Invalid count for {name.strip()!r}: {count_str!r}.",
+                "blocked": True,
+                "risk_tier": "SAFE_READ",
+            }, indent=2)
+
+    raw = await (await get_client()).send_command_with_response("list fixture")
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+
+    actual: dict[str, int] = {}
+    unmatched_lines: list[str] = []
+    for line in lines:
+        matched = False
+        for fixture_type in expected:
+            if fixture_type.lower() in line.lower():
+                actual[fixture_type] = actual.get(fixture_type, 0) + 1
+                matched = True
+                break
+        if not matched and re.match(r"^\d+\s", line):
+            unmatched_lines.append(line[:160])
+
+    missing: list[dict] = []
+    over: list[dict] = []
+    for fixture_type, expected_count in expected.items():
+        actual_count = actual.get(fixture_type, 0)
+        if actual_count < expected_count:
+            missing.append({
+                "fixture_type": fixture_type,
+                "expected": expected_count,
+                "actual": actual_count,
+                "delta": expected_count - actual_count,
+            })
+        elif actual_count > expected_count:
+            over.append({
+                "fixture_type": fixture_type,
+                "expected": expected_count,
+                "actual": actual_count,
+                "delta": actual_count - expected_count,
+            })
+
+    fit_status = "match" if not missing and not over else "mismatch"
+    if missing:
+        recommendation = "Patch is under target for at least one expected fixture type. Plan clone/PSR or rebuild strategy."
+    elif over:
+        recommendation = "Patch exceeds at least one expected type count. Verify executor/group mapping still aligns."
+    else:
+        recommendation = "Patch counts match the supplied expectation for the requested fixture types."
+
+    return json.dumps({
+        "expected": expected,
+        "actual": actual,
+        "missing": missing,
+        "over": over,
+        "fit_status": fit_status,
+        "unmatched_fixture_rows": unmatched_lines[:20],
+        "recommendation": recommendation,
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def snapshot_programmer_state() -> str:
+    """
+    Capture a structured programmer-state snapshot for later review (SAFE_READ).
+
+    Returns:
+        str: JSON with a restorable snapshot subset plus non-restorable context.
+    """
+    snap = getattr(_orchestrator, "last_snapshot", None)
+    if snap is None:
+        raw = await list_system_variables(filter_prefix="SELECTED")
+        data = json.loads(raw)
+        return json.dumps({
+            "snapshot_available": False,
+            "fallback_variables": data.get("variables", {}),
+            "note": "No hydrated snapshot available. Run hydrate_console_state for a full programmer snapshot.",
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    snapshot = {
+        "selected_fixture_count": snap.selected_fixture_count,
+        "active_preset_type": snap.active_preset_type,
+        "active_feature": snap.active_feature,
+        "active_attribute": snap.active_attribute,
+        "selected_exec": snap.selected_exec,
+        "selected_exec_cue": snap.selected_exec_cue,
+        "active_world": snap.active_world,
+        "active_filter": snap.active_filter,
+        "console_modes": snap.console_modes,
+        "parked_fixtures": sorted(list(snap.parked_fixtures))[:20],
+        "matricks": {
+            "active": getattr(snap.matricks, "active", False),
+            "summary": snap.matricks.summary() if hasattr(snap.matricks, "summary") else "",
+        },
+        "snapshot_age_s": round(snap.age_seconds(), 1),
+    }
+
+    return json.dumps({
+        "snapshot": snapshot,
+        "restorable_fields": ["active_world", "active_filter", "selected_exec", "console_modes.blind"],
+        "non_restorable_fields": ["selected_fixture_count", "parked_fixtures", "matricks", "selected_exec_cue"],
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.PROGRAMMER_WRITE)
+@_handle_errors
+async def restore_programmer_state(
+    snapshot_json: str,
+    apply: bool = False,
+    clear_before_restore: bool = True,
+) -> str:
+    """
+    Preview or apply a conservative programmer-state restore (SAFE_WRITE).
+
+    This tool intentionally restores only fields that can be expressed
+    confidently through existing MA2 telnet commands. It does not attempt to
+    recreate exact fixture selections, parked-fixture state, or MAtricks.
+
+    Args:
+        snapshot_json: JSON payload from snapshot_programmer_state().
+        apply: If False (default), return the restore plan only.
+        clear_before_restore: If True, begin with ClearAll when apply=True.
+
+    Returns:
+        str: JSON with planned commands, executed commands, and skipped fields.
+    """
+    try:
+        parsed = json.loads(snapshot_json)
+    except json.JSONDecodeError as exc:
+        return json.dumps({
+            "error": f"Invalid snapshot_json: {exc}",
+            "blocked": True,
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+
+    snapshot = parsed.get("snapshot", parsed)
+    if not isinstance(snapshot, dict):
+        return json.dumps({
+            "error": "snapshot_json must contain an object or a top-level 'snapshot' object.",
+            "blocked": True,
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+
+    planned_commands: list[str] = []
+    skipped_fields: list[str] = []
+
+    if clear_before_restore:
+        planned_commands.append(build_clear_all())
+
+    active_world = snapshot.get("active_world")
+    if isinstance(active_world, int) and active_world > 0:
+        planned_commands.append(f"World {active_world}")
+    elif active_world in (None, 0, "0", ""):
+        skipped_fields.append("active_world")
+
+    active_filter = snapshot.get("active_filter")
+    if isinstance(active_filter, int) and active_filter > 0:
+        planned_commands.append(f"Filter {active_filter}")
+    elif active_filter in (None, 0, "0", ""):
+        skipped_fields.append("active_filter")
+
+    selected_exec = str(snapshot.get("selected_exec") or "").strip()
+    if selected_exec:
+        planned_commands.append(f"select executor {selected_exec}")
+    else:
+        skipped_fields.append("selected_exec")
+
+    blind_mode = bool((snapshot.get("console_modes") or {}).get("blind"))
+    if blind_mode:
+        planned_commands.append("Blind On")
+
+    skipped_fields.extend([
+        "selected_fixture_count",
+        "selected_exec_cue",
+        "parked_fixtures",
+        "matricks",
+    ])
+
+    if not apply:
+        return json.dumps({
+            "apply": False,
+            "planned_commands": planned_commands,
+            "skipped_fields": skipped_fields,
+            "note": "Preview only. Pass apply=True to execute the conservative restore plan.",
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+
+    client = await get_client()
+    executed: list[dict[str, str]] = []
+    for cmd in planned_commands:
+        raw = await client.send_command_with_response(cmd)
+        executed.append({"command_sent": cmd, "raw_response": raw})
+
+    return json.dumps({
+        "apply": True,
+        "planned_commands": planned_commands,
+        "executed": executed,
+        "skipped_fields": skipped_fields,
+        "risk_tier": "SAFE_WRITE",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def generate_song_macro_pack(
+    song_name: str,
+    sequence_id: int,
+    start_macro_id: int = 1,
+    target_page: int = 1,
+) -> str:
+    """
+    Draft a song macro pack using a practical busking-page structure (SAFE_READ).
+
+    This returns macro labels and line content only. It does not store any
+    macros on the console.
+
+    Args:
+        song_name: Human-readable song title.
+        sequence_id: Primary playback sequence for the song.
+        start_macro_id: First macro ID to assign in the draft pack.
+        target_page: Page operators should jump to before loading the song.
+
+    Returns:
+        str: JSON with draft macro definitions and first-button protocol notes.
+    """
+    song_label = (song_name or "").strip()
+    if not song_label:
+        return json.dumps({
+            "error": "song_name is required.",
+            "blocked": True,
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    macro_specs = [
+        ("Load Song", [
+            f'Page {target_page}',
+            "ClearAll",
+            f'Select Executor {target_page}.201',
+            f'Goto Cue 1 Sequence {sequence_id}',
+            f'Label Sequence {sequence_id} "{song_label}"',
+        ]),
+        ("Verse", [f"Goto Cue 2 Sequence {sequence_id}"]),
+        ("Chorus", [f"Goto Cue 3 Sequence {sequence_id}"]),
+        ("Bridge", [f"Goto Cue 4 Sequence {sequence_id}"]),
+        ("Solo", [f"Goto Cue 5 Sequence {sequence_id}"]),
+        ("Outro", [f"Goto Cue 6 Sequence {sequence_id}"]),
+        ("Blackout", ["Off Executor Thru", "ClearAll"]),
+    ]
+
+    macros = []
+    for offset, (label, lines) in enumerate(macro_specs):
+        macros.append({
+            "macro_id": start_macro_id + offset,
+            "label": f"{song_label} - {label}",
+            "lines": lines,
+        })
+
+    return json.dumps({
+        "song_name": song_label,
+        "sequence_id": sequence_id,
+        "target_page": target_page,
+        "macro_count": len(macros),
+        "macros": macros,
+        "notes": [
+            "Draft only — review labels, cue numbers, and first-button protocol before storing.",
+            "The first macro is intended to be the safe song-loader entrypoint.",
+        ],
+        "risk_tier": "SAFE_READ",
+    }, indent=2)
+
+
+# ============================================================
 # OSC Output (Resolume, etc.)
 # ============================================================
 
@@ -9439,7 +10136,7 @@ def resource_vocab_summary() -> str:
 @mcp.resource("ma2://docs/tool-taxonomy")
 def resource_tool_taxonomy() -> str:
     """
-    ML-generated tool taxonomy — 210 tools clustered into 14 categories.
+    ML-generated tool taxonomy — 218 tools clustered into 14 categories.
 
     Each entry includes tool name, category, and docstring summary.
     Use this resource to understand the tool landscape before calling

@@ -108,13 +108,13 @@ The change lists below capture the original hardening wave on this branch. The "
 | `showkontrol-bpm-sync` | CDJ → ShowKontrol → MA2 BPM sync (+ Resolume OSC) |
 
 ### Current stats
-- **210 tools** (176 server + 34 orchestration)
-- **44 skills**
-- **2773 tests** (2631 passing, 142 skipped, 0 failed)
+- **218 tools** (184 server + 34 orchestration)
+- **45 skills**
+- **2783 tests** (2641 passing, 142 skipped, 0 failed)
 - **Version:** 1.0.0
 - **Repo:** https://github.com/drohi-r/grandma2-mcp (public)
 - **Latest expansion:** 10 additional analysis/intelligence tools + 5 additional skills beyond the earlier hardening wave
-- **Latest local fix pass:** agent-harness confirmation/auth corrections, MA2 Agent runtime branding alignment, and 5 new regression tests
+- **Latest local fix pass:** agent-harness confirmation/auth corrections, runtime/doc sync, 8 new analysis/recovery tools, 1 new skill, and final full-suite validation
 
 ---
 

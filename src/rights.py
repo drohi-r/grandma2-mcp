@@ -245,6 +245,14 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "audit_page_consistency":       MA2Right.NONE,
     "plan_fixture_swap":            MA2Right.NONE,
     "incident_snapshot":            MA2Right.NONE,
+    "trace_attribute_lineage":      MA2Right.NONE,
+    "find_executor_dependencies":   MA2Right.NONE,
+    "find_unused_objects":          MA2Right.NONE,
+    "validate_universal_preset_coverage": MA2Right.NONE,
+    "compare_patch_to_show_expectation": MA2Right.NONE,
+    "snapshot_programmer_state":    MA2Right.NONE,
+    "restore_programmer_state":     MA2Right.PRESETS,
+    "generate_song_macro_pack":     MA2Right.NONE,
 }
 
 # MA2 console error code for rights denial

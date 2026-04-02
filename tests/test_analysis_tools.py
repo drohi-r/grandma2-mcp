@@ -3,7 +3,10 @@ Tests for analysis & intelligence tools:
 find_preset_usages, diff_cues, get_page_map, lint_macro,
 detect_programmer_contamination, preview_preset_update_impact,
 detect_tracking_leaks, audit_page_consistency, plan_fixture_swap,
-incident_snapshot
+incident_snapshot, trace_attribute_lineage, find_executor_dependencies,
+find_unused_objects, validate_universal_preset_coverage,
+compare_patch_to_show_expectation, snapshot_programmer_state,
+restore_programmer_state, generate_song_macro_pack
 """
 
 import json
@@ -330,3 +333,204 @@ class TestIncidentSnapshot:
         assert "showfile" in data
         assert "summary" in data
         assert data["risk_tier"] == "SAFE_READ"
+
+
+class TestTraceAttributeLineage:
+    @pytest.mark.asyncio
+    @patch("src.server._orchestrator")
+    @patch("src.server.get_client")
+    async def test_finds_candidate_sources(self, mock_get_client, mock_orch):
+        from src.server import trace_attribute_lineage
+
+        snap = MagicMock()
+        snap.executor_state = {201: MagicMock(sequence_id=1)}
+        snap.selected_fixture_count = 0
+        snap.active_filter = None
+        snap.active_world = None
+        snap.console_modes = {}
+        snap.selected_exec = "1.201"
+        snap.selected_exec_cue = "1"
+        mock_orch.last_snapshot = snap
+
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(side_effect=[
+            "1 Cue1\n2 Cue2\n",
+            "Fixture 101 Dimmer 100\n",
+            "Fixture 101 Color Red\n",
+        ])
+        mock_get_client.return_value = mock_client
+
+        result = await trace_attribute_lineage(attribute="Dimmer", fixture_id=101)
+        data = json.loads(result)
+
+        assert data["candidate_sources"][0]["sequence_id"] == 1
+        assert data["risk_tier"] == "SAFE_READ"
+
+
+class TestFindExecutorDependencies:
+    @pytest.mark.asyncio
+    @patch("src.server._orchestrator")
+    @patch("src.server.get_client")
+    async def test_extracts_dependencies(self, mock_get_client, mock_orch):
+        from src.server import find_executor_dependencies
+
+        snap = MagicMock()
+        snap.executor_state = {
+            1: MagicMock(page=3, id=205, sequence_id=12, label="Wash", priority="High",
+                         button_function="Go", fader_function="Master", ooo=False,
+                         kill_protect=True, auto_start=False)
+        }
+        mock_orch.last_snapshot = snap
+
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(
+            return_value='Name="Wash" Sequence=12 Trigger=Go Priority=High Fader=Master Speed=3.1'
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await find_executor_dependencies(page=3, executor_id=205)
+        data = json.loads(result)
+
+        assert data["dependencies"]["sequence_id"] == "12"
+        assert data["dependencies"]["speed_master"] == "3.1"
+
+
+class TestFindUnusedObjects:
+    @pytest.mark.asyncio
+    @patch("src.server._orchestrator")
+    @patch("src.server.get_client")
+    async def test_sequence_candidates(self, mock_get_client, mock_orch):
+        from src.server import find_unused_objects
+
+        snap = MagicMock()
+        snap.executor_state = {1: MagicMock(sequence_id=1)}
+        mock_orch.last_snapshot = snap
+
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(return_value="1 Seq1\n2 Seq2\n")
+        mock_get_client.return_value = mock_client
+
+        result = await find_unused_objects(object_type="sequence")
+        data = json.loads(result)
+
+        assert any(item["id"] == 2 for item in data["candidate_unused"])
+        assert data["heuristic_only"] is True
+
+
+class TestValidateUniversalPresetCoverage:
+    @pytest.mark.asyncio
+    @patch("src.server.list_preset_pool")
+    async def test_reports_missing_slots(self, mock_pool):
+        from src.server import validate_universal_preset_coverage
+
+        mock_pool.return_value = json.dumps({
+            "entries": [
+                {"id": 1, "name": "Open White"},
+                {"id": 3, "name": "Blue"},
+            ],
+            "risk_tier": "SAFE_READ",
+        })
+
+        result = await validate_universal_preset_coverage("color", 1, 3)
+        data = json.loads(result)
+
+        assert data["missing_ids"] == [2]
+        assert data["coverage_percent"] == pytest.approx(66.7, rel=1e-2)
+
+
+class TestComparePatchToShowExpectation:
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_detects_missing_fixture_counts(self, mock_get_client):
+        from src.server import compare_patch_to_show_expectation
+
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(
+            return_value="101 Mac Aura XB\n102 Mac Aura XB\n201 Viper Profile\n"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = await compare_patch_to_show_expectation("Mac Aura XB=3, Viper Profile=1")
+        data = json.loads(result)
+
+        assert data["fit_status"] == "mismatch"
+        assert data["missing"][0]["fixture_type"] == "Mac Aura XB"
+
+
+class TestSnapshotProgrammerState:
+    @pytest.mark.asyncio
+    @patch("src.server._orchestrator")
+    async def test_snapshot_from_hydrated_state(self, mock_orch):
+        from src.server import snapshot_programmer_state
+
+        snap = MagicMock()
+        snap.selected_fixture_count = 4
+        snap.active_preset_type = "COLOR"
+        snap.active_feature = "Color"
+        snap.active_attribute = "Dimmer"
+        snap.selected_exec = "1.201"
+        snap.selected_exec_cue = "1"
+        snap.active_world = 2
+        snap.active_filter = 3
+        snap.console_modes = {"blind": True}
+        snap.parked_fixtures = {"101"}
+        snap.matricks = MagicMock(active=True)
+        snap.matricks.summary.return_value = "blocks=2 wings=1"
+        snap.age_seconds.return_value = 2.5
+        mock_orch.last_snapshot = snap
+
+        result = await snapshot_programmer_state()
+        data = json.loads(result)
+
+        assert data["snapshot"]["active_world"] == 2
+        assert "selected_fixture_count" in data["non_restorable_fields"]
+
+
+class TestRestoreProgrammerState:
+    @pytest.mark.asyncio
+    async def test_preview_only(self):
+        from src.server import restore_programmer_state
+
+        result = await restore_programmer_state(json.dumps({
+            "snapshot": {
+                "active_world": 2,
+                "active_filter": 3,
+                "selected_exec": "1.201",
+                "console_modes": {"blind": True},
+            }
+        }))
+        data = json.loads(result)
+
+        assert data["apply"] is False
+        assert "World 2" in data["planned_commands"]
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_apply_executes_commands(self, mock_get_client):
+        from src.server import restore_programmer_state
+
+        mock_client = MagicMock()
+        mock_client.send_command_with_response = AsyncMock(return_value="OK")
+        mock_get_client.return_value = mock_client
+
+        result = await restore_programmer_state(
+            json.dumps({"snapshot": {"active_world": 2, "selected_exec": "1.201", "console_modes": {}}}),
+            apply=True,
+        )
+        data = json.loads(result)
+
+        assert data["apply"] is True
+        assert len(data["executed"]) >= 2
+
+
+class TestGenerateSongMacroPack:
+    @pytest.mark.asyncio
+    async def test_builds_macro_draft(self):
+        from src.server import generate_song_macro_pack
+
+        result = await generate_song_macro_pack("Opening Song", sequence_id=12, start_macro_id=100, target_page=3)
+        data = json.loads(result)
+
+        assert data["macro_count"] == 7
+        assert data["macros"][0]["macro_id"] == 100
+        assert data["macros"][0]["label"] == "Opening Song - Load Song"

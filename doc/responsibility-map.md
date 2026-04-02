@@ -72,9 +72,9 @@ artifact in the Phase 1 architecture refactor based on the transcript's central 
 **Problem:** Executes tool calls in the same Python process. No fresh LLM context window.
 **Fix:** Wire a real subagent spawner via `sub_agent_fn` parameter. Requires Claude API / Agent SDK — out of MCP server scope. Document pattern for integrators.
 
-### S2 — Planner sees all 210 tools (Medium)
+### S2 — Planner sees all 218 tools (Medium)
 **Location:** `src/server.py` — all tools always registered at startup
-**Problem:** All 210 tools consume instruction budget in every session.
+**Problem:** All 218 tools consume instruction budget in every session.
 **Fix:** Use `suggest_tool_for_task` for pre-session retrieval. Long-term: FastMCP dynamic tool registration. See `doc/tool-surface-tiers.md`.
 
 ### S3 — TaskDecomposer has 3 hardcoded rules (Low)
