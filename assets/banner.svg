@@ -1,78 +1,96 @@
 <svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">MA2 Agent banner</title>
-  <desc id="desc">Dark production-style banner with red black white accents and bold MA2 Agent lettering.</desc>
+  <title id="title">MA2 Agent</title>
+  <desc id="desc">AI agent for grandMA2 lighting consoles — 218 MCP tools, 45 skills.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#050505"/>
-      <stop offset="0.55" stop-color="#0D0D0D"/>
-      <stop offset="1" stop-color="#141414"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A0A0A"/>
+      <stop offset="1" stop-color="#060606"/>
     </linearGradient>
-    <linearGradient id="accent" x1="1040" y1="90" x2="1520" y2="430" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FF2A2A"/>
-      <stop offset="0.55" stop-color="#D4141E"/>
-      <stop offset="1" stop-color="#7D0E15"/>
+
+    <!-- Beam — bright at source, fading out -->
+    <linearGradient id="beamFill1" x1="1520" y1="0" x2="600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF2222" stop-opacity="0.65"/>
+      <stop offset="0.35" stop-color="#FF1A1A" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#FF1111" stop-opacity="0"/>
     </linearGradient>
-    <linearGradient id="lineAccent" x1="260" y1="0" x2="1120" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FF2A2A"/>
-      <stop offset="1" stop-color="#B5121B"/>
+
+    <linearGradient id="beamFill2" x1="1600" y1="0" x2="900" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF2222" stop-opacity="0.4"/>
+      <stop offset="0.35" stop-color="#FF1A1A" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FF1111" stop-opacity="0"/>
     </linearGradient>
-    <filter id="glow" x="980" y="40" width="620" height="440" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="28"/>
-    </filter>
+
+    <!-- Source glow -->
+    <radialGradient id="srcGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FF3333" stop-opacity="0.7"/>
+      <stop offset="0.4" stop-color="#FF1111" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#FF0000" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Subtle ambient wash -->
+    <radialGradient id="ambient" cx="0.65" cy="0.15" r="0.65" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#FF1111" stop-opacity="0.035"/>
+      <stop offset="1" stop-color="#FF0000" stop-opacity="0"/>
+    </radialGradient>
   </defs>
 
+  <!-- Background -->
   <rect width="1600" height="520" fill="url(#bg)"/>
+  <rect width="1600" height="520" fill="url(#ambient)"/>
 
-  <g opacity="0.12" stroke="#FFFFFF">
-    <path d="M0 96H1600"/>
-    <path d="M0 160H1600"/>
-    <path d="M0 224H1600"/>
-    <path d="M0 288H1600"/>
-    <path d="M0 352H1600"/>
-    <path d="M0 416H1600"/>
-    <path d="M160 0V520"/>
-    <path d="M320 0V520"/>
-    <path d="M480 0V520"/>
-    <path d="M640 0V520"/>
-    <path d="M800 0V520"/>
-    <path d="M960 0V520"/>
-    <path d="M1120 0V520"/>
-    <path d="M1280 0V520"/>
-    <path d="M1440 0V520"/>
+  <!-- Beam 1 — primary, from top-right fanning down-left -->
+  <polygon points="1555,0 1600,0 920,520 680,520" fill="url(#beamFill1)"/>
+
+  <!-- Beam 2 — secondary, tighter -->
+  <polygon points="1600,0 1600,35 1120,520 980,520" fill="url(#beamFill2)"/>
+
+  <!-- Beam edge cores — thin bright lines -->
+  <line x1="1578" y1="0" x2="800" y2="520" stroke="#FF2A2A" stroke-width="0.8" opacity="0.25"/>
+  <line x1="1600" y1="18" x2="1050" y2="520" stroke="#FF2A2A" stroke-width="0.8" opacity="0.15"/>
+
+  <!-- Source glow -->
+  <circle cx="1590" cy="0" r="70" fill="url(#srcGlow)"/>
+
+  <!-- ══════════════════════════════════ -->
+  <!-- TYPOGRAPHY                         -->
+  <!-- ══════════════════════════════════ -->
+
+  <!-- Descriptor — y:80 -->
+  <text x="80" y="80" fill="#484848" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" letter-spacing="5">GRANDMA2 LIGHTING CONSOLE</text>
+
+  <!-- Red accent rule — y:96 -->
+  <rect x="80" y="96" width="70" height="2.5" rx="1.25" fill="#FF2A2A"/>
+
+  <!-- Main title — y:240, safe zone between y:130-260 -->
+  <text x="72" y="240" fill="#FFFFFF" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="138" font-weight="900" letter-spacing="2">MA2 AGENT</text>
+
+  <!-- Tagline — y:290, below title with 50px gap -->
+  <text x="84" y="290" fill="#3D3D3D" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" letter-spacing="6">PLAYBACK · PROGRAMMING · AUTOMATION</text>
+
+  <!-- ══════════════════════════════════ -->
+  <!-- STATS — y:440-470 zone            -->
+  <!-- ══════════════════════════════════ -->
+
+  <!-- Separator — y:410 -->
+  <rect x="80" y="410" width="360" height="1" fill="#1C1C1C"/>
+
+  <!-- Stats inline — y:450 -->
+  <g transform="translate(80, 450)">
+    <!-- 218 -->
+    <text x="0" y="0" fill="#FF2A2A" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="900">218</text>
+    <text x="56" y="0" fill="#3D3D3D" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" letter-spacing="3">TOOLS</text>
+
+    <!-- Dot -->
+    <circle cx="140" cy="-5" r="2" fill="#252525"/>
+
+    <!-- 45 -->
+    <text x="160" y="0" fill="#FF2A2A" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="900">45</text>
+    <text x="200" y="0" fill="#3D3D3D" font-family="Arial, Helvetica, sans-serif" font-size="13" font-weight="600" letter-spacing="3">SKILLS</text>
   </g>
 
-  <g opacity="0.16">
-    <path d="M0 462L352 110" stroke="#FFFFFF" stroke-width="1.5"/>
-    <path d="M132 520L612 40" stroke="#FFFFFF" stroke-width="1.5"/>
-    <path d="M1048 520L1556 12" stroke="#FFFFFF" stroke-width="1.5"/>
-  </g>
+  <!-- Bottom accent — faint red underline -->
+  <rect x="80" y="472" width="280" height="1.5" rx="0.75" fill="#FF2A2A" opacity="0.12"/>
 
-  <rect x="78" y="76" width="112" height="7" rx="3.5" fill="url(#lineAccent)"/>
-  <rect x="78" y="437" width="332" height="7" rx="3.5" fill="url(#lineAccent)"/>
-
-  <g opacity="0.12" filter="url(#glow)">
-    <circle cx="1290" cy="260" r="150" fill="#C2151D"/>
-  </g>
-
-  <g opacity="0.96">
-    <path d="M1122 98H1468V422H1122V98Z" fill="#0B0B0B" stroke="#2A2A2A" stroke-width="2"/>
-    <path d="M1148 124H1442V396H1148V124Z" fill="none" stroke="url(#accent)" stroke-width="2"/>
-    <path d="M1180 156H1410V364H1180V156Z" fill="#101010"/>
-    <path d="M1180 156H1296L1410 270V364H1180V156Z" fill="url(#accent)" opacity="0.95"/>
-    <path d="M1180 364L1410 156" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
-    <path d="M1180 260H1410" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
-    <path d="M1296 156V364" stroke="#F4EDE8" stroke-width="3" opacity="0.9"/>
-  </g>
-
-  <text x="78" y="172" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="7">
-    GRANDMA2 LIGHTING CONTROL
-  </text>
-
-  <text x="78" y="292" fill="#F8F2EC" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="140" font-weight="900" letter-spacing="4">
-    MA2 AGENT
-  </text>
-
-  <text x="84" y="364" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="4">
-    PLAYBACK  •  PROGRAMMING  •  AUTOMATION
-  </text>
+  <!-- MCP label — bottom right, barely visible -->
+  <text x="1520" y="492" fill="#1E1E1E" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="600" letter-spacing="4" text-anchor="end">MODEL CONTEXT PROTOCOL</text>
 </svg>
