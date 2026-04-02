@@ -232,6 +232,8 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "companion_button_press":       MA2Right.PLAYBACK,
     # ── BPM sync ────────────────────────────────────────────────────────
     "set_bpm":                      MA2Right.PLAYBACK,
+    # ── OSC output ──────────────────────────────────────────────────────
+    "send_osc":                     MA2Right.PLAYBACK,
 }
 
 # MA2 console error code for rights denial

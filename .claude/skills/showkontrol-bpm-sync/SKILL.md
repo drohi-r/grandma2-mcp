@@ -157,6 +157,37 @@ This approach is useful when the BPM source can only trigger MA2 macros (e.g., v
 
 ---
 
+## Phase 6: Resolume BPM Sync (Optional)
+
+If you're also running Resolume Arena/Avenue for visuals, you can sync BPM there too:
+
+```
+CDJs → ShowKontrol → MA2 (speed master via Telnet)
+                   ↘ Resolume (BPM via OSC)
+```
+
+### Option A: MA2 Agent sends BPM to both simultaneously
+
+Call both tools when BPM changes:
+1. `set_bpm(bpm=128)` — sets MA2 speed master
+2. `send_osc(address="/composition/tempocontroller/tempo", value=128.0, host="localhost", port=7000)` — sets Resolume tempo
+
+### Option B: ShowKontrol sends to Resolume directly
+
+ShowKontrol has native Resolume integration — configure it in ShowKontrol's output settings to send BPM to Resolume's OSC port (default 7000).
+
+### Useful Resolume OSC addresses
+
+| Address | Value | Effect |
+|---------|-------|--------|
+| `/composition/tempocontroller/tempo` | float (BPM) | Set composition tempo |
+| `/composition/layers/N/clips/M/connect` | int 1 | Trigger clip M on layer N |
+| `/composition/layers/N/video/opacity` | float 0.0-1.0 | Layer opacity |
+| `/composition/disconnectall` | int 1 | Clear all clips |
+| `/composition/tempocontroller/resync` | int 1 | Resync tempo to beat |
+
+---
+
 ## Allowed Tools
 
-`set_bpm`, `control_special_master`, `list_system_variables`, `get_executor_status`, `send_raw_command`, `playback_action`
+`set_bpm`, `send_osc`, `control_special_master`, `list_system_variables`, `get_executor_status`, `send_raw_command`, `playback_action`

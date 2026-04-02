@@ -429,10 +429,10 @@ _vocab_spec = build_v39_spec()
 # Create MCP server
 mcp = FastMCP(
     name="grandMA2-MCP",
-    instructions="""grandMA2 MCP server — 199 tools, 13 resources, 10 prompts.
+    instructions="""grandMA2 MCP server — 200 tools, 13 resources, 10 prompts.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
-Use ma2://docs/tool-taxonomy resource to browse all 199 tools by category.
+Use ma2://docs/tool-taxonomy resource to browse all 200 tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
@@ -7753,7 +7753,7 @@ async def _tool_caller(tool_name: str, inputs: dict):
     """
     Call any registered MCP tool function by name.
     Looks up the function from this module's global namespace at call time,
-    so all 165 tool definitions above are available.
+    so all 166 tool definitions above are available.
     """
     fn = sys.modules[__name__].__dict__.get(tool_name)
     if fn is None:
@@ -8442,6 +8442,98 @@ async def set_bpm(
 
 
 # ============================================================
+# OSC Output (Resolume, etc.)
+# ============================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.EXECUTOR_CTRL)
+@_handle_errors
+async def send_osc(
+    address: str,
+    value: float | int | str,
+    host: str = "localhost",
+    port: int = 7000,
+) -> str:
+    """
+    Send an OSC message to an external application like Resolume Arena (SAFE_WRITE).
+
+    Uses raw UDP — no extra dependencies. Works with any OSC-compatible software:
+    Resolume Arena/Avenue, QLab, TouchDesigner, Ableton, etc.
+
+    Common Resolume OSC addresses:
+      /composition/tempocontroller/tempo  — set BPM (float)
+      /composition/layers/N/clips/M/connect — trigger clip (int 1)
+      /composition/layers/N/video/opacity — layer opacity (float 0.0-1.0)
+      /composition/disconnectall — clear all clips (int 1)
+
+    Args:
+        address: OSC address pattern (e.g. "/composition/tempocontroller/tempo").
+        value: Value to send — float, int, or string.
+        host: Target host (default "localhost").
+        port: Target OSC port (default 7000, Resolume's default).
+
+    Returns:
+        str: JSON with address, value, host, port, status.
+
+    Examples:
+        - Set Resolume BPM: send_osc(address="/composition/tempocontroller/tempo", value=128.0)
+        - Trigger clip: send_osc(address="/composition/layers/1/clips/1/connect", value=1)
+        - Layer opacity: send_osc(address="/composition/layers/1/video/opacity", value=0.75)
+    """
+    import socket
+    import struct
+
+    def _build_osc_message(addr: str, val: float | int | str) -> bytes:
+        """Build a minimal OSC message packet."""
+        # Pad address to 4-byte boundary
+        addr_bytes = addr.encode("utf-8") + b"\x00"
+        while len(addr_bytes) % 4 != 0:
+            addr_bytes += b"\x00"
+
+        if isinstance(val, float):
+            type_tag = b",f\x00\x00"
+            val_bytes = struct.pack(">f", val)
+        elif isinstance(val, int):
+            type_tag = b",i\x00\x00"
+            val_bytes = struct.pack(">i", val)
+        else:
+            # String
+            s = str(val).encode("utf-8") + b"\x00"
+            while len(s) % 4 != 0:
+                s += b"\x00"
+            type_tag = b",s\x00\x00"
+            val_bytes = s
+
+        return addr_bytes + type_tag + val_bytes
+
+    try:
+        packet = _build_osc_message(address, value)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.sendto(packet, (host, port))
+        sock.close()
+
+        return json.dumps({
+            "status": "sent",
+            "address": address,
+            "value": value,
+            "host": host,
+            "port": port,
+            "packet_size": len(packet),
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "error": str(e),
+            "address": address,
+            "host": host,
+            "port": port,
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+
+
+# ============================================================
 # MCP Resources
 # Static and semi-static context exposed as URI-addressable docs
 # ============================================================
@@ -8485,7 +8577,7 @@ def resource_vocab_summary() -> str:
 @mcp.resource("ma2://docs/tool-taxonomy")
 def resource_tool_taxonomy() -> str:
     """
-    ML-generated tool taxonomy — 199 tools clustered into 14 categories.
+    ML-generated tool taxonomy — 200 tools clustered into 14 categories.
 
     Each entry includes tool name, category, and docstring summary.
     Use this resource to understand the tool landscape before calling
