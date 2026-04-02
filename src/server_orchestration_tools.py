@@ -1,5 +1,5 @@
 """
-server_orchestration_tools.py — Register 35 agentic MCP tools (110-144) onto the FastMCP instance.
+server_orchestration_tools.py — Register 34 agentic MCP tools (IDs 110-144, excluding 130) onto the FastMCP instance.
 
 Tools 110-118 bring the MA2 MCP server's agentic capability up to the multi-agent
 model: task decomposition, orchestrated execution, memory recall, token tracking,
@@ -10,7 +10,7 @@ with zero telnet cost (get_console_state, get_park_ledger, get_filter_state,
 get_world_state, get_matricks_state, get_programmer_selection, hydrate_sequences,
 get_sequence_memory, assert_selection_count, assert_preset_exists, get_executor_detail).
 
-Tools 130-133 provide state diff, showfile info, and system variable polling.
+Tools 131-133 provide state diff, showfile info, and system variable polling.
 
 Tools 134-136 are orchestration safety gates: confirm_destructive_steps, abort_task,
 and retry_failed_steps.
@@ -1503,4 +1503,3 @@ def register_orchestration_tools(
             "actual": live,
             "action": "Call hydrate_console_state to re-sync agent memory to the new show.",
         })
-

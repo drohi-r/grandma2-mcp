@@ -1,14 +1,14 @@
 ---
 title: Tool Surface Tiers
-description: Classification of all 176 MCP tools into planner-visible tiers A/B/C to manage context budget
+description: Classification of the 210-tool MCP surface into planner-visible tiers A/B/C to manage context budget
 version: 1.2.0
 created: 2026-03-29T21:44:45Z
-last_updated: 2026-03-31T23:56:48Z
+last_updated: 2026-04-02T04:16:48Z
 ---
 
 # Tool Surface Tiers
 
-The transcript's core observation: **176 tools always visible to the parent planner is a context budget risk**. This document classifies all tools into three tiers to guide future dynamic tool loading.
+The transcript's core observation: **210 tools always visible to the parent planner is a context budget risk**. This document classifies the current tool surface into three tiers to guide future dynamic tool loading.
 
 ---
 
@@ -44,7 +44,7 @@ These tools give the planner situational awareness and safe entrypoints. They co
 | `get_skill` | OpenSpace | Inspect skill body + lineage |
 | `get_tool_metrics` | OpenSpace | Tool failure/latency telemetry |
 | `get_improvement_suggestions` | OpenSpace | SkillImprover read-only |
-| `run_orchestrated_task` | Orchestration | Top-level planner entrypoint |
+| `run_agent_goal` | Orchestration | Top-level planner entrypoint for the agent harness |
 | `hydrate_console_state` | Orchestration | Snapshot all 19 memory gaps |
 | `send_raw_command` | Escape hatch | Direct MA2 command (safety-gated) |
 | `playback_action` | Playback | go/pause/goto on executors |
@@ -147,7 +147,7 @@ All workers return a **fixed envelope**:
 
 ## MCP Primitive Classification
 
-For the 176 tools, the question "is this really a tool?" has three answers:
+For the 210-tool surface, the question "is this really a tool?" has three answers:
 
 | If it… | Should be |
 |--------|-----------|

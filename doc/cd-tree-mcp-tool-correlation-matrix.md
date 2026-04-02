@@ -3,7 +3,7 @@ title: "CD Tree \u2194 MCP Tool Correlation Matrix"
 description: Maps every MCP tool to its grandMA2 console object tree branch for navigation-based verification
 version: 3.1.0
 created: 2026-03-08T23:31:47Z
-last_updated: 2026-03-31T23:56:48Z
+last_updated: 2026-04-02T04:16:48Z
 ---
 
 # CD Tree \u2194 MCP Tool Correlation Matrix
@@ -14,7 +14,7 @@ This document maps every MCP tool to the grandMA2 console object tree branch
 it operates on. Use this to know which `cd` + `list` path to inspect when
 verifying that an MCP tool actually created/modified/deleted the expected object.
 
-## Quick Reference: 176 MCP Tools → Tree Branches (143 interactive + 33 agentic)
+## Quick Reference: 210 MCP Tools → Tree Branches (176 server + 34 orchestration)
 
 ### Navigation & Inspection Tools (6)
 
@@ -278,4 +278,4 @@ delete_object("effect", 99, confirm_destructive=True)
 | Fixture Patching | 4 | `browse_patch_schedule`, `patch_fixture`, `unpatch_fixture`, `set_fixture_type_property` |
 | User Management | 4 | `list_console_users`, `create_console_user`, `assign_world_to_user_profile`, `inspect_sessions` |
 | Utility | 5 | `clear_programmer`, `park_fixture`/`unpark_fixture`, `manage_variable`, `send_raw_command`, `search_codebase` |
-| **Total** | **89** | *(54 additional interactive tools + 33 agentic tools [110-143] not mapped to cd tree branches)* |
+| **Total** | **89** | *(87 additional server tools + 34 orchestration tools [IDs 110-144, excluding 130] not mapped to cd tree branches)* |

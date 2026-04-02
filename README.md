@@ -3,7 +3,7 @@ title: MA2 Agent
 description: AI agent for grandMA2 lighting consoles — 210 MCP tools via Telnet
 version: 1.0.0
 created: 2025-11-04T17:05:43Z
-last_updated: 2026-04-02T00:00:00Z
+last_updated: 2026-04-02T04:31:14Z
 ---
 
 <p align="center">
@@ -17,7 +17,7 @@ last_updated: 2026-04-02T00:00:00Z
   <a href="https://github.com/drohi-r/grandma2-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Python-3.12%2B-blue?style=for-the-badge" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/MCP_Tools-210-FF2020?style=for-the-badge" alt="210 MCP Tools">
-  <img src="https://img.shields.io/badge/Tests-2768-FF2020?style=for-the-badge" alt="2768 Tests">
+  <img src="https://img.shields.io/badge/Tests-2773-FF2020?style=for-the-badge" alt="2773 Tests">
 </p>
 
 > Forked from [thisis-romar/ma2-onPC-MCP](https://github.com/thisis-romar/ma2-onPC-MCP) (originally built by [chienchuanw](https://github.com/chienchuanw)) — hardened and maintained by [@drohi-r](https://github.com/drohi-r).
@@ -63,8 +63,8 @@ uv run python -m src.server  # starts MCP server (stdio transport)
 
 ```mermaid
 graph TD
-    H["🤖 Agent Core Layer<br/><code>src/server_orchestration_tools.py</code><br/>34 tools (110–144) · orchestrator · skills"] --> A
-    A["🎭 MCP Server Layer<br/><code>src/server.py</code><br/>210 tools · safety gate"] --> B
+    H["🤖 Agent Core Layer<br/><code>src/server_orchestration_tools.py</code><br/>34 tools (IDs 110–144, excluding 130) · orchestrator · skills"] --> A
+    A["🎭 MCP Server Layer<br/><code>src/server.py</code><br/>176 server tools · safety gate"] --> B
     B["🧭 Navigation Layer<br/><code>src/navigation.py</code><br/>cd · list · scan · set_property"] --> C
     C["🔧 Command Builders<br/><code>src/commands/</code><br/>198 pure functions → strings"] --> D
     D["📡 Telnet Client<br/><code>src/telnet_client.py</code><br/>async · auth · injection prevention"]
@@ -95,8 +95,8 @@ MA2 Agent is a **layered hybrid** — the boundary is explicit in the code:
 
 | Layer | What it is | Key files |
 |-------|-----------|-----------|
-| **Bottom 210 tools** | **Agent Harness** — exposes a tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
-| **Top 34 tools** | **Embedded Agent Core** — orchestrator, task decomposer, long-term memory, skill registry | `src/server_orchestration_tools.py`, `src/orchestrator.py` |
+| **Bottom 176 server tools** | **Agent Harness** — exposes the core MCP tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
+| **Top 34 orchestration tools** | **Embedded Agent Core** — orchestrator, task decomposer, long-term memory, skill registry | `src/server_orchestration_tools.py`, `src/orchestrator.py` |
 
 The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and MA2 Agent becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
 
@@ -105,7 +105,7 @@ The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool call
 | Module | Role |
 |--------|------|
 | `src/server.py` | FastMCP server, 176 interactive tools, safety gate, env config |
-| `src/server_orchestration_tools.py` | 34 agentic tools (110–144) registered onto FastMCP |
+| `src/server_orchestration_tools.py` | 34 agentic tools (IDs 110–144, excluding 130) registered onto FastMCP |
 | `src/orchestrator.py` | Multi-agent task runner: hydration, risk-tier isolation, LTM; `_showfile_guard()`, `check_showfile()` for dynamic show change detection |
 | `src/task_decomposer.py` | Natural-language goal → ordered SubTask plan (rule-based) |
 | `src/agent_memory.py` | WorkingMemory (ephemeral) + LongTermMemory (SQLite session log) + showfile baseline tracking (`baseline_showfile`, `showfile_changed()`) |
@@ -620,7 +620,7 @@ Read from the cached snapshot — **no telnet round-trips required**.
 | `retry_failed_steps` | Reload a past session from LTM and re-run the original goal |
 | `assert_fixture_exists` | Two-tier fixture patch validation (snapshot index → live telnet fallback) |
 
-#### OpenSpace Layer — Telemetry, Skills & Improvement (Tools 110–144)
+#### OpenSpace Layer — Telemetry, Skills & Improvement (Tool IDs 110–144, excluding 130)
 
 | Tool | Scope | Description |
 |------|-------|-------------|
@@ -673,7 +673,7 @@ Thirteen read-only resources exposable to any MCP client. Use them for zero-teln
 |-----|-------------|
 | `ma2://docs/rights-matrix` | OAuth scope → MA2Right mapping matrix (JSON) |
 | `ma2://docs/vocab-summary` | All 157 keywords with RiskTier and category (JSON) |
-| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 176 base tools clustered into 14 categories (JSON) |
+| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 210 tools clustered into 14 categories (JSON) |
 | `ma2://docs/responsibility-map` | Module responsibility map for architectural decisions (Markdown) |
 | `ma2://docs/tool-surface-tiers` | Tier A/B/C classification for every tool (Markdown) |
 | `ma2://docs/volunteer-guide` | Plain-language volunteer operator guide: three-tier access model + Sunday preflight |
@@ -706,7 +706,7 @@ Ten workflow prompts that orchestrate tools into guided multi-step procedures.
 
 ## Agent Skills
 
-Instruction modules (`.claude/skills/`) that are injected as user messages into agent conversations. They teach agents domain-specific workflows without embedding knowledge in tool docstrings.
+Forty-four instruction modules in `.claude/skills/` are injected as user messages into agent conversations. They teach agents domain-specific workflows without embedding knowledge in tool docstrings.
 
 | Skill | Description |
 |-------|-------------|
@@ -714,16 +714,23 @@ Instruction modules (`.claude/skills/`) that are injected as user messages into 
 | `telnet-feedback-triage` | Classify and summarise grandMA2 Telnet feedback using the `FeedbackClass` enum |
 | `feedback-investigator` | Worker playbook: classify and investigate Telnet feedback failures |
 | `cue-list-auditor` | Worker playbook: audit cue list gaps, labels, timing, and health |
+| `operator-recovery-runbook` | On-site incident response for stuck playback, contaminated programmer, wrong world/filter, and similar show emergencies |
 | `busking-lighting-performance` | Live busking — fader-per-effect model, executor layout, effect layering, live recovery |
 | `song-macro-page-design` | Song macro pages — first-button protocol, executor column layout, jump target safety |
 | `constrained-color-design` | Monochromatic HSB palette design — preset numbering, color lock, song-to-palette mapping |
 | `preset-library-architect` | Build full dimmer/position/color/gobo preset pools from raw attribute values |
+| `preset-impact-manager` | Assess preset updates or deletions safely by tracing downstream cue and showfile references |
 | `patch-and-group-builder` | Patch fixtures, build groups by type/position, and verify selection counts |
+| `festival-stage-setup` | End-to-end one-off festival workflow from patched rig to busking-ready showfile |
+| `fixture-swap-surgeon` | Analyze fixture substitutions and plan compatible swap + migration steps |
 | `chaser-builder` | Step-based chasers, running lights via MAtricks, strobes — speed/rate/direction control |
 | `cue-tracking-and-timing` | Tracking vs non-tracking, Block/Unblock, MIB, timing layers, trigger types, Update vs Store |
+| `tracking-debugger` | Diagnose tracking leaks, unexpected blocks, and cue inheritance problems in sequences |
+| `cue-to-cue-rehearsal` | Guided cue-by-cue walkthrough with state summaries and cue diffs during rehearsal |
 | `executor-configuration` | Executor priority, trigger types, fader functions, speed masters, protect options |
 | `show-management-and-psr` | Save/Load/New show (connectivity preservation), PSR workflow, Export/Import XML |
 | `macro-advanced` | SetVar/SetUserVar, conditionals, CmdDelay, jump targets, XML authoring, Store Group timing |
+| `macro-linter-and-refactorer` | Inspect macros for unsafe patterns, broken jumps, and cleanup opportunities |
 | `clone-and-data-transfer` | Clone fixture with `/selective`, copy/move pool objects, cue-range copy, cross-show PSR |
 | `effect-programmer` | Build effects from scratch, layer rate/speed/phase, assign to executors |
 | `world-filter-designer` | Create worlds, assign fixtures, configure filter objects, control visibility |
@@ -735,6 +742,9 @@ Instruction modules (`.claude/skills/`) that are injected as user messages into 
 | `sequence-executor-assigner` | Assign a sequence to a free executor so it appears as a playback fader |
 | `rdm-workflow` | RDM discovery → device info → autopatch workflow via MCP |
 | `lua-and-plugins` | Lua 5.2 scripting with `gma.*` namespace, plugin invocation, and reload lifecycle |
+| `troubleshoot-no-output` | Systematic no-output diagnostic from Grand Master and worlds down to DMX and fixture-level faults |
+| `companion-integration` | Build Bitfocus Companion button pages that mirror the MA2 executor layout |
+| `showkontrol-bpm-sync` | Sync CDJ tempo from ShowKontrol into MA2 speed masters for live BPM-locked effects |
 | `psr-show-migration` | PSR with pre-flight slot check, fixture ID verification, and post-import diff |
 | `compliance-documentation` | Generate SB 132 / insurance audit reports from session telemetry — SAFE_READ only |
 | `volunteer-operations` | Three-tier access model, Sunday morning preflight, and incident response for non-programmers |
@@ -758,7 +768,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "gma2": {
       "command": "uv",
-      "args": ["--directory", "/path/to/ma2-onPC-MCP", "run", "python", "-m", "src.server"],
+      "args": ["--directory", "/path/to/grandma2-mcp", "run", "python", "-m", "src.server"],
       "env": {
         "GMA_HOST": "192.168.1.100",
         "GMA_USER": "administrator",
@@ -1184,10 +1194,10 @@ The command builder layer (`src/commands/`) generates grandMA2 command strings a
 ## Project Structure
 
 ```
-ma2-onPC-MCP/
+grandma2-mcp/
 ├── src/
 │   ├── server.py                           # FastMCP server (176 interactive tools)
-│   ├── server_orchestration_tools.py       # Agentic layer (tools 110–144)
+│   ├── server_orchestration_tools.py       # Agentic layer (34 tools, IDs 110–144 excluding 130)
 │   │
 │   │   # Orchestration & Memory
 │   ├── orchestrator.py                     # Multi-agent task runner + session memory

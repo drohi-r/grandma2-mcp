@@ -1,8 +1,8 @@
 {
   "name": "ma2-onpc-mcp",
-  "displayName": "ma2 onPC MCP",
-  "description": "Registers ma2 onPC MCP server for AI assistants via MCP stdio transport.",
-  "version": "0.0.1",
+  "displayName": "MA2 Agent",
+  "description": "Registers the MA2 Agent MCP server for AI assistants via MCP stdio transport.",
+  "version": "1.0.0",
   "engines": {
     "vscode": ">=1.80.0"
   },
@@ -15,7 +15,7 @@
     "mcpServerDefinitionProviders": [
       {
         "id": "ma2-onpc-mcp.mcp-servers",
-        "label": "ma2 onPC MCP Servers"
+        "label": "MA2 Agent Servers"
       }
     ]
   },

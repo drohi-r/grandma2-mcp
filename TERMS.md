@@ -1,9 +1,9 @@
 ---
 title: Terms of Use
-description: Hardware safety disclaimers, liability limitations, acceptable use policy, and network security warnings for ma2-onPC-MCP
+description: Hardware safety disclaimers, liability limitations, acceptable use policy, and network security warnings for MA2 Agent
 version: 1.0.0
 created: 2026-04-01T00:00:00Z
-last_updated: 2026-04-01T00:00:00Z
+last_updated: 2026-04-02T04:16:48Z
 ---
 
 # Terms of Use
@@ -12,7 +12,7 @@ last_updated: 2026-04-01T00:00:00Z
 
 **THIS SOFTWARE CONTROLS PHYSICAL LIGHTING EQUIPMENT.**
 
-ma2-onPC-MCP issues commands over a network connection to grandMA2 lighting consoles and software. Commands sent through this software can:
+MA2 Agent issues commands over a network connection to grandMA2 lighting consoles and software. Commands sent through this software can:
 
 - Change or extinguish stage lighting during live performances
 - Overwrite or delete show programming stored on the console
@@ -83,7 +83,7 @@ This software is designed for:
 
 **California SB 132 (effective July 2025)** establishes documentation requirements for AI-assisted work on covered productions.
 
-ma2-onPC-MCP provides telemetry logging (`tool_invocations` table, `generate_compliance_report` tool) that can assist in meeting SB 132 documentation obligations. However:
+MA2 Agent provides telemetry logging (`tool_invocations` table, `generate_compliance_report` tool) that can assist in meeting SB 132 documentation obligations. However:
 
 - **Compliance with SB 132 remains solely the operator's and producer's responsibility.**
 - This software does not guarantee that its audit trails satisfy any specific regulatory requirement.
@@ -97,7 +97,7 @@ ma2-onPC-MCP provides telemetry logging (`tool_invocations` table, `generate_com
 
 **grandMA2 consoles ship with Telnet (port 30000) unauthenticated by default.**
 
-Anyone with network access to port 30000 on your MA2 console can issue any console command without authentication. ma2-onPC-MCP does not add authentication to the Telnet connection itself; it adds an OAuth scope layer in the MCP server that governs which AI-issued commands are permitted.
+Anyone with network access to port 30000 on your MA2 console can issue any console command without authentication. MA2 Agent does not add authentication to the Telnet connection itself; it adds an OAuth scope layer in the MCP server that governs which AI-issued commands are permitted.
 
 **Operator responsibilities:**
 

@@ -1,16 +1,16 @@
 ---
 title: OpenSpace Framework Comparison Audit
-description: Feature-by-feature comparison of ma2-onPC-MCP against the OpenSpace self-evolving skill framework, with gap analysis and prioritised roadmap
+description: Feature-by-feature comparison of MA2 Agent against the OpenSpace self-evolving skill framework, with gap analysis and prioritised roadmap
 version: 1.5.0
 created: 2026-03-29T16:59:35Z
-last_updated: 2026-04-01T00:25:43Z
+last_updated: 2026-04-02T04:16:48Z
 ---
 
 # OpenSpace Framework Comparison Audit
 
 ## Context
 
-This audit compares **ma2-onPC-MCP** against the **OpenSpace** self-evolving skill framework.
+This audit compares **MA2 Agent** against the **OpenSpace** self-evolving skill framework.
 The goal is to produce an honest, evidence-based gap analysis — not a marketing comparison — so that
 any decision to close the gap is grounded in what the code actually does today.
 
@@ -21,9 +21,9 @@ All findings were verified directly against the repository source as of 2026-03-
 
 ## 1. What Each System Is
 
-### ma2-onPC-MCP
+### MA2 Agent
 
-An MCP server that exposes **177 tools** so AI assistants can control a grandMA2 lighting console
+An MCP server that exposes **210 tools** so AI assistants can control a grandMA2 lighting console
 via Telnet. Its own README describes it as:
 
 > "an agent-ready, syntax-aware Telnet control server for MA Lighting grandMA2 consoles"
@@ -49,7 +49,7 @@ The core claim is that agents improve themselves without human intervention.
 
 ## 2. Feature-by-Feature Comparison Table
 
-| OpenSpace Capability | Present in ma2-onPC-MCP? | Evidence / Location |
+| OpenSpace Capability | Present in MA2 Agent? | Evidence / Location |
 |---|---|---|
 | Self-evolution engine | ❌ Absent | No execution-monitoring hooks; no mutation logic anywhere in `src/` |
 | AutoFix (broken skills) | ❌ Absent | Safety tiers prevent harm but don't auto-repair |
@@ -59,14 +59,14 @@ The core claim is that agents improve themselves without human intervention.
 | Skill evolution dashboard | ❌ Absent | No React dashboard |
 | CloudSkill community / registry | ❌ Absent | RAG store is local SQLite only (`rag/store/rag.db`) |
 | Token efficiency tracking | ⚠️ Partial | Session-level `token_spend` / `charge_tokens()` / `token_report()` in `WorkingMemory` (`src/agent_memory.py:96,210–220`). Per-MCP-tool invocation instrumentation is absent. |
-| MCP integration | ✅ Excellent | 177 tools (143 in `server.py` + 34 in `server_orchestration_tools.py`), stdio transport, Claude Desktop + VS Code configs |
+| MCP integration | ✅ Excellent | 210 tools (176 in `server.py` + 34 in `src/server_orchestration_tools.py`), stdio transport, Claude Desktop + VS Code configs |
 | Python 3.12 | ✅ Yes | `.python-version` file |
 | MIT license | ⚠️ No — Apache 2.0 | `LICENSE` file |
-| Benchmark / metrics pipeline | ❌ Absent | 2355 unit tests exist but no performance-benchmark loop |
+| Benchmark / metrics pipeline | ❌ Absent | 2773 tests exist but no performance-benchmark loop |
 
 ---
 
-## 3. Where ma2-onPC-MCP Is Genuinely Strong
+## 3. Where MA2 Agent Is Genuinely Strong
 
 These are areas the OpenSpace framework design does not address, where this repo outperforms
 OpenSpace's stated architecture.
@@ -87,7 +87,7 @@ this. For a system controlling live physical hardware, this safety model is more
 
 ### 3.2 MCP tool quality
 
-177 tools across 14 categories, pure-function command builders in `src/commands/`,
+210 tools across 15 server categories plus a 34-tool orchestration layer, pure-function command builders in `src/commands/`,
 structured schemas, VS Code extension, Claude Desktop config. This is production-grade MCP work.
 
 ### 3.3 RAG pipeline
@@ -229,7 +229,7 @@ This is the lowest priority relative to Layers 1–3.
 ## 6. Domain-Specific Safety Constraint OpenSpace Never Raises
 
 In OpenSpace, a broken skill failing to fix itself wastes tokens.
-In ma2-onPC-MCP, a broken skill or an autonomous repair gone wrong can:
+In MA2 Agent, a broken skill or an autonomous repair gone wrong can:
 - corrupt a live show mid-performance,
 - issue `delete` or `store` commands that overwrite programming,
 - sever the Telnet connection by inadvertently calling `new_show` without `/globalsettings`.
@@ -295,7 +295,7 @@ args and returns a `DecisionCheckpoint` object — the correct API used everywhe
 | Improvement loop | ⚠️ Partial — suggestions generated; promotion is manual (by design) |
 | Next milestone | Layer 3 auto-repair: apply `RepairSuggestion` hints after operator review |
 
-ma2-onPC-MCP is an **execution/control plane with an emerging learning layer**.
+MA2 Agent is an **execution/control plane with an emerging learning layer**.
 OpenSpace is a **learning/evolution plane**. The repo has closed the telemetry and
 skill-artifact gaps. The remaining distance is the autonomous improvement loop —
 intentionally gated behind human approval for a live-hardware control system.

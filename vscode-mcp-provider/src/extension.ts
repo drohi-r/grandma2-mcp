@@ -5,7 +5,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.lm.registerMcpServerDefinitionProvider('ma2-onpc-mcp.mcp-servers', {
             provideMcpServerDefinitions: async () => [
                 new vscode.McpStdioServerDefinition(
-                    'ma2 onPC MCP',
+                    'MA2 Agent',
                     'uv',
                     ['run', 'python', '-m', 'src.server'],
                     {}, // Optionally pass .env variables here

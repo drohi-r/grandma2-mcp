@@ -428,7 +428,7 @@ _vocab_spec = build_v39_spec()
 
 # Create MCP server
 mcp = FastMCP(
-    name="grandMA2-MCP",
+    name="MA2 Agent",
     instructions="""grandMA2 MCP server — 210 tools, 13 resources, 10 prompts.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
@@ -437,7 +437,7 @@ Use ma2://docs/tool-taxonomy resource to browse all 210 tools by category.
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
   Plan     → inspect + list_system_variables + suggest_tool_for_task
-  Execute  → run_orchestrated_task (handles preflight, execution, verification)
+  Execute  → run_task (rule-based orchestration) or run_agent_goal (agent harness)
 
 SAFETY: DESTRUCTIVE tools require confirm_destructive=True.
 Rights: read ma2://docs/rights-matrix before any mutating operation.
@@ -12313,6 +12313,7 @@ def _build_tool_registry() -> dict:
 
 
 @mcp.tool()
+@require_scope(OAuthScope.SYSTEM_ADMIN)
 @_handle_errors
 async def run_agent_goal(
     goal: str,
@@ -12332,8 +12333,8 @@ async def run_agent_goal(
         goal: Natural language goal, e.g. "Patch 8 Mac 700 fixtures
             starting at address 1.001 and assign to executor 1"
         auto_confirm: If True, auto-confirm all destructive steps.
-            If False (default), destructive steps are auto-confirmed
-            when executed through this tool.
+            If False (default), destructive steps remain blocked unless
+            the runtime can obtain an explicit confirmation callback.
         dry_run: If True, generate and validate the plan but do NOT
             execute it. Returns the plan and policy warnings.
 
@@ -12368,12 +12369,13 @@ async def run_agent_goal(
 
     trace = await runtime.run(
         goal,
-        on_confirm=_auto_confirm if auto_confirm else _auto_confirm,
+        on_confirm=_auto_confirm if auto_confirm else None,
     )
     return trace.to_json()
 
 
 @mcp.tool()
+@require_scope(OAuthScope.DISCOVER)
 @_handle_errors
 async def plan_agent_goal(goal: str) -> str:
     """Generate a plan for a goal WITHOUT executing it.

@@ -1,14 +1,14 @@
 ---
 title: Transcript Architecture Audit
-description: Audit of ma2-onPC-MCP against 10 agent architecture concepts from a Claude Code video transcript
+description: Audit of MA2 Agent against 10 agent architecture concepts from a Claude Code video transcript
 version: 1.2.0
 created: 2026-03-29T21:20:36Z
-last_updated: 2026-03-31T23:56:48Z
+last_updated: 2026-04-02T04:16:48Z
 ---
 
 # Transcript Architecture Audit
 
-Audit of the ma2-onPC-MCP repo against 10 architectural concepts extracted from a
+Audit of the MA2 Agent repo against 10 architectural concepts extracted from a
 Claude Code / agent architecture video transcript. Each concept is evaluated against
 the repo's current implementation and assigned a status, severity, and recommended action.
 
@@ -26,7 +26,7 @@ the repo's current implementation and assigned a status, severity, and recommend
 | 2.3 | Skills as versioned, lineage-tracked playbooks | **Partial** | Medium | [§2.3](#23-skills-versioned-playbooks) |
 | 2.4 | Progressive disclosure (lazy file loading) | **Gap** | Low | [§2.4](#24-progressive-disclosure) |
 | 3.1 | Instruction budget awareness | **Gap** | Medium | [§3.1](#31-instruction-budget-awareness) |
-| 3.2 | Tool explosion (176 tools) | **Partial** | Medium | [§3.2](#32-tool-explosion) |
+| 3.2 | Tool explosion (210 tools) | **Partial** | Medium | [§3.2](#32-tool-explosion) |
 | 3.3 | Tool search mitigation | **Partial** | Medium | [§3.3](#33-tool-search-mitigation) |
 | 4.1-4.2 | Disable-model-invocation / prompt guarding | **N/A** | — | [§4](#4-skill-invocation-control) |
 | 5.1 | Monorepo preference | **Aligned** | — | [§5.1](#51-monorepo-preference) |
@@ -205,7 +205,7 @@ performance. 90+ tools → significant degradation.
 
 | What | Evidence |
 |------|----------|
-| 176 tools always loaded into every session | `src/server.py` (143) + `src/server_orchestration_tools.py` (33) |
+| 210 tools always loaded into every session | `src/server.py` (176) + `src/server_orchestration_tools.py` (34) |
 | No per-session tool surface restriction | — |
 | No budget tracking for tool schema tokens | — |
 | `suggest_tool_for_task` provides retrieval but doesn't restrict loaded tools | `src/server.py:6968` |
@@ -230,7 +230,7 @@ context degradation when multiple MCP servers are combined.
 
 | What | Evidence |
 |------|----------|
-| 176 tools in a single server | `src/server.py`, `src/server_orchestration_tools.py` |
+| 210 tools in a single server | `src/server.py`, `src/server_orchestration_tools.py` |
 | `categorize_tools` script groups tools into clusters | `scripts/categorize_tools.py` |
 | `suggest_tool_for_task` provides targeted retrieval | `src/server.py:6968–7060` |
 | Tools are domain-grouped by `FunctionalDomain` in `vocab.py` | `src/vocab.py` |
