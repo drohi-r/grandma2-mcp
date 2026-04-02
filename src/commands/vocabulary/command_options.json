@@ -1,0 +1,525 @@
+{
+  "version": "1.0",
+  "schema": "ma2.command.options.v1",
+  "source": "grandMA2 User Manual v3.9 + codebase analysis (2026-03-03)",
+  "notes": [
+    "Options use /keyword or /keyword=value syntax on the grandMA2 command line.",
+    "Three types: flag (no value), bool (=true/=false), value (=<string>).",
+    "list_impact: none = pure execution modifier, content = changes property values at existing element-indexes, structural = changes list total / adds or removes element-indexes."
+  ],
+  "cross_cutting_options": [
+    {
+      "keyword": "noconfirm",
+      "alias": "nc",
+      "type": "flag",
+      "description": "Suppress confirmation pop-up dialogs. Pure execution modifier.",
+      "functions": ["Store", "Delete", "Copy", "Assign", "Edit"],
+      "list_impact": "none",
+      "value_constraints": null,
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_FLAG_OPTIONS + assignment.py + edit.py"
+    },
+    {
+      "keyword": "quiet",
+      "alias": "q",
+      "type": "flag",
+      "description": "Suppress command feedback in the command line response area. Pure execution modifier.",
+      "functions": ["Store", "List", "Copy", "Delete", "Move"],
+      "list_impact": "none",
+      "value_constraints": null,
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_FLAG_OPTIONS"
+    },
+    {
+      "keyword": "merge",
+      "alias": null,
+      "type": "flag",
+      "description": "Merge new values into existing stored data without removing old values.",
+      "functions": ["Store", "Copy"],
+      "list_impact": "content",
+      "value_constraints": null,
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_FLAG_OPTIONS + edit.py"
+    },
+    {
+      "keyword": "overwrite",
+      "alias": null,
+      "type": "flag",
+      "description": "Remove existing stored values and replace with new values.",
+      "functions": ["Store", "Copy"],
+      "list_impact": "content",
+      "value_constraints": null,
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_FLAG_OPTIONS + edit.py"
+    },
+    {
+      "keyword": "cueonly",
+      "alias": null,
+      "type": "bool",
+      "description": "Prevent stored changes from tracking forward into subsequent cues.",
+      "functions": ["Store", "Copy", "Delete"],
+      "list_impact": "content",
+      "value_constraints": ["true", "false"],
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_BOOL_OPTIONS + edit.py"
+    },
+    {
+      "keyword": "status",
+      "alias": null,
+      "type": "bool",
+      "description": "Include or exclude tracking status data in the operation.",
+      "functions": ["Copy", "Call", "At"],
+      "list_impact": "none",
+      "value_constraints": ["true", "false"],
+      "in_codebase": true,
+      "codebase_location": "edit.py + call.py + values.py"
+    },
+    {
+      "keyword": "x",
+      "alias": null,
+      "type": "value",
+      "description": "X coordinate for layout positioning.",
+      "functions": ["Store", "Assign"],
+      "list_impact": "content",
+      "value_constraints": "integer (pixel or grid position)",
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_VALUE_OPTIONS + assignment.py"
+    },
+    {
+      "keyword": "y",
+      "alias": null,
+      "type": "value",
+      "description": "Y coordinate for layout positioning.",
+      "functions": ["Store", "Assign"],
+      "list_impact": "content",
+      "value_constraints": "integer (pixel or grid position)",
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_VALUE_OPTIONS + assignment.py"
+    },
+    {
+      "keyword": "filename",
+      "alias": "f",
+      "type": "value",
+      "description": "Export list output to a CSV file in the console's reports folder.",
+      "functions": ["List"],
+      "list_impact": "none",
+      "value_constraints": "string (filename without extension)",
+      "in_codebase": true,
+      "codebase_location": "info.py:list_objects, list_cue, list_group, list_attribute, list_messages"
+    },
+    {
+      "keyword": "condition",
+      "alias": "cnd",
+      "type": "value",
+      "description": "Filter list output by condition. View-only filter, does not change stored data.",
+      "functions": ["List"],
+      "list_impact": "content",
+      "value_constraints": "string (filter expression)",
+      "in_codebase": true,
+      "codebase_location": "info.py:list_objects, list_messages"
+    },
+    {
+      "keyword": "path",
+      "alias": "p",
+      "type": "value",
+      "description": "Filesystem path for Import/Export operations.",
+      "functions": ["Import", "Export"],
+      "list_impact": "none",
+      "value_constraints": "string (filesystem path)",
+      "in_codebase": false,
+      "codebase_location": null,
+      "notes": "Requires Import/Export command builders (not yet implemented)."
+    },
+    {
+      "keyword": "values",
+      "alias": null,
+      "type": "bool",
+      "description": "Filter or enable the value layer in store/at operations.",
+      "functions": ["Store", "At"],
+      "list_impact": "none",
+      "value_constraints": ["true", "false"],
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_BOOL_OPTIONS + values.py"
+    },
+    {
+      "keyword": "valuetimes",
+      "alias": null,
+      "type": "bool",
+      "description": "Filter or enable the value times layer in store/at operations.",
+      "functions": ["Store", "At"],
+      "list_impact": "none",
+      "value_constraints": ["true", "false"],
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_BOOL_OPTIONS + values.py"
+    },
+    {
+      "keyword": "effects",
+      "alias": null,
+      "type": "bool",
+      "description": "Filter or enable the effect layer in store/at operations.",
+      "functions": ["Store", "At"],
+      "list_impact": "none",
+      "value_constraints": ["true", "false"],
+      "in_codebase": true,
+      "codebase_location": "constants.py:STORE_BOOL_OPTIONS + values.py"
+    }
+  ],
+  "function_options": {
+    "Store": {
+      "notes": "Store options are centralized in constants.py and built via _build_store_options() in helpers.py.",
+      "options": [
+        {
+          "keyword": "remove",
+          "type": "flag",
+          "description": "Remove stored values for attributes that have active values in the programmer.",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "global",
+          "type": "flag",
+          "description": "Store preset with global scope (values applied regardless of fixture selection).",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "selective",
+          "type": "flag",
+          "description": "Store preset with selective scope (values applied only to selected fixtures).",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "universal",
+          "type": "flag",
+          "description": "Store preset with universal scope (values applied to all fixtures of matching type).",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "auto",
+          "type": "flag",
+          "description": "Store preset with default (automatic) scope selection.",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "trackingshield",
+          "type": "flag",
+          "description": "Use tracking shield when storing cue values.",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "embedded",
+          "type": "flag",
+          "description": "Create an embedded preset within the target preset slot.",
+          "list_impact": "structural",
+          "value_constraints": null,
+          "notes": "Creates a new sub-entry in the preset pool, increasing list total."
+        },
+        {
+          "keyword": "tracking",
+          "type": "bool",
+          "description": "Enable or disable tracking when storing cue values.",
+          "list_impact": "content",
+          "value_constraints": ["true", "false"]
+        },
+        {
+          "keyword": "keepactive",
+          "type": "bool",
+          "description": "Keep programmer values active after storing.",
+          "list_impact": "none",
+          "value_constraints": ["true", "false"]
+        },
+        {
+          "keyword": "presetfilter",
+          "type": "bool",
+          "description": "Enable or disable preset filter during store.",
+          "list_impact": "none",
+          "value_constraints": ["true", "false"]
+        },
+        {
+          "keyword": "addnewcontent",
+          "type": "bool",
+          "description": "Add new content to the target when merging.",
+          "list_impact": "none",
+          "value_constraints": ["true", "false"]
+        },
+        {
+          "keyword": "originalcontent",
+          "type": "bool",
+          "description": "Store original content source references.",
+          "list_impact": "none",
+          "value_constraints": ["true", "false"]
+        },
+        {
+          "keyword": "source",
+          "type": "value",
+          "description": "Data source for the store operation.",
+          "list_impact": "none",
+          "value_constraints": ["Prog", "Output", "DmxIn"]
+        },
+        {
+          "keyword": "useselection",
+          "type": "value",
+          "description": "Selection scope for the store operation.",
+          "list_impact": "none",
+          "value_constraints": ["Active", "Allforselected", "Activeforselected", "All", "Look"]
+        },
+        {
+          "keyword": "screen",
+          "type": "value",
+          "description": "Target screen number for the store operation.",
+          "list_impact": "none",
+          "value_constraints": "integer (1-6)"
+        }
+      ]
+    },
+    "At": {
+      "notes": "At options are built manually in values.py (not via _build_store_options).",
+      "options": [
+        {
+          "keyword": "layer",
+          "type": "value",
+          "description": "Target programmer layer for value assignment.",
+          "list_impact": "none",
+          "value_constraints": "string (layer name)"
+        },
+        {
+          "keyword": "ignoreselection",
+          "type": "flag",
+          "description": "Override current fixture selection and apply to all fixtures.",
+          "list_impact": "none",
+          "value_constraints": null
+        },
+        {
+          "keyword": "disablecolortransform",
+          "type": "flag",
+          "description": "Disable automatic color space transformation.",
+          "list_impact": "none",
+          "value_constraints": null
+        },
+        {
+          "keyword": "prefercolorwheel",
+          "type": "flag",
+          "description": "Prefer color wheel over color mixing when setting colors.",
+          "list_impact": "none",
+          "value_constraints": null
+        },
+        {
+          "keyword": "prefermixcolor",
+          "type": "flag",
+          "description": "Prefer color mixing over color wheel when setting colors.",
+          "list_impact": "none",
+          "value_constraints": null
+        },
+        {
+          "keyword": "prefercolorboth",
+          "type": "flag",
+          "description": "Use both color wheel and color mixing when setting colors.",
+          "list_impact": "none",
+          "value_constraints": null
+        }
+      ]
+    },
+    "Assign": {
+      "notes": "Assign options are built manually in assignment.py.",
+      "options": [
+        {
+          "keyword": "break",
+          "type": "value",
+          "description": "DMX patch break number for multi-break fixtures.",
+          "list_impact": "content",
+          "value_constraints": "integer (break number)"
+        },
+        {
+          "keyword": "multipatch",
+          "type": "value",
+          "description": "Multipatch slot number for fixture patching.",
+          "list_impact": "content",
+          "value_constraints": "integer (slot number)"
+        },
+        {
+          "keyword": "reset",
+          "type": "flag",
+          "description": "Remove existing DMX patch assignment.",
+          "list_impact": "structural",
+          "value_constraints": null,
+          "notes": "Removes DMX entries from list under DMX universe."
+        },
+        {
+          "keyword": "special",
+          "type": "value",
+          "description": "Preset mode for executor assignment.",
+          "list_impact": "content",
+          "value_constraints": "string (mode name)"
+        },
+        {
+          "keyword": "cue_mode",
+          "type": "value",
+          "description": "Cue execution mode for the assigned executor.",
+          "list_impact": "content",
+          "value_constraints": "string (mode name)"
+        },
+        {
+          "keyword": "password",
+          "type": "value",
+          "description": "Password for user assignment operations.",
+          "list_impact": "content",
+          "value_constraints": "string (password)"
+        }
+      ]
+    },
+    "Playback": {
+      "notes": "Playback options apply to Go, GoBack, Goto commands in playback.py.",
+      "options": [
+        {
+          "keyword": "cue_mode",
+          "type": "value",
+          "description": "Override the cue execution mode for this playback action.",
+          "list_impact": "content",
+          "value_constraints": "string (mode name)"
+        },
+        {
+          "keyword": "userprofile",
+          "type": "value",
+          "description": "Target user profile for the playback action.",
+          "list_impact": "none",
+          "value_constraints": "string (profile name or ID)"
+        }
+      ]
+    },
+    "Call": {
+      "notes": "Call options are built manually in call.py.",
+      "options": [
+        {
+          "keyword": "layer",
+          "type": "flag",
+          "description": "Target specific layer for the call operation.",
+          "list_impact": "none",
+          "value_constraints": null
+        },
+        {
+          "keyword": "screen",
+          "type": "flag",
+          "description": "Target specific screen for the call operation.",
+          "list_impact": "none",
+          "value_constraints": null
+        },
+        {
+          "keyword": "toggle_activation",
+          "type": "flag",
+          "description": "Toggle the activation state of the called object.",
+          "list_impact": "content",
+          "value_constraints": null
+        }
+      ]
+    },
+    "Copy": {
+      "notes": "Copy-specific options in edit.py (cross-cutting options also apply).",
+      "options": []
+    },
+    "Delete": {
+      "notes": "Delete-specific options in edit.py (cross-cutting options also apply).",
+      "options": [
+        {
+          "keyword": "deletevalues",
+          "type": "flag",
+          "description": "Remove attribute values from the cue without deleting the cue itself.",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "region",
+          "type": "flag",
+          "description": "Delete a layout region from the target object.",
+          "list_impact": "structural",
+          "value_constraints": null,
+          "notes": "Removes entries from layout tree listing."
+        },
+        {
+          "keyword": "element",
+          "type": "flag",
+          "description": "Delete a layout element from the target object.",
+          "list_impact": "structural",
+          "value_constraints": null,
+          "notes": "Removes entries from layout tree listing."
+        }
+      ]
+    },
+    "Edit": {
+      "notes": "Edit options in edit.py.",
+      "options": []
+    },
+    "Appearance": {
+      "notes": "Appearance options are built manually in labeling.py.",
+      "options": [
+        {
+          "keyword": "reset",
+          "type": "flag",
+          "description": "Reset appearance to default values.",
+          "list_impact": "content",
+          "value_constraints": null
+        },
+        {
+          "keyword": "color",
+          "type": "value",
+          "description": "Set appearance color as a hex string.",
+          "list_impact": "content",
+          "value_constraints": "string (hex color, e.g., FF0000)"
+        },
+        {
+          "keyword": "r",
+          "type": "value",
+          "description": "Red component (0-100 or 0-255).",
+          "list_impact": "content",
+          "value_constraints": "integer"
+        },
+        {
+          "keyword": "g",
+          "type": "value",
+          "description": "Green component (0-100 or 0-255).",
+          "list_impact": "content",
+          "value_constraints": "integer"
+        },
+        {
+          "keyword": "b",
+          "type": "value",
+          "description": "Blue component (0-100 or 0-255).",
+          "list_impact": "content",
+          "value_constraints": "integer"
+        },
+        {
+          "keyword": "h",
+          "type": "value",
+          "description": "Hue component (0-360).",
+          "list_impact": "content",
+          "value_constraints": "integer (0-360)"
+        },
+        {
+          "keyword": "s",
+          "type": "value",
+          "description": "Saturation component (0-100).",
+          "list_impact": "content",
+          "value_constraints": "integer (0-100)"
+        },
+        {
+          "keyword": "br",
+          "type": "value",
+          "description": "Brightness component (0-100).",
+          "list_impact": "content",
+          "value_constraints": "integer (0-100)"
+        }
+      ]
+    },
+    "Import": {
+      "notes": "Import command builder not yet implemented. Options documented for future use.",
+      "options": []
+    },
+    "Export": {
+      "notes": "Export command builder not yet implemented. Options documented for future use.",
+      "options": []
+    }
+  }
+}

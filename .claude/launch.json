@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mcp-sse",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-c", "from src.server import mcp; mcp.run(transport='sse')"],
+      "port": 8000
+    },
+    {
+      "name": "mcp-streamable-http",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "python", "-c", "from src.server import mcp; mcp.run(transport='streamable-http')"],
+      "port": 8000
+    },
+    {
+      "name": "pytest",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "pytest", "-v", "-m", "not live"],
+      "port": 0
+    },
+    {
+      "name": "mcp-inspector",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "mcp", "dev", "src/server.py"],
+      "port": 6274
+    }
+  ]
+}

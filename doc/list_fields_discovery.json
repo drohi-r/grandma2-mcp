@@ -1,0 +1,316 @@
+{
+  "Sequence": [
+    {
+      "command": "List Sequence 201",
+      "note": "Color Palette Profiles (8 cues)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Sequence 201\n\r         No.  Name            Track  ReleaseFirststep  CueZero  CueZeroExtract  InputFilter  TimecodeSlot   Info  ForcedPos.mode  \n\rSequ 201 201  Profiles Color  On     On                Off      Off             None         Link Selected        Pan/Tilt         (8)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Sequence 202",
+      "note": "Color Palette Washes (8 cues)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Sequence 202\n\r         No.  Name          Track  ReleaseFirststep  CueZero  CueZeroExtract  InputFilter  TimecodeSlot   Info  ForcedPos.mode  \n\rSequ 202 202  Washes Color  On     On                Off      Off             None         Link Selected        Pan/Tilt         (8)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Cue": [
+    {
+      "command": "List Cue Sequence 201",
+      "note": "All cues in sequence 201",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Cue Sequence 201\n\r      Number  MIB  Trig  TrigTime  Mode    Loop  Lcount    Ltime     \n\rCue 1 1            Go              Normal  None  Infinite  Infinite   (1)\n\rCue 2 2            Go              Normal  None  Infinite  Infinite   (1)\n\rCue 3 3            Go              Normal  None  Infinite  Infinite   (1)\n\rCue 4 4            Go              Normal  None  Infinite  Infinite   (1)\n\rCue 5 5            Go              Normal  None  Infinite  Infinite   (1)\n\rCue 6 6            "
+    },
+    {
+      "command": "List Cue 1 Sequence 201",
+      "note": "Cue 1 of sequence 201",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Cue 1 Sequence 201\n\r      Number  MIB  Trig  TrigTime  Mode    Loop  Lcount    Ltime     \n\rCue 1 1            Go              Normal  None  Infinite  Infinite   (1)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Cue 8 Sequence 201",
+      "note": "Cue 8 of sequence 201",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Cue 8 Sequence 201\n\r      Number  MIB  Trig  TrigTime  Mode    Loop  Lcount    Ltime     \n\rCue 8 8            Go              Normal  None  Infinite  Infinite   (1)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Group": [
+    {
+      "command": "List Group 1",
+      "note": "First group",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Group 1\n\r        No.  Name      Info  \n\rGroup 1 1    FOH Warm\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Group 13",
+      "note": "Viper Profiles group",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Group 13\n\r         No.  Name      Info  \n\rGroup 13 13   Profiles\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Group 15",
+      "note": "Washes group",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Group 15\n\r         No.  Name        Info  \n\rGroup 15 15   All Movers\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Preset": [
+    {
+      "command": "List Preset 1.1",
+      "note": "Dimmer - Full",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Preset 1.1\n\r           No.  Name  Special  Info  \n\rDimmer 1.1 1.1  Full  Normal\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Preset 2.1",
+      "note": "Position - Home",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Preset 2.1\n\r             No.  Name  Special  Info  \n\rPosition 2.1 2.1  Home  Normal\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Preset 3.1",
+      "note": "Gobo - Open",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Preset 3.1\n\r         No.  Name  Special  Info  \n\rGobo 3.1 3.1  Open  Normal\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Preset 4.1",
+      "note": "Color - White",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Preset 4.1\n\r          No.  Name   Special  Info  \n\rColor 4.1 4.1  White  Normal\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Preset 4.5",
+      "note": "Color - Amber",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Preset 4.5\n\r          No.  Name   Special  Info  \n\rColor 4.5 4.5  Amber  Normal\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Fixture": [
+    {
+      "command": "List Fixture 111",
+      "note": "Mac 700 Profile #1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Fixture 111\n\r            Name      FixId  ChaId  FixtureType                 Patch   NoParameters  PosX  PosY  PosZ  RotX  RotY  RotZ  Info  RDMID  \n\rFixture 111 Mac700 1  111    111    3 Mac 700 Profile Extended   2.001  No            0.00  0.00  0.00  0.00  0.00  0.00                (1)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Fixture 120",
+      "note": "Mac Viper Profile #1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Fixture 120\n\r            Name   FixId  ChaId  FixtureType                 Patch   NoParameters  PosX  PosY  PosZ  RotX  RotY  RotZ  Info  RDMID  \n\rFixture 120 Viper  120    120    4 Mac Viper Profile 16 bit   3.001  No            0.00  0.00  0.00  0.00  0.00  0.00                (1)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Fixture 201",
+      "note": "Mac Quantum Wash #1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Fixture 201\n\r            Name       FixId  ChaId  FixtureType               Patch   NoParameters  PosX  PosY  PosZ  RotX  RotY  RotZ  Info  RDMID  \n\rFixture 201 Quantum W  201    201    5 Mac Quantum Wash Basic   4.001  No            0.00  0.00  0.00  0.00  0.00  0.00                (1)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Channel": [
+    {
+      "command": "List Channel 111",
+      "note": "Channel for fixture 111",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Channel 111\n\r            Name      FixId  ChaId  FixtureType                 Patch   NoParameters  PosX  PosY  PosZ  RotX  RotY  RotZ  Info  RDMID  \n\rFixture 111 Mac700 1  111    111    3 Mac 700 Profile Extended   2.001  No            0.00  0.00  0.00  0.00  0.00  0.00                (1)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Channel 201",
+      "note": "Channel for fixture 201",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Channel 201\n\r            Name       FixId  ChaId  FixtureType               Patch   NoParameters  PosX  PosY  PosZ  RotX  RotY  RotZ  Info  RDMID  \n\rFixture 201 Quantum W  201    201    5 Mac Quantum Wash Basic   4.001  No            0.00  0.00  0.00  0.00  0.00  0.00                (1)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Macro": [
+    {
+      "command": "List Macro",
+      "note": "All macros (probe)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Macro\n\r        No.  Name                 CLI  Timing  Info  \n\rMacro 1 1    MAtricks Filter Off  On   On             (1)\n\rMacro 2 2    MAtricks Reset       On   On             (1)\n\rMacro 4 4    MAtricks Reset#2     On   On             (1)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Macro 1",
+      "note": "Macro 1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Macro 1\n\r        No.  Name                 CLI  Timing  Info  \n\rMacro 1 1    MAtricks Filter Off  On   On             (1)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Filter": [
+    {
+      "command": "List Filter 3",
+      "note": "Filter slot 3",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Filter 3\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Filter 10",
+      "note": "Filter slot 10",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Filter 10\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Filter 50",
+      "note": "Filter slot 50",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Filter 50\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Effect": [
+    {
+      "command": "List Effect",
+      "note": "All effects (probe)",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Effect\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Effect 1",
+      "note": "Effect 1",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Effect 1\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Layout": [
+    {
+      "command": "List Layout",
+      "note": "All layouts (probe)",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Layout\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Layout 1",
+      "note": "Layout 1",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Layout 1\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "View": [
+    {
+      "command": "List View",
+      "note": "All views (probe)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List View\n\r       No.  Name         Screen  Info  \n\rView 1 1    View 1       2              (11)\n\rView 2 2    MATricks     2              (2)\n\rView 3 3    View 3       2              (2)\n\rView 4 4    View 4       2              (2)\n\rView 5 5    Seq Content  1              (1)\n\rView 6 6    Seq Exec     1              (1)\n\rView 7 7    View 7       4              (7)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List View 1",
+      "note": "View 1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List View 1\n\r       No.  Name    Screen  Info  \n\rView 1 1    View 1  2              (11)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Timecode": [
+    {
+      "command": "List Timecode",
+      "note": "All timecodes (probe)",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Timecode\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Timecode 1",
+      "note": "Timecode 1",
+      "status": "empty",
+      "fields": {},
+      "raw_truncated": "Executing : List Timecode 1\n\rWARNING, NO OBJECTS FOUND FOR LIST\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Timer": [
+    {
+      "command": "List Timer",
+      "note": "All timers (probe)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Timer\n\r        No.  Name       TimerMode  WhenRestarting  TimeUnit       ExecTrigger  AlertType     AlertRange  CountdownTime  AlertDuration  AlertCommand  AlertText  Info  \n\rTimer 1 1    Stopwatch  Stopwatch  Continue        1/100 Seconds  Not Linked   Popup & Beep  Local       10             Infinite\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Timer 1",
+      "note": "Timer 1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Timer 1\n\r        No.  Name       TimerMode  WhenRestarting  TimeUnit       ExecTrigger  AlertType     AlertRange  CountdownTime  AlertDuration  AlertCommand  AlertText  Info  \n\rTimer 1 1    Stopwatch  Stopwatch  Continue        1/100 Seconds  Not Linked   Popup & Beep  Local       10             Infinite\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "World": [
+    {
+      "command": "List World 1",
+      "note": "World 1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List World 1\n\r        No.  Name  Info  \n\rWorld 1 1    Full\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "MAtricks": [
+    {
+      "command": "List MAtricks 1",
+      "note": "MAtricks slot 1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List MAtricks 1\n\r           No.  Name   Info  \n\rMAtricks 1 1    Reset\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List MAtricks 2",
+      "note": "MAtricks slot 2",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List MAtricks 2\n\r           No.  Name         Info  \n\rMAtricks 2 2    W0-G0-B0-I0\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Page": [
+    {
+      "command": "List Page 1",
+      "note": "Page 1",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Page 1\n\r       No.  Name  Info  \n\rPage 1 1    Page         (13)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Page 2",
+      "note": "Page 2 (Sat Bands)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Page 2\n\r       No.  Name       Info  \n\rPage 2 2    Sat Bands         (8)\n\r\r [Fixture]>\u001b[K"
+    },
+    {
+      "command": "List Page 3",
+      "note": "Page 3 (Hue Faders)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Page 3\n\r       No.  Name        Info  \n\rPage 3 3    Hue Faders         (13)\n\r\r [Fixture]>\u001b[K"
+    }
+  ],
+  "Plugin": [
+    {
+      "command": "List Plugin",
+      "note": "All plugins (probe)",
+      "status": "no_fields",
+      "fields": {},
+      "raw_truncated": "Executing : List Plugin\n\r         No.  Name  ExecuteOnLoad  Info  \n\rPlugin 1 1    LUA   No\n\r\r [Fixture]>\u001b[K"
+    }
+  ]
+}

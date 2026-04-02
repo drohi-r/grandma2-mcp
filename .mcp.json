@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "time": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-time"],
+      "env": {}
+    }
+  }
+}

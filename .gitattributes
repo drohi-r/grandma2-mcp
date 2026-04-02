@@ -1,0 +1,2 @@
+# Ensure shell scripts always use LF line endings
+.githooks/pre-commit text eol=lf

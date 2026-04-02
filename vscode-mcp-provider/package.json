@@ -1,0 +1,32 @@
+{
+  "name": "ma2-onpc-mcp",
+  "displayName": "ma2 onPC MCP",
+  "description": "Registers ma2 onPC MCP server for AI assistants via MCP stdio transport.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": ">=1.80.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "ma2-onpc-mcp.mcp-servers",
+        "label": "ma2 onPC MCP Servers"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "dependencies": {}
+}

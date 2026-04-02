@@ -1,0 +1,53 @@
+# env
+.env
+
+# venv
+.venv/
+
+# vscode
+.vscode/
+
+# Python
+__pycache__/
+.pytest_cache/
+
+# log
+*.log
+
+# augment
+.augment/
+
+# Node
+node_modules/
+
+# Build output
+dist/
+
+# Data dumps / scan artifacts
+scan_output*.json
+scan_output*.jsonl
+*.progress.jsonl
+scan_full_log*.txt
+gma2_full_tree.txt
+test_cd_behavior_output.json
+keyword_combos*.json
+
+# Telnet output artifacts
+macro_telnet_output.txt
+macro_v2_output.txt
+
+# RAG database and crawl cache
+rag/store/*.db
+rag/store/web_crawl_cache.json
+
+# Tool categorization taxonomy (generated artifact)
+src/categorization/taxonomy.json
+*.taxonomy.json
+
+# KMeans clustering data artifacts (too large for RAG chunker)
+doc/grandMA2_KMeans_Complete.json
+.claude/settings.local.json
+
+# Agent harness runtime artifacts
+agent_data/
+agent_traces/

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+# Incrementally re-indexes the RAG database before each commit.
+# Uses zero-vector provider (no API calls) — fast, no token required.
+# To rebuild with semantic embeddings run manually:
+#   uv run python scripts/rag_ingest.py --provider github
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "[RAG] Re-indexing changed files..."
+uv run python scripts/rag_ingest.py --root . --ref worktree --provider zero
+
+echo "[RAG] Index up to date."
