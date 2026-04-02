@@ -7753,7 +7753,7 @@ async def _tool_caller(tool_name: str, inputs: dict):
     """
     Call any registered MCP tool function by name.
     Looks up the function from this module's global namespace at call time,
-    so all 109 tool definitions above are available.
+    so all 162 tool definitions above are available.
     """
     fn = sys.modules[__name__].__dict__.get(tool_name)
     if fn is None:

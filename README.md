@@ -1,7 +1,7 @@
 ---
 title: MA2 Agent
 description: AI agent for grandMA2 lighting consoles — 196 MCP tools via Telnet
-version: 4.0.0
+version: 1.0.0
 created: 2025-11-04T17:05:43Z
 last_updated: 2026-04-02T00:00:00Z
 ---
@@ -17,7 +17,7 @@ last_updated: 2026-04-02T00:00:00Z
   <a href="https://github.com/drohi-r/grandma2-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Python-3.12%2B-blue?style=for-the-badge" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/MCP_Tools-196-FF2020?style=for-the-badge" alt="196 MCP Tools">
-  <img src="https://img.shields.io/badge/Tests-2578-FF2020?style=for-the-badge" alt="2578 Tests">
+  <img src="https://img.shields.io/badge/Tests-2735-FF2020?style=for-the-badge" alt="2735 Tests">
 </p>
 
 > Forked from [thisis-romar/ma2-onPC-MCP](https://github.com/thisis-romar/ma2-onPC-MCP) (originally built by [chienchuanw](https://github.com/chienchuanw)) — hardened and maintained by [@drohi-r](https://github.com/drohi-r). See [DEDICATION.md](DEDICATION.md) for the original author's tribute.
@@ -104,7 +104,7 @@ The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool call
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server, 143 interactive tools, safety gate, env config |
+| `src/server.py` | FastMCP server, 162 interactive tools, safety gate, env config |
 | `src/server_orchestration_tools.py` | 34 agentic tools (110–144) registered onto FastMCP |
 | `src/orchestrator.py` | Multi-agent task runner: hydration, risk-tier isolation, LTM; `_showfile_guard()`, `check_showfile()` for dynamic show change detection |
 | `src/task_decomposer.py` | Natural-language goal → ordered SubTask plan (rule-based) |
@@ -673,7 +673,7 @@ Thirteen read-only resources exposable to any MCP client. Use them for zero-teln
 |-----|-------------|
 | `ma2://docs/rights-matrix` | OAuth scope → MA2Right mapping matrix (JSON) |
 | `ma2://docs/vocab-summary` | All 157 keywords with RiskTier and category (JSON) |
-| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 150 base tools clustered into 14 categories (JSON) |
+| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 162 base tools clustered into 14 categories (JSON) |
 | `ma2://docs/responsibility-map` | Module responsibility map for architectural decisions (Markdown) |
 | `ma2://docs/tool-surface-tiers` | Tier A/B/C classification for every tool (Markdown) |
 | `ma2://docs/volunteer-guide` | Plain-language volunteer operator guide: three-tier access model + Sunday preflight |
@@ -1186,7 +1186,7 @@ The command builder layer (`src/commands/`) generates grandMA2 command strings a
 ```
 ma2-onPC-MCP/
 ├── src/
-│   ├── server.py                           # FastMCP server (143 interactive tools)
+│   ├── server.py                           # FastMCP server (162 interactive tools)
 │   ├── server_orchestration_tools.py       # Agentic layer (tools 110–144)
 │   │
 │   │   # Orchestration & Memory

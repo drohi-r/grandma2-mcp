@@ -1,7 +1,7 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 4.8.0
+version: 1.0.0
 created: 2026-03-01T23:37:51Z
 last_updated: 2026-04-01T00:25:43Z
 ---
@@ -22,7 +22,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server — 157 tools + 13 MCP resources + 10 MCP prompts, safety gate |
+| `src/server.py` | FastMCP server — 162 tools + 13 MCP resources + 10 MCP prompts, safety gate |
 | `src/server_orchestration_tools.py` | Registers tools 110-144 (agentic layer) onto FastMCP |
 | `src/telnet_client.py` | Async Telnet (telnetlib3), auth, send/receive, injection prevention |
 | `src/session_manager.py` | Per-operator Telnet session pool (LRU, keepalive, auto-reconnect) |
@@ -125,7 +125,7 @@ make install-hooks
 - Unit tests import command builders or vocab directly and assert on returned strings.
 - No live console required; live tests are in `tests/test_live_integration.py` (skipped by default).
 - Use `@pytest.mark.asyncio` for async tests.
-- Current counts (2026-04-01): **2355 tests** (unit + live integration).
+- Current counts (2026-04-02): **2735 tests** (unit + live integration).
 
 ---
 

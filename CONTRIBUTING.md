@@ -88,7 +88,7 @@ All PRs must pass the full test suite before review:
 uv run python -m pytest -v
 ```
 
-Current baseline: **2355 tests** (unit + live integration). Live integration tests are skipped by default (`tests/test_live_integration.py` requires `RUN_LIVE_TESTS=1`).
+Current baseline: **2735 tests** (unit + live integration). Live integration tests are skipped by default (`tests/test_live_integration.py` requires `RUN_LIVE_TESTS=1`).
 
 - Add tests for every new command builder in `tests/test_<feature>.py`.
 - Add tests for every new MCP tool in `tests/test_tools.py` or a feature-specific file.
