@@ -227,6 +227,9 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "auto_number_cues":             MA2Right.PROGRAM,
     "compare_cue_values":           MA2Right.NONE,
     "diagnose_no_output":           MA2Right.NONE,
+    # ── Companion integration ───────────────────────────────────────────
+    "generate_companion_config":    MA2Right.NONE,
+    "companion_button_press":       MA2Right.PLAYBACK,
 }
 
 # MA2 console error code for rights denial

@@ -429,10 +429,10 @@ _vocab_spec = build_v39_spec()
 # Create MCP server
 mcp = FastMCP(
     name="grandMA2-MCP",
-    instructions="""grandMA2 MCP server — 196 tools, 13 resources, 10 prompts.
+    instructions="""grandMA2 MCP server — 198 tools, 13 resources, 10 prompts.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
-Use ma2://docs/tool-taxonomy resource to browse all 196 tools by category.
+Use ma2://docs/tool-taxonomy resource to browse all 198 tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
@@ -7753,7 +7753,7 @@ async def _tool_caller(tool_name: str, inputs: dict):
     """
     Call any registered MCP tool function by name.
     Looks up the function from this module's global namespace at call time,
-    so all 162 tool definitions above are available.
+    so all 164 tool definitions above are available.
     """
     fn = sys.modules[__name__].__dict__.get(tool_name)
     if fn is None:
@@ -8195,6 +8195,194 @@ async def diagnose_no_output(
 
 
 # ============================================================
+# Bitfocus Companion Integration Tools
+# ============================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.STATE_READ)
+@_handle_errors
+async def generate_companion_config(
+    page: int = 1,
+    companion_page: int = 1,
+    grid_columns: int = 8,
+) -> str:
+    """
+    Generate a Bitfocus Companion .companionconfig page from the current MA2 executor layout (SAFE_READ).
+
+    Reads the executor page and builds a Companion-importable JSON config
+    with one button per assigned executor. Each button sends the appropriate
+    Go+ command via Companion's grandMA2 telnet module.
+
+    The output is a JSON string in Companion v4 page-export format. Save it
+    to a .companionconfig file and import via Companion UI → Buttons → Import.
+
+    Args:
+        page: MA2 executor page to export (default 1).
+        companion_page: Target Companion page number (default 1).
+        grid_columns: Companion grid width — 8 for Stream Deck XL, 5 for Stream Deck (default 8).
+
+    Returns:
+        str: JSON with companion_config (the importable config), executor_count, and instructions.
+
+    Examples:
+        - Export page 1: generate_companion_config()
+        - Export page 2 for Stream Deck: generate_companion_config(page=2, grid_columns=5)
+    """
+    client = await get_client()
+
+    # Read the executor page layout
+    scan_result = await scan_page_executor_layout(page=page)
+    scan_data = json.loads(scan_result) if isinstance(scan_result, str) else scan_result
+
+    executors = scan_data.get("executors", [])
+    if not executors and "error" in scan_data:
+        return json.dumps({
+            "error": f"Could not read executor page {page}: {scan_data.get('error')}",
+            "risk_tier": "SAFE_READ",
+        }, indent=2)
+
+    # Build Companion page config
+    controls: dict[str, dict] = {}
+    button_count = 0
+
+    for exec_info in executors:
+        exec_id = exec_info.get("executor_id") or exec_info.get("id")
+        if exec_id is None:
+            continue
+
+        label = exec_info.get("label") or exec_info.get("name") or f"Exec {exec_id}"
+        has_sequence = exec_info.get("sequence_id") is not None or exec_info.get("assigned")
+
+        # Grid position
+        row = button_count // grid_columns
+        col = button_count % grid_columns
+
+        # Button color: dark blue for assigned, dark gray for empty
+        bgcolor = 1315860 if has_sequence else 2105376  # #141414 vs #202020
+
+        controls[f"{row}/{col}"] = {
+            "type": "button",
+            "style": {
+                "text": str(label)[:12],
+                "size": "auto",
+                "color": 16777215,  # white text
+                "bgcolor": bgcolor,
+            },
+            "options": {"relativeDelay": False},
+            "feedbacks": [],
+            "steps": {
+                "0": {
+                    "action_sets": {
+                        "down": [
+                            {
+                                "actionId": "command",
+                                "options": {
+                                    "command": f"Go+ Executor {page}.{exec_id}",
+                                },
+                            }
+                        ],
+                        "up": [],
+                    }
+                }
+            },
+        }
+        button_count += 1
+
+    max_row = max(0, (button_count - 1) // grid_columns)
+    companion_config = {
+        "version": 4,
+        "type": "page",
+        "page": {
+            "name": f"MA2 Page {page}",
+            "gridSize": {
+                "minColumn": 0,
+                "maxColumn": grid_columns - 1,
+                "minRow": 0,
+                "maxRow": max_row,
+            },
+            "controls": controls,
+        },
+    }
+
+    return json.dumps({
+        "companion_config": companion_config,
+        "executor_count": button_count,
+        "companion_page": companion_page,
+        "ma2_page": page,
+        "grid_columns": grid_columns,
+        "risk_tier": "SAFE_READ",
+        "instructions": (
+            "Save the 'companion_config' value to a .companionconfig file, "
+            "then import in Companion UI → Buttons → Import. "
+            "Make sure the grandMA2 connection module is configured with "
+            "the correct console IP and Telnet credentials."
+        ),
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.PLAYBACK_GO)
+@_handle_errors
+async def companion_button_press(
+    page: int,
+    button: int,
+    host: str = "localhost",
+    port: int = 8000,
+) -> str:
+    """
+    Press a button on a running Bitfocus Companion instance via HTTP API (SAFE_WRITE).
+
+    Sends a GET request to Companion's REST API to trigger a button press.
+    Companion must be running and accessible at the specified host/port.
+
+    Args:
+        page: Companion page number (1-based).
+        button: Button index on the page (0-based).
+        host: Companion host (default "localhost").
+        port: Companion HTTP API port (default 8000).
+
+    Returns:
+        str: JSON with status, url_called, response text.
+
+    Examples:
+        - Press button 0 on page 1: companion_button_press(page=1, button=0)
+        - Remote Companion: companion_button_press(page=1, button=3, host="192.168.1.50")
+    """
+    import urllib.request
+    import urllib.error
+
+    url = f"http://{host}:{port}/press/bank/{page}/{button}"
+
+    try:
+        req = urllib.request.Request(url, method="GET")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            return json.dumps({
+                "status": "ok",
+                "http_status": resp.status,
+                "url_called": url,
+                "response": body[:500],
+                "risk_tier": "SAFE_WRITE",
+            }, indent=2)
+    except urllib.error.URLError as e:
+        return json.dumps({
+            "status": "error",
+            "error": f"Could not reach Companion at {url}: {e.reason}",
+            "url_called": url,
+            "hint": "Ensure Bitfocus Companion is running and the HTTP API is enabled.",
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+    except TimeoutError:
+        return json.dumps({
+            "status": "error",
+            "error": f"Timeout connecting to Companion at {url}",
+            "url_called": url,
+            "risk_tier": "SAFE_WRITE",
+        }, indent=2)
+
+
+# ============================================================
 # MCP Resources
 # Static and semi-static context exposed as URI-addressable docs
 # ============================================================
@@ -8238,7 +8426,7 @@ def resource_vocab_summary() -> str:
 @mcp.resource("ma2://docs/tool-taxonomy")
 def resource_tool_taxonomy() -> str:
     """
-    ML-generated tool taxonomy — 196 tools clustered into 14 categories.
+    ML-generated tool taxonomy — 198 tools clustered into 14 categories.
 
     Each entry includes tool name, category, and docstring summary.
     Use this resource to understand the tool landscape before calling

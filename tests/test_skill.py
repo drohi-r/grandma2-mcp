@@ -283,7 +283,7 @@ class TestSearch:
         for _ in range(3):
             reg.save(_make_skill(id=str(uuid.uuid4())))
         # 3 DB skills + 37 filesystem skills
-        assert len(reg.list_all()) == 40
+        assert len(reg.list_all()) == 41
 
     def test_search_no_matches(self, reg):
         reg.save(_make_skill())
@@ -305,7 +305,7 @@ class TestListAll:
         for i in range(5):
             reg.save(_make_skill(id=str(uuid.uuid4()), name=f"s{i}"))
         # 5 DB skills + 34 filesystem skills = 39 total (capped at limit=50)
-        assert len(reg.list_all()) == 42
+        assert len(reg.list_all()) == 43
 
     def test_respects_limit(self, reg):
         for i in range(30):
@@ -315,7 +315,7 @@ class TestListAll:
     def test_empty_db_returns_filesystem_skills(self, reg):
         # When DB has no rows, list_all() falls back to filesystem skills
         skills = reg.list_all()
-        assert len(skills) == 37  # all .claude/skills/ directories
+        assert len(skills) == 38  # all .claude/skills/ directories
 
 
 # ---------------------------------------------------------------------------
@@ -475,7 +475,7 @@ class TestFilesystemSkillLoading:
 
     def test_list_filesystem_skills_count(self):
         skills = _list_filesystem_skills()
-        assert len(skills) == 37
+        assert len(skills) == 38
 
     def test_list_filesystem_skills_approval_matches_scope(self):
         skills = _list_filesystem_skills()
@@ -502,7 +502,7 @@ class TestFilesystemSkillLoading:
         ids = {s.id for s in skills}
         assert "fs:ma2-command-rules" in ids
         assert "fs:chaser-builder" in ids
-        assert len(skills) == 37
+        assert len(skills) == 38
         reg.close()
 
     def test_registry_search_finds_filesystem_skill(self, tmp_path):
