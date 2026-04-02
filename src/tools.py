@@ -25,3 +25,12 @@ def set_gma2_client(client) -> None:
     _gma2_client = client
 
 
+def get_client():
+    """Return the global GMA2 client, or raise if not initialized."""
+    if _gma2_client is None:
+        raise RuntimeError(
+            "GMA2 client not initialized — call set_gma2_client() first"
+        )
+    return _gma2_client
+
+

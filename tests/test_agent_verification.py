@@ -81,13 +81,26 @@ class TestVerifier:
         result = await verifier.verify_step(step, ctx)
         assert result.passed is True
 
-    async def test_verify_no_strategy(self):
+    async def test_verify_no_strategy_destructive_fails(self):
         verifier = Verifier()
-        step = _make_step("some_unknown_tool")
+        step = _make_step("some_unknown_tool")  # DESTRUCTIVE by default
         ctx = RunContext(goal="test", plan=[step])
         result = await verifier.verify_step(step, ctx)
-        assert result.passed is True  # assumed OK
-        assert "No verification strategy" in result.details
+        assert result.passed is False
+        assert "No verification strategy for DESTRUCTIVE" in result.details
+
+    async def test_verify_no_strategy_safe_passes(self):
+        verifier = Verifier()
+        step = PlanStep(
+            tool_name="some_unknown_tool",
+            tool_args={},
+            description="test safe tool",
+            risk_tier=RiskTier.SAFE_READ,
+        )
+        ctx = RunContext(goal="test", plan=[step])
+        result = await verifier.verify_step(step, ctx)
+        assert result.passed is True
+        assert "assumed OK" in result.details
 
     async def test_verify_tool_not_available(self):
         verifier = Verifier(tool_dispatch={})

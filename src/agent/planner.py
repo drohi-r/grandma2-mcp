@@ -19,6 +19,40 @@ from src.vocab import RiskTier
 
 logger = logging.getLogger(__name__)
 
+
+def _detect_cycles(steps: list[PlanStep]) -> list[list[str]]:
+    """Detect dependency cycles in a plan using DFS.
+
+    Returns a list of cycles found (each cycle is a list of step IDs).
+    Empty list means no cycles.
+    """
+    id_to_deps: dict[str, list[str]] = {s.id: list(s.depends_on) for s in steps}
+    valid_ids = set(id_to_deps)
+    visited: set[str] = set()
+    on_stack: set[str] = set()
+    cycles: list[list[str]] = []
+
+    def _dfs(node: str, path: list[str]) -> None:
+        if node in on_stack:
+            cycle_start = path.index(node)
+            cycles.append(path[cycle_start:] + [node])
+            return
+        if node in visited or node not in valid_ids:
+            return
+        visited.add(node)
+        on_stack.add(node)
+        path.append(node)
+        for dep in id_to_deps.get(node, []):
+            _dfs(dep, path)
+        path.pop()
+        on_stack.discard(node)
+
+    for step_id in id_to_deps:
+        if step_id not in visited:
+            _dfs(step_id, [])
+    return cycles
+
+
 # Keyword patterns for intent classification
 _PATCH_PATTERNS = re.compile(
     r"\b(patch|add\s+fixture|import\s+fixture|create\s+fixture)\b", re.IGNORECASE
@@ -102,22 +136,28 @@ class DomainPlanner:
         Dispatches to the appropriate workflow template based on intent.
         """
         if goal.intent == GoalIntent.PATCH:
-            return build_patch_workflow(goal)
+            steps = build_patch_workflow(goal)
         elif goal.intent == GoalIntent.PRESET:
-            return build_preset_workflow(goal)
+            steps = build_preset_workflow(goal)
         elif goal.intent == GoalIntent.PLAYBACK:
-            return build_playback_workflow(goal)
+            steps = build_playback_workflow(goal)
         elif goal.intent == GoalIntent.GROUP:
-            return self._build_group_workflow(goal)
+            steps = self._build_group_workflow(goal)
         elif goal.intent == GoalIntent.LABEL:
-            return self._build_label_workflow(goal)
+            steps = self._build_label_workflow(goal)
         elif goal.intent == GoalIntent.DISCOVER:
-            return self._build_discover_workflow(goal)
+            steps = self._build_discover_workflow(goal)
         elif goal.intent == GoalIntent.COMPOSITE:
-            return self._build_composite_workflow(goal)
+            steps = self._build_composite_workflow(goal)
         else:
             # Fallback: discovery
-            return self._build_discover_workflow(goal)
+            steps = self._build_discover_workflow(goal)
+
+        cycles = _detect_cycles(steps)
+        if cycles:
+            logger.error("Dependency cycle detected in plan: %s", cycles)
+            raise ValueError(f"Plan contains dependency cycles: {cycles}")
+        return steps
 
     def plan_from_text(self, goal_text: str) -> tuple[ParsedGoal, list[PlanStep]]:
         """Convenience: classify + plan in one call."""

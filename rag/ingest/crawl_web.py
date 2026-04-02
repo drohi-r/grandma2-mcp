@@ -165,10 +165,23 @@ def crawl_web(
 
 
 def _normalize_url(url: str) -> str:
-    """Normalize a URL by removing fragment and trailing whitespace."""
+    """Normalize a URL: lowercase scheme/host, strip fragment + tracking params."""
     parsed = urlparse(url.strip())
-    # Remove fragment, keep everything else
-    return urlunparse(parsed._replace(fragment=""))
+    # Lowercase scheme and netloc for consistent deduplication
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc.lower()
+    # Strip tracking parameters
+    _TRACKING_PARAMS = {"utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "fbclid", "gclid", "ref"}
+    if parsed.query:
+        from urllib.parse import parse_qs, urlencode
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        filtered = {k: v for k, v in params.items() if k.lower() not in _TRACKING_PARAMS}
+        query = urlencode(filtered, doseq=True)
+    else:
+        query = ""
+    # Remove fragment, normalize path trailing slash
+    path = parsed.path.rstrip("/") if parsed.path != "/" else "/"
+    return urlunparse((scheme, netloc, path, parsed.params, query, ""))
 
 
 def _extract_links(soup: BeautifulSoup, base_url: str, prefixes: list[str]) -> list[str]:

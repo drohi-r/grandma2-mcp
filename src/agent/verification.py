@@ -140,6 +140,17 @@ class Verifier:
         """
         strategy = VERIFICATION_STRATEGIES.get(step.tool_name)
         if not strategy:
+            # DESTRUCTIVE steps without a verification strategy must NOT
+            # silently pass — fail explicitly so the operator is alerted.
+            is_destructive = getattr(step, "risk_tier", None) and str(step.risk_tier) == "DESTRUCTIVE"
+            if is_destructive:
+                return VerificationResult(
+                    step_id=step.id,
+                    passed=False,
+                    expected={},
+                    actual={},
+                    details=f"No verification strategy for DESTRUCTIVE tool '{step.tool_name}' — cannot confirm success",
+                )
             return VerificationResult(
                 step_id=step.id,
                 passed=True,

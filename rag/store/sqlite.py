@@ -111,6 +111,16 @@ class RagStore:
         repo_ref: str = "worktree",
     ) -> None:
         """Insert or replace chunks, optionally with embeddings."""
+        # Validate embedding dimensions are consistent before inserting
+        if embeddings:
+            expected_dim = self._get_existing_embedding_dim(repo_ref)
+            new_dim = len(embeddings[0]) if embeddings else None
+            if expected_dim is not None and new_dim is not None and expected_dim != new_dim:
+                raise ValueError(
+                    f"Embedding dimension mismatch: existing chunks have {expected_dim} dims, "
+                    f"new embeddings have {new_dim} dims. Clear old embeddings first."
+                )
+
         now = datetime.now(UTC).isoformat()
         rows = []
         for i, chunk in enumerate(chunks):
@@ -145,6 +155,16 @@ class RagStore:
             rows,
         )
         self.conn.commit()
+
+    def _get_existing_embedding_dim(self, repo_ref: str) -> int | None:
+        """Return the dimension of the first non-null embedding, or None."""
+        row = self.conn.execute(
+            "SELECT embedding FROM chunks WHERE repo_ref = ? AND embedding IS NOT NULL LIMIT 1",
+            (repo_ref,),
+        ).fetchone()
+        if row and row[0]:
+            return len(_blob_to_floats(row[0]))
+        return None
 
     def delete_chunks_for_doc(self, doc_id: str) -> int:
         """Delete all chunks belonging to a document. Returns count deleted."""
