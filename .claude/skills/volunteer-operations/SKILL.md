@@ -42,7 +42,7 @@ DESTRUCTIVE (TD only — never delegate):
 | **SAFE_WRITE** | Trained volunteer | Apply presets, trigger go/pause, adjust fader levels — with guidance |
 | **DESTRUCTIVE** | Technical Director only | Store cues, modify show file, change patch — never delegated without explicit TD authorization |
 
-The GrandPA2-Buddy safety gate enforces these tiers automatically. A volunteer without DESTRUCTIVE scope cannot accidentally overwrite a cue, delete a fixture, or store a new preset — the system physically prevents it.
+The MA2 Agent safety gate enforces these tiers automatically. A volunteer without DESTRUCTIVE scope cannot accidentally overwrite a cue, delete a fixture, or store a new preset — the system physically prevents it.
 
 ---
 

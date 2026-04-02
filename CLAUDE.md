@@ -1,6 +1,6 @@
 ---
 title: Project Rules
-description: Thin root conventions for ma2-onPC-MCP — architectural invariants, safety rules, and build commands
+description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
 version: 4.8.0
 created: 2026-03-01T23:37:51Z
 last_updated: 2026-04-01T00:25:43Z

@@ -1,11 +1,11 @@
 [project]
-name = "grandpa2-buddy"
+name = "ma2-agent"
 version = "0.1.0"
-description = "AI agent for grandMA2 lighting consoles — 191 MCP tools via Telnet"
+description = "AI agent for grandMA2 lighting consoles — 191 MCP tools via Telnet (fork of ma2-onPC-MCP)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-authors = [{ name = "romar" }]
+authors = [{ name = "drohi-r" }]
 keywords = ["grandma2", "mcp", "lighting", "telnet", "dmx"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -31,11 +31,12 @@ dev = [
 ]
 
 [project.scripts]
-grandpa2-buddy = "src.server:main"
+ma2-agent = "src.server:main"
 
 [project.urls]
-Repository = "https://github.com/thisis-romar/ma2-onPC-MCP"
-Issues = "https://github.com/thisis-romar/ma2-onPC-MCP/issues"
+Repository = "https://github.com/drohi-r/grandma2-mcp"
+Issues = "https://github.com/drohi-r/grandma2-mcp/issues"
+Upstream = "https://github.com/thisis-romar/ma2-onPC-MCP"
 
 [tool.ruff]
 target-version = "py312"

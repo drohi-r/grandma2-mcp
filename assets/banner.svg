@@ -2,18 +2,18 @@
   <rect width="900" height="200" fill="#0d1117"/>
 
   <!-- 3D shadow layers — deepest first, stepping 2px toward main position -->
-  <text x="466" y="146" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#1a0c00">GRANDPA2-BUDDY</text>
-  <text x="464" y="144" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#2d1500">GRANDPA2-BUDDY</text>
-  <text x="462" y="142" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#3f1e00">GRANDPA2-BUDDY</text>
-  <text x="460" y="140" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#542800">GRANDPA2-BUDDY</text>
-  <text x="458" y="138" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#6b3400">GRANDPA2-BUDDY</text>
-  <text x="456" y="136" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#854000">GRANDPA2-BUDDY</text>
-  <text x="454" y="134" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#9e4f00">GRANDPA2-BUDDY</text>
-  <text x="452" y="132" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#b86000">GRANDPA2-BUDDY</text>
+  <text x="466" y="126" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#1a0000">MA2 AGENT</text>
+  <text x="464" y="124" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#2d0000">MA2 AGENT</text>
+  <text x="462" y="122" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#450000">MA2 AGENT</text>
+  <text x="460" y="120" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#5c0000">MA2 AGENT</text>
+  <text x="458" y="118" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#730000">MA2 AGENT</text>
+  <text x="456" y="116" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#8a0000">MA2 AGENT</text>
+  <text x="454" y="114" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#a30000">MA2 AGENT</text>
+  <text x="452" y="112" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#bb0000">MA2 AGENT</text>
 
-  <!-- Main text — gold with dark outline -->
-  <text x="450" y="130" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" text-anchor="middle" letter-spacing="6" fill="#FFD700" stroke="#1a0a00" stroke-width="1" paint-order="stroke">GRANDPA2-BUDDY</text>
+  <!-- Main text — red with dark outline -->
+  <text x="450" y="110" font-family="'Courier New', Courier, monospace" font-size="64" font-weight="bold" text-anchor="middle" letter-spacing="8" fill="#FF2020" stroke="#1a0500" stroke-width="1" paint-order="stroke">MA2 AGENT</text>
 
   <!-- Subtitle -->
-  <text x="450" y="170" font-family="'Courier New', Courier, monospace" font-size="13" text-anchor="middle" letter-spacing="2" fill="#6b7280">grandMA2 Console Agent  ·  148 MCP Tools  ·  AI-Native</text>
+  <text x="450" y="160" font-family="'Courier New', Courier, monospace" font-size="13" text-anchor="middle" letter-spacing="2" fill="#6b7280">grandMA2 Console Agent  &#183;  191 MCP Tools  &#183;  AI-Native</text>
 </svg>

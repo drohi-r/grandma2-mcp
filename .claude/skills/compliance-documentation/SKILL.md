@@ -1,6 +1,6 @@
 ---
 title: Compliance Documentation
-description: Worker instruction module for generating SB 132 / safety-audit documentation from GrandPA2-Buddy session telemetry — risk tier breakdown, DESTRUCTIVE operation log, and operator audit trail
+description: Worker instruction module for generating SB 132 / safety-audit documentation from MA2 Agent session telemetry — risk tier breakdown, DESTRUCTIVE operation log, and operator audit trail
 version: 1.0.0
 created: 2026-04-01T00:00:00Z
 last_updated: 2026-04-01T00:00:00Z
@@ -30,9 +30,9 @@ No DESTRUCTIVE tools. No `store_*`, `delete_*`, or `assign_*`. Never modifies co
 
 ---
 
-## What SB 132 Requires (mapped to GrandPA2-Buddy fields)
+## What SB 132 Requires (mapped to MA2 Agent fields)
 
-| SB 132 Requirement | GrandPA2-Buddy Data Source |
+| SB 132 Requirement | MA2 Agent Data Source |
 |---|---|
 | Written risk assessment | tool_invocations table: risk_tier per operation |
 | Daily safety meeting notes | session_id grouped tool calls with timestamps |
@@ -74,7 +74,7 @@ Generate a structured compliance report with these sections:
 
 Include a human-readable paragraph suitable for inclusion in production safety documentation:
 
-> "All lighting control operations during this session were processed through GrandPA2-Buddy's three-tier safety system. [N] operations were classified SAFE_READ (read-only monitoring, zero risk), [M] were SAFE_WRITE (controlled modifications requiring standard authorization), and [K] were DESTRUCTIVE (required explicit confirm_destructive=True authorization and elevated scope). Full telemetry is available for forensic review."
+> "All lighting control operations during this session were processed through MA2 Agent's three-tier safety system. [N] operations were classified SAFE_READ (read-only monitoring, zero risk), [M] were SAFE_WRITE (controlled modifications requiring standard authorization), and [K] were DESTRUCTIVE (required explicit confirm_destructive=True authorization and elevated scope). Full telemetry is available for forensic review."
 
 Substitute actual counts from the session telemetry.
 

@@ -1,26 +1,28 @@
 ---
-title: GrandPA2-Buddy
+title: MA2 Agent
 description: AI agent for grandMA2 lighting consoles — 191 MCP tools via Telnet
-version: 3.25.0
+version: 4.0.0
 created: 2025-11-04T17:05:43Z
-last_updated: 2026-04-01T00:25:43Z
+last_updated: 2026-04-02T00:00:00Z
 ---
 
 <p align="center">
-  <img src="assets/banner.svg" alt="GrandPA2-Buddy" width="100%">
+  <img src="assets/banner.svg" alt="MA2 Agent" width="100%">
 </p>
 
-# GrandPA2-Buddy 👨‍🎨
+# MA2 Agent
 
 <p align="center">
-  <a href="https://github.com/thisis-romar/ma2-onPC-MCP/actions/workflows/test.yml"><img src="https://github.com/thisis-romar/ma2-onPC-MCP/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
-  <a href="https://github.com/thisis-romar/ma2-onPC-MCP/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/drohi-r/grandma2-mcp/actions/workflows/test.yml"><img src="https://github.com/drohi-r/grandma2-mcp/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/drohi-r/grandma2-mcp/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-orange?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Python-3.12%2B-blue?style=for-the-badge" alt="Python 3.12+">
-  <img src="https://img.shields.io/badge/MCP_Tools-184-brightgreen?style=for-the-badge" alt="184 MCP Tools">
-  <img src="https://img.shields.io/badge/Tests-2355-brightgreen?style=for-the-badge" alt="2355 Tests">
+  <img src="https://img.shields.io/badge/MCP_Tools-191-FF2020?style=for-the-badge" alt="191 MCP Tools">
+  <img src="https://img.shields.io/badge/Tests-2578-FF2020?style=for-the-badge" alt="2578 Tests">
 </p>
 
-**An Agent Harness — and an embedded Agent core — for grandMA2 lighting consoles.** Exposes 191 grandMA2 commands as [Model Context Protocol](https://modelcontextprotocol.io/) tools so AI assistants (Claude Desktop, VS Code, etc.) can drive a lighting console via Telnet. Wire in an LLM client and the built-in orchestrator, task decomposer, and long-term memory turn it into a fully autonomous lighting agent.
+> Forked from [thisis-romar/ma2-onPC-MCP](https://github.com/thisis-romar/ma2-onPC-MCP) (originally built by [chienchuanw](https://github.com/chienchuanw)) — hardened and maintained by [@drohi-r](https://github.com/drohi-r). See [DEDICATION.md](DEDICATION.md) for the original author's tribute.
+
+**An AI agent for grandMA2 lighting consoles.** Exposes 191 grandMA2 operations as [Model Context Protocol](https://modelcontextprotocol.io/) tools so AI assistants (Claude Desktop, VS Code, etc.) can drive a lighting console via Telnet. Includes a built-in orchestrator, task decomposer, and long-term memory for fully autonomous lighting control.
 
 <table>
 <tr><td><b>Agent Harness</b></td><td>191 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
@@ -30,9 +32,7 @@ last_updated: 2026-04-01T00:25:43Z
 <tr><td><b>RAG-powered knowledge</b></td><td>Three indexed sources: this repo, ~1,043 grandMA2 help pages, and the MCP SDK. Semantic search via GitHub Models embeddings; falls back to keyword search without an API token.</td></tr>
 </table>
 
-[Quick Start](#quick-start) · [Architecture](#architecture) · [184 MCP Tools](#mcp-tools) · [Resources](#mcp-resources) · [Prompts](#mcp-prompts) · [Skills](#agent-skills) · [Safety System](#safety-system) · [RAG Pipeline](#rag-pipeline)
-
-*The name is a play on "grandMA2" — [dedicated to someone special](DEDICATION.md).*
+[Quick Start](#quick-start) · [Architecture](#architecture) · [191 MCP Tools](#mcp-tools) · [Resources](#mcp-resources) · [Prompts](#mcp-prompts) · [Skills](#agent-skills) · [Safety System](#safety-system) · [RAG Pipeline](#rag-pipeline)
 
 ---
 
@@ -40,7 +40,7 @@ last_updated: 2026-04-01T00:25:43Z
 
 ```bash
 # 1. Install
-git clone https://github.com/thisis-romar/ma2-onPC-MCP && cd ma2-onPC-MCP
+git clone https://github.com/drohi-r/grandma2-mcp && cd grandma2-mcp
 uv sync
 
 # 2. Configure
@@ -91,14 +91,14 @@ graph TD
 
 ### Agent Harness vs. Agent Core
 
-GrandPA2-Buddy is a **layered hybrid** — the boundary is explicit in the code:
+MA2 Agent is a **layered hybrid** — the boundary is explicit in the code:
 
 | Layer | What it is | Key files |
 |-------|-----------|-----------|
 | **Bottom 191 tools** | **Agent Harness** — exposes a tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
 | **Top 34 tools** | **Embedded Agent Core** — orchestrator, task decomposer, long-term memory, skill registry | `src/server_orchestration_tools.py`, `src/orchestrator.py` |
 
-The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and GrandPA2-Buddy becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
+The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and MA2 Agent becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
 
 ### Module Overview
 
@@ -789,7 +789,7 @@ See [`vscode-mcp-provider/README.md`](vscode-mcp-provider/README.md) for full de
 
 ## Safety System
 
-GrandPA2-Buddy enforces a **3-layer model** where effective permissions are the intersection of all three — no single layer can expand privileges:
+MA2 Agent enforces a **3-layer model** where effective permissions are the intersection of all three — no single layer can expand privileges:
 
 ```
 scope ∩ policy ∩ ma2_rights = FINAL AUTHORITY

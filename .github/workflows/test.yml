@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [main, GrandMA2-Telnet-Buddy, "feat/**"]
+    branches: [main, "feat/**"]
   pull_request:
-    branches: [main, GrandMA2-Telnet-Buddy]
+    branches: [main]
 
 jobs:
   test:

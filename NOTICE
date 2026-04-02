@@ -1,7 +1,16 @@
-GrandPA2-Buddy (ma2-onPC-MCP)
-Copyright 2025 thisis-romar
+MA2 Agent (grandma2-mcp)
+Copyright 2026 drohi-r
 
-This product includes software developed at this project.
+This project is a fork of GrandPA2-Buddy (ma2-onPC-MCP) by thisis-romar,
+which itself built upon the original foundation by chienchuanw.
+
+Upstream repositories:
+  https://github.com/thisis-romar/ma2-onPC-MCP  (GrandPA2-Buddy)
+  https://github.com/chienchuanw/ma2-onPC-MCP   (original foundation)
+
+Original authors:
+  Copyright 2025 chienchuanw  (foundation, Nov-Dec 2025)
+  Copyright 2025 thisis-romar (GrandPA2-Buddy, Feb-Mar 2026)
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this software except in compliance with the License.

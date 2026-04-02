@@ -1,12 +1,12 @@
 ---
-title: Contributing to ma2-onPC-MCP
+title: Contributing to MA2 Agent
 description: Development setup, branch model, code conventions, test requirements, and skill contribution guide
 version: 1.0.0
 created: 2026-04-01T00:00:00Z
 last_updated: 2026-04-01T00:00:00Z
 ---
 
-# Contributing to ma2-onPC-MCP
+# Contributing to MA2 Agent
 
 Thank you for your interest in contributing. This project controls physical lighting hardware on live production stages — please read this guide carefully before submitting changes.
 
@@ -30,8 +30,8 @@ For **security vulnerabilities** (e.g. command injection, auth bypass), do **not
 
 ```bash
 # 1. Clone and enter the repo
-git clone https://github.com/thisis-romar/ma2-onPC-mcp
-cd ma2-onPC-mcp
+git clone https://github.com/drohi-r/grandma2-mcp
+cd grandma2-mcp
 
 # 2. Install dependencies (requires uv)
 uv sync

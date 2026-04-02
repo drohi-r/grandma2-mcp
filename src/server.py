@@ -8051,11 +8051,11 @@ def resource_volunteer_guide() -> str:
     training volunteers and any production environment with tiered staff skill levels.
     """
     return """\
-# GrandPA2-Buddy Volunteer Operator Guide
+# MA2 Agent Volunteer Operator Guide
 
 ## The Three Safety Tiers
 
-GrandPA2-Buddy enforces three access levels automatically. You cannot accidentally break something outside your tier.
+MA2 Agent enforces three access levels automatically. You cannot accidentally break something outside your tier.
 
 | Your Role | Tier | What You Can Do |
 |-----------|------|-----------------|
@@ -8099,13 +8099,13 @@ Rule: If in doubt, do nothing and call your TD.
 def resource_sb132_compliance() -> str:
     """
     SB 132 compliance guide — California Film & Television Tax Credit safety documentation
-    requirements mapped to GrandPA2-Buddy telemetry fields.
+    requirements mapped to MA2 Agent telemetry fields.
 
     For gaffers, safety officers, production managers, and insurance brokers on
     productions receiving the California Film & Television Tax Credit (effective July 2025).
     """
     return """\
-# SB 132 Compliance Guide for GrandPA2-Buddy
+# SB 132 Compliance Guide for MA2 Agent
 
 ## What SB 132 Requires (July 2025)
 
@@ -8116,9 +8116,9 @@ California SB 132 applies to productions receiving the CA Film & Television Tax 
 3. Daily Safety Meeting Notes -- documented
 4. Final Safety Report -- within 60 days of wrap
 
-## GrandPA2-Buddy Data to SB 132 Mapping
+## MA2 Agent Data to SB 132 Mapping
 
-| SB 132 Requirement | GrandPA2-Buddy Source | Tool |
+| SB 132 Requirement | MA2 Agent Source | Tool |
 |---|---|---|
 | Written risk assessment | risk_tier per operation (SAFE_READ/SAFE_WRITE/DESTRUCTIVE) | get_telemetry_report() |
 | Operator identification | operator field in tool_invocations | get_telemetry_report() |
@@ -8128,7 +8128,7 @@ California SB 132 applies to productions receiving the CA Film & Television Tax 
 
 ## Three-Tier Risk Stratification (for Insurance Underwriters)
 
-GrandPA2-Buddy classifies every lighting control operation:
+MA2 Agent classifies every lighting control operation:
 
 - SAFE_READ -- Read-only monitoring. Zero risk to console state or physical hardware.
 - SAFE_WRITE -- Controlled modifications (level adjustments, go/pause). Standard operational risk.
@@ -8145,7 +8145,7 @@ Use get_telemetry_report(session_id, format="json") for archival JSON export.
 ## Insurance Brief Template
 
 All lighting control operations during [PRODUCTION NAME] were processed through
-GrandPA2-Buddy's three-tier safety system. [N] operations were classified SAFE_READ
+MA2 Agent's three-tier safety system. [N] operations were classified SAFE_READ
 (read-only monitoring, zero risk), [M] were SAFE_WRITE (controlled modifications
 requiring standard authorization), and [K] were DESTRUCTIVE (required explicit
 authorization and elevated scope). Full telemetry is retained for forensic review
@@ -8154,7 +8154,7 @@ and available upon request from the production safety advisor.
 ## IATSE Kit Rental
 
 Under the 2024 IATSE-AMPTP contract, AI tools used by union members constitute "covered work"
-and operators may charge a kit rental fee. GrandPA2-Buddy's operator field in telemetry
+and operators may charge a kit rental fee. MA2 Agent's operator field in telemetry
 records which union member ran each session, supporting kit rental documentation.
 """
 
@@ -9900,7 +9900,7 @@ async def get_telemetry_report(
             error_log.append(entry)
 
     report = {
-        "report_type": "GrandPA2-Buddy Telemetry Audit Report",
+        "report_type": "MA2 Agent Telemetry Audit Report",
         "generated_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
         "filter": {
             "session_id": session_id,
@@ -9918,7 +9918,7 @@ async def get_telemetry_report(
 
     if format == "markdown":
         md_lines = [
-            "# GrandPA2-Buddy Audit Report",
+            "# MA2 Agent Audit Report",
             f"Generated: {report['generated_at']}",
             "",
             "## Risk Tier Summary",
@@ -9963,7 +9963,7 @@ async def generate_compliance_report(
     """
     Generate a SB 132 / safety-audit compliance report from session telemetry.
 
-    Produces a structured report mapping GrandPA2-Buddy telemetry fields to
+    Produces a structured report mapping MA2 Agent telemetry fields to
     SB 132 documentation requirements: written risk assessment, operator
     identification, DESTRUCTIVE operation log, and incident timeline.
 
@@ -10034,7 +10034,7 @@ async def generate_compliance_report(
     total = len(invocations)
 
     report_lines = [
-        "# GrandPA2-Buddy Safety & Compliance Report",
+        "# MA2 Agent Safety & Compliance Report",
         "",
         f"**Production:** {production_name}  ",
         f"**Console Operator:** {operator_name or 'Not specified'}  ",
@@ -10045,7 +10045,7 @@ async def generate_compliance_report(
         "",
         "## Risk Assessment Summary",
         "",
-        "All lighting control operations were processed through GrandPA2-Buddy's three-tier safety system:",
+        "All lighting control operations were processed through MA2 Agent's three-tier safety system:",
         "",
         "| Risk Tier | Operations | Description |",
         "|-----------|-----------|-------------|",
@@ -10056,7 +10056,7 @@ async def generate_compliance_report(
         "",
         "### Insurance Brief",
         "",
-        "All lighting control operations during this session were processed through GrandPA2-Buddy's",
+        "All lighting control operations during this session were processed through MA2 Agent's",
         f"three-tier safety system. {safe_read} operation(s) were classified SAFE_READ (read-only",
         f"monitoring, zero risk), {safe_write} were SAFE_WRITE (controlled modifications requiring",
         f"standard authorization), and {destructive} were DESTRUCTIVE (required explicit",
@@ -10097,12 +10097,12 @@ async def generate_compliance_report(
         "",
         "## System Information",
         "",
-        "- **Control System:** GrandPA2-Buddy MCP Server",
+        "- **Control System:** MA2 Agent MCP Server",
         "- **Safety Architecture:** Three-tier (SAFE_READ / SAFE_WRITE / DESTRUCTIVE)",
         "- **Audit Logging:** Enabled — all operations recorded to persistent SQLite database",
         "- **Authorization Model:** OAuth 2.1 scope enforcement per operation",
         "",
-        "_This report was generated automatically from GrandPA2-Buddy telemetry._",
+        "_This report was generated automatically from MA2 Agent telemetry._",
         "_Retain as part of production safety documentation._",
     ]
 
