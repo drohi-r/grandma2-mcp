@@ -1,16 +1,16 @@
 ---
-title: MA2 Agent
-description: AI agent for grandMA2 lighting consoles — 218 MCP tools via Telnet
-version: 1.0.0
+title: grandMA2 MCP
+description: MCP server for grandMA2 lighting consoles — 218 MCP tools via Telnet
+version: 1.1.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-04-04T19:35:00Z
+last_updated: 2026-04-04T00:00:00Z
 ---
 
 <p align="center">
-  <img src="assets/banner.svg" alt="MA2 Agent" width="100%">
+  <img src="assets/banner.svg" alt="grandMA2 MCP" width="100%">
 </p>
 
-# MA2 Agent
+# grandMA2 MCP
 
 <p align="center">
   <a href="https://github.com/drohi-r/grandma2-mcp/actions/workflows/test.yml"><img src="https://github.com/drohi-r/grandma2-mcp/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
@@ -22,7 +22,9 @@ last_updated: 2026-04-04T19:35:00Z
 
 > Forked from [thisis-romar/ma2-onPC-MCP](https://github.com/thisis-romar/ma2-onPC-MCP) (originally built by [chienchuanw](https://github.com/chienchuanw)) — hardened and maintained by [@drohi-r](https://github.com/drohi-r).
 
-**An AI agent for grandMA2 lighting consoles.** Exposes 218 grandMA2 operations as [Model Context Protocol](https://modelcontextprotocol.io/) tools so AI assistants (Claude Desktop, VS Code, etc.) can drive a lighting console via Telnet. Includes a built-in orchestrator, task decomposer, and long-term memory for fully autonomous lighting control.
+**An MCP server for [grandMA2](https://www.malighting.com/grandma2/) lighting consoles.** Exposes 218 grandMA2 operations as [Model Context Protocol](https://modelcontextprotocol.io/) tools so AI assistants (Claude Desktop, VS Code, etc.) can drive a lighting console via Telnet. Includes a built-in orchestrator, task decomposer, and long-term memory for fully autonomous lighting control.
+
+Built for live production. Pairs with [Resolume MCP](https://github.com/drohi-r/resolume-mcp), [MADRIX MCP](https://github.com/drohi-r/madrix-mcp), [Companion MCP](https://github.com/drohi-r/companion-mcp), and [Beyond MCP](https://github.com/drohi-r/beyond-mcp) for full AI-driven show control.
 
 <table>
 <tr><td><b>Agent Harness</b></td><td>218 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
@@ -36,7 +38,7 @@ last_updated: 2026-04-04T19:35:00Z
 
 ---
 
-## Quick Start
+## Quick start
 
 ```bash
 # 1. Install
@@ -118,14 +120,14 @@ graph TD
 
 ### Agent Harness vs. Agent Core
 
-MA2 Agent is a **layered hybrid** — the boundary is explicit in the code:
+grandMA2 MCP is a **layered hybrid** — the boundary is explicit in the code:
 
 | Layer | What it is | Key files |
 |-------|-----------|-----------|
 | **Bottom 184 server tools** | **Agent Harness** — exposes the core MCP tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
 | **Top 34 orchestration tools** | **Embedded Agent Core** — orchestrator, task decomposer, long-term memory, skill registry | `src/server_orchestration_tools.py`, `src/orchestrator.py` |
 
-The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and MA2 Agent becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
+The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and grandMA2 MCP becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
 
 ### Module Overview
 
@@ -831,7 +833,7 @@ See [`vscode-mcp-provider/README.md`](vscode-mcp-provider/README.md) for full de
 
 ## Safety System
 
-MA2 Agent enforces a **3-layer model** where effective permissions are the intersection of all three — no single layer can expand privileges:
+grandMA2 MCP enforces a **3-layer model** where effective permissions are the intersection of all three — no single layer can expand privileges:
 
 ```
 scope ∩ policy ∩ ma2_rights = FINAL AUTHORITY
@@ -1272,7 +1274,7 @@ grandma2-mcp/
 │   ├── create_matricks_library.py          # MAtricks combinatorial library (625 items)
 │   ├── create_filter_library.py            # Filter library XMLs (168 items with VTE)
 │   └── strategic_scan.py                   # Fast 4-phase console tree scan (~24 min)
-├── tests/                                  # 2187 tests (2026-03-30)
+├── tests/
 ├── doc/                                    # Command builders ref + cd-tree docs
 ├── vscode-mcp-provider/                    # VS Code MCP extension
 └── .claude/                                # Skills (playbooks) + scoped rules
@@ -1323,4 +1325,4 @@ uv run python scripts/main.py
 
 ## License
 
-[Apache License 2.0](LICENSE)
+[Apache 2.0](LICENSE)
