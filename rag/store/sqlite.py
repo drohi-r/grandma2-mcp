@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 import sqlite3
 import struct
 from datetime import UTC, datetime
@@ -18,6 +19,7 @@ _SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 # Bump when schema.sql changes — warns if DB is newer than code.
 _EXPECTED_SCHEMA_VERSION = 1
+_MIN_SEARCH_TERM_LENGTH = 2
 
 
 class RagStore:
@@ -239,10 +241,9 @@ class RagStore:
 
     def _search_by_fts5(self, query: str, top_k: int = 12) -> list[RagHit]:
         """FTS5-based full-text search with BM25 ranking."""
+        terms = _extract_search_terms(query)
         # FTS5 query: quote terms to handle special characters
-        fts_query = " ".join(
-            f'"{term}"' for term in query.split() if term.strip()
-        )
+        fts_query = " ".join(f'"{term}"' for term in terms)
         if not fts_query:
             return []
 
@@ -259,14 +260,12 @@ class RagStore:
             (fts_query, top_k * 2),
         ).fetchall()
 
-        query_lower = query.lower()
-        scored: list[RagHit] = []
+        scored: dict[str, RagHit] = {}
         for chunk_id, path, kind, start_line, end_line, text, symbols, rank in rows:
             # FTS5 rank is negative (lower = better), negate for our scoring
             score = -rank
-            if query_lower in symbols.lower():
-                score += 5.0
-            scored.append(RagHit(
+            score += _symbol_match_bonus(terms, symbols)
+            scored[chunk_id] = RagHit(
                 chunk_id=chunk_id,
                 path=path,
                 kind=kind,
@@ -274,15 +273,20 @@ class RagStore:
                 end_line=end_line,
                 score=score,
                 text=text,
-            ))
+            )
 
-        scored.sort(key=lambda h: h.score, reverse=True)
-        return scored[:top_k]
+        for hit in self._search_symbol_matches(terms, limit=top_k * 2):
+            existing = scored.get(hit.chunk_id)
+            if existing is None or hit.score > existing.score:
+                scored[hit.chunk_id] = hit
+
+        return sorted(scored.values(), key=lambda h: h.score, reverse=True)[:top_k]
 
     def _search_by_like(self, query: str, top_k: int = 12) -> list[RagHit]:
         """LIKE-based text search fallback with occurrence counting."""
         escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         pattern = f"%{escaped}%"
+        terms = _extract_search_terms(query)
         rows = self.conn.execute(
             """
             SELECT chunk_id, path, kind, start_line, end_line, text, symbols
@@ -291,14 +295,12 @@ class RagStore:
             (pattern, pattern),
         ).fetchall()
 
-        query_lower = query.lower()
-        scored: list[RagHit] = []
+        scored: dict[str, RagHit] = {}
         for chunk_id, path, kind, start_line, end_line, text, symbols in rows:
-            score = float(text.lower().count(query_lower))
-            if query_lower in symbols.lower():
-                score += 5.0
+            score = _text_match_score(terms, text)
+            score += _symbol_match_bonus(terms, symbols)
             score = max(score, 1.0)
-            scored.append(RagHit(
+            scored[chunk_id] = RagHit(
                 chunk_id=chunk_id,
                 path=path,
                 kind=kind,
@@ -306,10 +308,42 @@ class RagStore:
                 end_line=end_line,
                 score=score,
                 text=text,
-            ))
+            )
 
-        scored.sort(key=lambda h: h.score, reverse=True)
-        return scored[:top_k]
+        for hit in self._search_symbol_matches(terms, limit=top_k * 2):
+            existing = scored.get(hit.chunk_id)
+            if existing is None or hit.score > existing.score:
+                scored[hit.chunk_id] = hit
+
+        return sorted(scored.values(), key=lambda h: h.score, reverse=True)[:top_k]
+
+    def _search_symbol_matches(self, terms: list[str], limit: int) -> list[RagHit]:
+        """Find chunks whose symbol metadata matches any search term."""
+        if not terms:
+            return []
+        clauses = " OR ".join("symbols LIKE ? ESCAPE '\\'" for _ in terms)
+        patterns = [f"%{_escape_like(term)}%" for term in terms]
+        rows = self.conn.execute(
+            f"""
+            SELECT chunk_id, path, kind, start_line, end_line, text, symbols
+            FROM chunks WHERE {clauses}
+            LIMIT ?
+            """,
+            (*patterns, limit),
+        ).fetchall()
+        hits: list[RagHit] = []
+        for chunk_id, path, kind, start_line, end_line, text, symbols in rows:
+            score = _text_match_score(terms, text) + _symbol_match_bonus(terms, symbols)
+            hits.append(RagHit(
+                chunk_id=chunk_id,
+                path=path,
+                kind=kind,
+                start_line=start_line,
+                end_line=end_line,
+                score=max(score, 1.0),
+                text=text,
+            ))
+        return hits
 
     def search_by_path(self, path_pattern: str) -> list[Chunk]:
         """Find chunks matching a path pattern (SQL LIKE)."""
@@ -393,3 +427,33 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
     return dot / (norm_a * norm_b)
+
+
+def _extract_search_terms(query: str) -> list[str]:
+    """Extract stable lowercase search terms from free-form text."""
+    return [
+        term.lower()
+        for term in re.findall(r"[A-Za-z0-9_]+", query)
+        if len(term) >= _MIN_SEARCH_TERM_LENGTH
+    ]
+
+
+def _escape_like(value: str) -> str:
+    """Escape LIKE wildcards in a single term."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _symbol_match_bonus(terms: list[str], symbols: str) -> float:
+    """Score symbol hits higher than plain text hits."""
+    if not terms or not symbols:
+        return 0.0
+    symbols_lower = symbols.lower()
+    return 5.0 * sum(1 for term in terms if term in symbols_lower)
+
+
+def _text_match_score(terms: list[str], text: str) -> float:
+    """Count per-term text matches instead of treating the whole query as one token."""
+    if not terms or not text:
+        return 0.0
+    text_lower = text.lower()
+    return float(sum(text_lower.count(term) for term in terms))

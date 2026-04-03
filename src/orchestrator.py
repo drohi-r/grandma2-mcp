@@ -425,7 +425,9 @@ class Orchestrator:
         if not self._send:
             return None
         hydrator = ConsoleStateHydrator(self._send)
-        return await hydrator.hydrate(sequence_ids=sequence_ids)
+        snapshot = await hydrator.hydrate(sequence_ids=sequence_ids)
+        self._last_snapshot = snapshot
+        return snapshot
 
     async def _showfile_guard(self, step: SubTask, wm: WorkingMemory) -> StepResult | None:
         """Check that the open show has not changed since hydration.

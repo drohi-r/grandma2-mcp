@@ -356,6 +356,21 @@ class TestOrchestratorRun:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_hydrate_snapshot_caches_last_snapshot(self, ltm_and_path):
+        ltm, _ = ltm_and_path
+        orch = Orchestrator(tool_caller=AsyncMock(), telnet_send=AsyncMock(), ltm=ltm,
+                            auto_hydrate=False)
+        snapshot = _make_snapshot()
+
+        with patch("src.orchestrator.ConsoleStateHydrator") as hydrator_cls:
+            hydrator_cls.return_value.hydrate = AsyncMock(return_value=snapshot)
+            result = await orch.hydrate_snapshot(sequence_ids=[1, 2])
+
+        assert result is snapshot
+        assert orch.last_snapshot is snapshot
+        hydrator_cls.return_value.hydrate.assert_called_once_with(sequence_ids=[1, 2])
+
+    @pytest.mark.asyncio
     async def test_dep_failure_skips_dependent(self, ltm_and_path):
         ltm, _ = ltm_and_path
 

@@ -184,6 +184,13 @@ class TestKMeans:
         with pytest.raises(ValueError, match="k=5 exceeds"):
             kmeans(X, 5)
 
+    def test_kmeans_plus_plus_handles_identical_points(self):
+        X = np.array([[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]], dtype=np.float64)
+        centroids = kmeans_plus_plus(X, 2, rng=np.random.default_rng(42))
+        assert centroids.shape == (2, 2)
+        assert np.allclose(centroids[0], [1.0, 1.0])
+        assert np.allclose(centroids[1], [1.0, 1.0])
+
 
 # ===========================================================================
 # Silhouette Tests

@@ -45,8 +45,15 @@ def kmeans_plus_plus(
             np.sum((X[:, np.newaxis, :] - centroids[np.newaxis, :c, :]) ** 2, axis=2),
             axis=1,
         )
+        total_dist = dists.sum()
+        if total_dist <= 0:
+            # Degenerate input (for example all rows identical): pick a random
+            # sample instead of dividing by zero in the k-means++ weights.
+            idx = rng.integers(n)
+            centroids[c] = X[idx]
+            continue
         # Probability proportional to D²
-        probs = dists / dists.sum()
+        probs = dists / total_dist
         idx = rng.choice(n, p=probs)
         centroids[c] = X[idx]
 

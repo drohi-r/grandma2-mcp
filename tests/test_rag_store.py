@@ -163,6 +163,53 @@ class TestSearch:
         assert len(hits) >= 1
         assert hits[0].path == "store.py"
 
+    def test_search_by_text_scores_multi_term_matches(self, store):
+        doc = DocumentRecord(
+            doc_id="d2", repo_ref="main", path="filter.py",
+            language="python", kind="source", file_hash="h2",
+        )
+        store.upsert_document(doc)
+
+        chunks = [
+            Chunk(
+                chunk_id="c3", doc_id="d2", path="filter.py",
+                kind="source", language="python",
+                text="filter library preset management",
+                start_line=1, end_line=1, symbols=["preset_manager"], chunk_hash="ch3",
+            ),
+            Chunk(
+                chunk_id="c4", doc_id="d2", path="filter.py",
+                kind="source", language="python",
+                text="filter helpers only",
+                start_line=2, end_line=2, symbols=["filter_helper"], chunk_hash="ch4",
+            ),
+        ]
+        store.upsert_chunks(chunks, repo_ref="main")
+
+        hits = store.search_by_text("filter preset")
+        assert hits[0].chunk_id == "c3"
+
+    def test_search_by_text_scores_symbol_matches_per_term(self, store):
+        doc = DocumentRecord(
+            doc_id="d3", repo_ref="main", path="symbols.py",
+            language="python", kind="source", file_hash="h3",
+        )
+        store.upsert_document(doc)
+
+        chunks = [
+            Chunk(
+                chunk_id="c5", doc_id="d3", path="symbols.py",
+                kind="source", language="python",
+                text="helpers",
+                start_line=1, end_line=1, symbols=["filter_library_preset"], chunk_hash="ch5",
+            ),
+        ]
+        store.upsert_chunks(chunks, repo_ref="main")
+
+        hits = store.search_by_text("filter preset")
+        assert hits
+        assert hits[0].score >= 10.0
+
     def test_search_by_embedding(self, store):
         doc = DocumentRecord(
             doc_id="d1", repo_ref="main", path="store.py",
