@@ -1,6 +1,6 @@
 <svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">MA2 Agent</title>
-  <desc id="desc">AI agent for grandMA2 lighting consoles — 218 MCP tools, 45 skills.</desc>
+  <title id="title">grandMA2 MCP</title>
+  <desc id="desc">MCP server for grandMA2 lighting consoles — 218 MCP tools, 45 skills.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="520" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#0A0A0A"/>
@@ -62,7 +62,7 @@
   <rect x="80" y="96" width="70" height="2.5" rx="1.25" fill="#FF2A2A"/>
 
   <!-- Main title — y:240, safe zone between y:130-260 -->
-  <text x="72" y="240" fill="#FFFFFF" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="138" font-weight="900" letter-spacing="2">MA2 AGENT</text>
+  <text x="72" y="240" fill="#FFFFFF" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="138" font-weight="900" letter-spacing="2">GRANDMA2 MCP</text>
 
   <!-- Tagline — y:290, below title with 50px gap -->
   <text x="84" y="290" fill="#3D3D3D" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="600" letter-spacing="6">PLAYBACK · PROGRAMMING · AUTOMATION</text>
