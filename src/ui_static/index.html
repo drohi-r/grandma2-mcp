@@ -3,140 +3,276 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>grandMA2 MCP UI</title>
+  <title>grandMA2 Console</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div class="shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">grandMA2 MCP</p>
-        <h1>Operator Console</h1>
+      <div class="topbar-left">
+        <span class="brand">grandMA2</span>
+        <span class="brand-sep">/</span>
+        <span class="brand-sub">MCP Console</span>
       </div>
-      <div class="top-actions">
-        <label>
+      <div class="topbar-right">
+        <div class="connection-pill" id="connection-pill">
+          <span class="dot"></span>
+          <span id="connection-label">Connecting</span>
+        </div>
+        <label class="page-selector">
           Page
           <input id="page-input" type="number" min="1" value="1">
         </label>
-        <button id="refresh-dashboard">Refresh</button>
+        <button id="refresh-btn" class="btn-icon" title="Refresh">&#x21bb;</button>
+        <label class="toggle-compact">
+          <input id="debug-toggle" type="checkbox">
+          <span>Debug</span>
+        </label>
       </div>
     </header>
 
-    <main class="layout">
-      <aside class="sidebar">
-        <button class="nav active" data-view="dashboard">Dashboard</button>
-        <button class="nav" data-view="executors">Executors</button>
-        <button class="nav" data-view="sequence">Sequence</button>
-        <button class="nav" data-view="patch">Patch</button>
-        <button class="nav" data-view="analysis">Analysis</button>
-        <button class="nav" data-view="actions">Actions</button>
-      </aside>
+    <div class="layout">
+      <nav class="sidebar">
+        <button class="nav-btn active" data-view="dashboard">
+          <span class="nav-icon">&#x25A3;</span> Dashboard
+        </button>
+        <button class="nav-btn" data-view="executors">
+          <span class="nav-icon">&#x25B6;</span> Executors
+        </button>
+        <button class="nav-btn" data-view="sequence">
+          <span class="nav-icon">&#x2630;</span> Sequence
+        </button>
+        <button class="nav-btn" data-view="patch">
+          <span class="nav-icon">&#x2699;</span> Patch
+        </button>
+        <button class="nav-btn" data-view="analysis">
+          <span class="nav-icon">&#x2691;</span> Analysis
+        </button>
+        <button class="nav-btn" data-view="actions">
+          <span class="nav-icon">&#x26A1;</span> Actions
+        </button>
+      </nav>
 
-      <section class="content">
+      <main class="content">
+        <!-- DASHBOARD -->
         <section class="view active" data-view="dashboard">
-          <div class="cards">
-            <article class="card"><h2>Console</h2><pre id="console-summary"></pre></article>
-            <article class="card"><h2>Fixture Types</h2><pre id="fixture-type-summary"></pre></article>
-            <article class="card"><h2>Sessions</h2><pre id="session-summary"></pre></article>
-            <article class="card"><h2>Users</h2><pre id="user-summary"></pre></article>
+          <div class="stat-row">
+            <div class="stat-card">
+              <div class="stat-label">Target</div>
+              <div class="stat-value" id="stat-target">--</div>
+              <div class="stat-sub" id="stat-transport">--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Session</div>
+              <div class="stat-value" id="stat-session">--</div>
+              <div class="stat-sub" id="stat-session-detail">--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">User</div>
+              <div class="stat-value" id="stat-users">--</div>
+              <div class="stat-sub" id="stat-users-sub">--</div>
+            </div>
           </div>
-        </section>
-
-        <section class="view" data-view="executors">
-          <div class="split">
-            <article class="panel">
-              <div class="panel-head">
-                <h2>Executor Page Map</h2>
-                <input id="executor-filter" type="search" placeholder="Filter labels or IDs">
-              </div>
-              <div id="executor-grid" class="executor-grid"></div>
-            </article>
-            <article class="panel">
-              <h2>Executor Detail</h2>
-              <pre id="executor-detail">Select an executor.</pre>
-            </article>
-          </div>
-        </section>
-
-        <section class="view" data-view="sequence">
-          <div class="split">
-            <article class="panel">
-              <div class="panel-head">
-                <h2>Sequence Inspector</h2>
-                <form id="sequence-form" class="inline-form">
-                  <input id="sequence-id" type="number" min="1" placeholder="Sequence ID">
-                  <input id="sequence-executor" type="number" min="1" placeholder="Executor ID">
-                  <button type="submit">Load</button>
-                </form>
-              </div>
-              <pre id="sequence-summary"></pre>
-            </article>
-            <article class="panel">
-              <h2>Parsed Cues</h2>
-              <div id="cue-list" class="cue-list"></div>
-            </article>
-          </div>
-        </section>
-
-        <section class="view" data-view="patch">
-          <div class="split">
-            <article class="panel">
-              <div class="panel-head">
-                <h2>Fixture Inventory</h2>
-                <input id="fixture-filter" type="search" placeholder="Filter fixtures">
-              </div>
-              <div id="fixture-list" class="fixture-list"></div>
-            </article>
-            <article class="panel">
-              <h2>Patch Detail</h2>
-              <pre id="patch-detail"></pre>
-            </article>
-          </div>
-        </section>
-
-        <section class="view" data-view="analysis">
-          <div class="split">
-            <article class="panel">
-              <h2>Patch Expectation</h2>
-              <form id="expectation-form">
-                <textarea id="expectation-input" rows="4" placeholder="Mac Aura XB=8, Viper Profile=4"></textarea>
-                <button type="submit">Compare</button>
-              </form>
-              <pre id="expectation-output"></pre>
-            </article>
-            <article class="panel">
-              <h2>Telemetry</h2>
-              <form id="telemetry-form" class="inline-form">
-                <input id="telemetry-days" type="number" min="1" value="1">
-                <button type="submit">Load</button>
-              </form>
-              <pre id="telemetry-output"></pre>
-            </article>
-          </div>
-        </section>
-
-        <section class="view" data-view="actions">
-          <div class="split">
-            <article class="panel">
-              <h2>Plan Goal</h2>
-              <form id="plan-form">
-                <textarea id="goal-input" rows="5" placeholder="Patch 8 Mac Aura XB fixtures and assign to executor 201"></textarea>
-                <div class="inline-form">
-                  <button type="submit">Plan</button>
-                  <button id="run-goal" type="button">Run</button>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header">Console Users</div>
+              <div class="card-body" id="dash-users"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">Quick Access</div>
+              <div class="card-body">
+                <div class="quick-links">
+                  <div class="list-item" onclick="document.querySelector('[data-view=executors]').click()">
+                    <span class="list-item-name">Executor Lookup</span>
+                    <span class="list-item-meta">Inspect any executor by ID</span>
+                  </div>
+                  <div class="list-item" onclick="document.querySelector('[data-view=patch]').click()">
+                    <span class="list-item-name">Patch Inventory</span>
+                    <span class="list-item-meta">Browse all patched fixtures</span>
+                  </div>
+                  <div class="list-item" onclick="document.querySelector('[data-view=sequence]').click()">
+                    <span class="list-item-name">Sequence Inspector</span>
+                    <span class="list-item-meta">View cues by sequence or executor</span>
+                  </div>
                 </div>
-              </form>
-              <pre id="plan-output"></pre>
-            </article>
-            <article class="panel">
-              <h2>Activity</h2>
-              <pre id="activity-output"></pre>
-            </article>
+              </div>
+            </div>
           </div>
         </section>
-      </section>
-    </main>
+
+        <!-- EXECUTORS -->
+        <section class="view" data-view="executors">
+          <div class="toolbar">
+            <label class="field-label">Executor ID
+              <input id="exec-id" type="number" min="1" placeholder="e.g. 1 or 201">
+            </label>
+            <button id="exec-lookup" class="btn-sm">Lookup</button>
+            <span class="toolbar-hint">Looks up one slot only on Page <span class="page-ref">1</span>.<span class="exec-ref">ID</span> to avoid spamming the console.</span>
+          </div>
+          <div class="split-panel">
+            <div class="panel-main">
+              <div class="card">
+                <div class="card-header">Executor Status</div>
+                <div class="card-body" id="exec-detail">
+                  <div class="empty">
+                    Enter a known executor number and click Lookup.<br>
+                    This view only probes one slot at a time so the console stays responsive.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-side">
+              <div class="card" id="exec-cue-card" style="display:none">
+                <div class="card-header">Linked Cues <span class="badge" id="exec-cue-badge">0</span></div>
+                <div class="card-body scroll-y" id="exec-cues"></div>
+              </div>
+              <div class="card">
+                <div class="card-header">Sequence Link</div>
+                <div class="card-body" id="exec-sequence-link">
+                  <div class="empty">
+                    If this executor resolves to a sequence, you can jump straight into the Sequence view.<br>
+                    If not, use a direct sequence ID instead.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SEQUENCE -->
+        <section class="view" data-view="sequence">
+          <div class="toolbar">
+            <form id="seq-form" class="toolbar-group">
+              <label class="field-label">Sequence <input id="seq-id" type="number" min="1" placeholder="e.g. 1"></label>
+              <label class="field-label">or Executor <input id="seq-exec" type="number" min="1" placeholder="linked slot"></label>
+              <button type="submit" class="btn-sm">Load</button>
+            </form>
+            <div class="btn-row">
+              <button type="button" class="btn-sm quick-seq" data-seq="1">Seq 1</button>
+              <button type="button" class="btn-sm quick-seq" data-seq="2">Seq 2</button>
+              <button type="button" class="btn-sm quick-seq" data-seq="3">Seq 3</button>
+              <button type="button" class="btn-sm quick-seq" data-seq="10">Seq 10</button>
+            </div>
+          </div>
+          <div class="split-panel">
+            <div class="panel-main">
+              <div class="card">
+                <div class="card-header">Cue List <span class="badge" id="seq-badge">0</span></div>
+                <div class="card-body scroll-y" id="seq-cues">
+                  <div class="empty">Enter a sequence ID or executor ID above</div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-side">
+              <div class="card">
+                <div class="card-header">Sequence Info</div>
+                <div class="card-body" id="seq-info">
+                  <div class="empty">Direct sequence IDs are the most reliable. Executor-based loads only work when that slot actually resolves to a sequence.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PATCH -->
+        <section class="view" data-view="patch">
+          <div class="toolbar">
+            <input id="patch-filter" type="search" placeholder="Filter fixtures...">
+            <span class="toolbar-stat" id="patch-stat"></span>
+            <span class="badge" id="patch-badge">0</span>
+          </div>
+          <div class="split-panel">
+            <div class="panel-main">
+              <div class="card">
+                <div class="card-header">Fixture Inventory</div>
+                <div class="card-body scroll-y" id="patch-list">
+                  <div class="empty">Loading on first visit...</div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-side">
+              <div class="card">
+                <div class="card-header">Fixture Detail</div>
+                <div class="card-body" id="patch-detail">
+                  <div class="empty">Select a fixture</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Type Summary</div>
+                <div class="card-body" id="patch-type-summary"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ANALYSIS -->
+        <section class="view" data-view="analysis">
+          <div class="split-panel">
+            <div class="panel-main">
+              <div class="card">
+                <div class="card-header">Patch Expectation</div>
+                <div class="card-body">
+                  <form id="expect-form">
+                    <textarea id="expect-input" rows="3" placeholder="Mac Aura XB=8, Viper Profile=4"></textarea>
+                    <button type="submit" class="btn-sm">Compare</button>
+                  </form>
+                  <div id="expect-output" class="result-area"></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-side">
+              <div class="card">
+                <div class="card-header">Telemetry</div>
+                <div class="card-body">
+                  <form id="telem-form" class="toolbar-group">
+                    <label class="field-label">Days <input id="telem-days" type="number" min="1" value="1"></label>
+                    <button type="submit" class="btn-sm">Load</button>
+                  </form>
+                  <div id="telem-output" class="result-area"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ACTIONS -->
+        <section class="view" data-view="actions">
+          <div class="split-panel">
+            <div class="panel-main">
+              <div class="card">
+                <div class="card-header">Agent Goal</div>
+                <div class="card-body">
+                  <form id="plan-form">
+                    <textarea id="goal-input" rows="4" placeholder="Patch 8 Mac Aura XB fixtures and assign to executor 201"></textarea>
+                    <div class="btn-row">
+                      <button type="submit" class="btn-sm">Plan</button>
+                      <button type="button" id="run-goal" class="btn-sm btn-accent">Run</button>
+                    </div>
+                  </form>
+                  <div id="plan-output" class="result-area"></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-side">
+              <div class="card">
+                <div class="card-header">Activity Log</div>
+                <div class="card-body scroll-y" id="activity-log"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
+
+  <div id="debug-panel" class="debug-panel hidden">
+    <div class="debug-header">
+      <span>Debug Payload</span>
+      <button id="debug-close" class="btn-icon btn-tiny">&times;</button>
+    </div>
+    <pre id="debug-output"></pre>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>
