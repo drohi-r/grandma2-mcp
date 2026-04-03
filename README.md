@@ -3,7 +3,7 @@ title: MA2 Agent
 description: AI agent for grandMA2 lighting consoles — 218 MCP tools via Telnet
 version: 1.0.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-04-02T05:20:00Z
+last_updated: 2026-04-04T19:35:00Z
 ---
 
 <p align="center">
@@ -60,6 +60,25 @@ uv run python -m src.ui
 ```
 
 Then open `http://127.0.0.1:8092`.
+
+For a live console target, run the UI with the same connection env vars as the MCP server:
+
+```bash
+GMA_HOST=192.168.20.179 GMA_PORT=30000 GMA_AUTH_BYPASS=1 uv run python -m src.ui
+```
+
+The browser UI is an operator console for:
+- dashboard and console session status
+- single-slot executor lookup
+- direct sequence inspection
+- patch browsing grouped by fixture type
+- expectation analysis and agent plan/run flows
+
+Important behavior notes:
+- executor lookup is intentionally single-slot only; the UI does not bulk-scan executor ranges by default
+- direct sequence IDs are more reliable than executor-based sequence resolution
+- empty executor slots can produce normal MA2 `NO OBJECTS FOUND FOR LIST` warnings on the console
+- fixture grouping on the Patch view is parsed from live `list fixture` output, not inferred from a full executor scan
 
 > [!TIP]
 > **Semantic search:** Add `GITHUB_MODELS_TOKEN=ghp_...` to `.env`, then run
