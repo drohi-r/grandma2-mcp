@@ -32,6 +32,7 @@ dev = [
 
 [project.scripts]
 ma2-agent = "src.server:main"
+ma2-agent-ui = "src.ui:main"
 
 [project.urls]
 Repository = "https://github.com/drohi-r/grandma2-mcp"

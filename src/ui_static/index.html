@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>grandMA2 MCP UI</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">grandMA2 MCP</p>
+        <h1>Operator Console</h1>
+      </div>
+      <div class="top-actions">
+        <label>
+          Page
+          <input id="page-input" type="number" min="1" value="1">
+        </label>
+        <button id="refresh-dashboard">Refresh</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <button class="nav active" data-view="dashboard">Dashboard</button>
+        <button class="nav" data-view="executors">Executors</button>
+        <button class="nav" data-view="sequence">Sequence</button>
+        <button class="nav" data-view="patch">Patch</button>
+        <button class="nav" data-view="analysis">Analysis</button>
+        <button class="nav" data-view="actions">Actions</button>
+      </aside>
+
+      <section class="content">
+        <section class="view active" data-view="dashboard">
+          <div class="cards">
+            <article class="card"><h2>Console</h2><pre id="console-summary"></pre></article>
+            <article class="card"><h2>Fixture Types</h2><pre id="fixture-type-summary"></pre></article>
+            <article class="card"><h2>Sessions</h2><pre id="session-summary"></pre></article>
+            <article class="card"><h2>Users</h2><pre id="user-summary"></pre></article>
+          </div>
+        </section>
+
+        <section class="view" data-view="executors">
+          <div class="split">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Executor Page Map</h2>
+                <input id="executor-filter" type="search" placeholder="Filter labels or IDs">
+              </div>
+              <div id="executor-grid" class="executor-grid"></div>
+            </article>
+            <article class="panel">
+              <h2>Executor Detail</h2>
+              <pre id="executor-detail">Select an executor.</pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="sequence">
+          <div class="split">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Sequence Inspector</h2>
+                <form id="sequence-form" class="inline-form">
+                  <input id="sequence-id" type="number" min="1" placeholder="Sequence ID">
+                  <input id="sequence-executor" type="number" min="1" placeholder="Executor ID">
+                  <button type="submit">Load</button>
+                </form>
+              </div>
+              <pre id="sequence-summary"></pre>
+            </article>
+            <article class="panel">
+              <h2>Parsed Cues</h2>
+              <div id="cue-list" class="cue-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="patch">
+          <div class="split">
+            <article class="panel">
+              <div class="panel-head">
+                <h2>Fixture Inventory</h2>
+                <input id="fixture-filter" type="search" placeholder="Filter fixtures">
+              </div>
+              <div id="fixture-list" class="fixture-list"></div>
+            </article>
+            <article class="panel">
+              <h2>Patch Detail</h2>
+              <pre id="patch-detail"></pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="analysis">
+          <div class="split">
+            <article class="panel">
+              <h2>Patch Expectation</h2>
+              <form id="expectation-form">
+                <textarea id="expectation-input" rows="4" placeholder="Mac Aura XB=8, Viper Profile=4"></textarea>
+                <button type="submit">Compare</button>
+              </form>
+              <pre id="expectation-output"></pre>
+            </article>
+            <article class="panel">
+              <h2>Telemetry</h2>
+              <form id="telemetry-form" class="inline-form">
+                <input id="telemetry-days" type="number" min="1" value="1">
+                <button type="submit">Load</button>
+              </form>
+              <pre id="telemetry-output"></pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" data-view="actions">
+          <div class="split">
+            <article class="panel">
+              <h2>Plan Goal</h2>
+              <form id="plan-form">
+                <textarea id="goal-input" rows="5" placeholder="Patch 8 Mac Aura XB fixtures and assign to executor 201"></textarea>
+                <div class="inline-form">
+                  <button type="submit">Plan</button>
+                  <button id="run-goal" type="button">Run</button>
+                </div>
+              </form>
+              <pre id="plan-output"></pre>
+            </article>
+            <article class="panel">
+              <h2>Activity</h2>
+              <pre id="activity-output"></pre>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

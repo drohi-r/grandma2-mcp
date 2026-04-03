@@ -53,6 +53,14 @@ make install-hooks
 uv run python -m src.server  # starts MCP server (stdio transport)
 ```
 
+For the local browser UI:
+
+```bash
+uv run python -m src.ui
+```
+
+Then open `http://127.0.0.1:8092`.
+
 > [!TIP]
 > **Semantic search:** Add `GITHUB_MODELS_TOKEN=ghp_...` to `.env`, then run
 > `uv run python scripts/rag_ingest.py --provider github` once to rebuild the index with
