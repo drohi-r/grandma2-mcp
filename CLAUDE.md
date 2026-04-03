@@ -8,8 +8,7 @@ last_updated: 2026-04-02T05:20:00Z
 
 # Project Rules
 
-> Portable agent entry point: see [AGENTS.md](./AGENTS.md).
-> This file is the detailed repo rulebook for deeper architecture, safety, and workflow guidance.
+> Portable agent entry point: see [AGENTS.md](./AGENTS.md). This file is the detailed repo rulebook for deeper architecture, safety, and workflow guidance.
 
 ## Project Identity
 
@@ -164,11 +163,8 @@ AgentRuntime (runtime.py)
 ```
 
 Preferred top-level automation path: `plan_agent_goal(goal)` to preview, then `run_agent_goal(goal, auto_confirm, dry_run)` to execute through the richer agent harness.
-
-Lower-level rule-based orchestration remains available via `decompose_task(goal, ...)`
-and `run_task(goal, ...)` in `src/server_orchestration_tools.py`.
-
-**Note:** `DomainPlanner` uses its own `PlanStep` model. Use `src/agent_bridge.py` (see below) to convert between `PlanStep` and main's `SubTask` for cross-system interop.
+Lower-level rule-based orchestration remains available via `decompose_task(goal, ...)` and `run_task(goal, ...)` in `src/server_orchestration_tools.py`.
+`DomainPlanner` uses its own `PlanStep` model. Use `src/agent_bridge.py` to convert between `PlanStep` and main's `SubTask` for cross-system interop.
 
 ---
 

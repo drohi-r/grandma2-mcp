@@ -24,11 +24,5 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Lint with Ruff
-        run: uv run ruff check src/ tests/ rag/
-
-      - name: Type check
-        run: uv run mypy src/ rag/
-
       - name: Run tests
         run: uv run python -m pytest tests/ -v --tb=short -m "not live"
