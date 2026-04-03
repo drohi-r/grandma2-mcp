@@ -8,6 +8,9 @@ last_updated: 2026-04-02T05:20:00Z
 
 # Project Rules
 
+> Portable agent entry point: see [AGENTS.md](./AGENTS.md).
+> This file is the detailed repo rulebook for deeper architecture, safety, and workflow guidance.
+
 ## Project Identity
 
 MCP server exposing **218 tools**, **13 resources**, **10 prompts**, and **45 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
