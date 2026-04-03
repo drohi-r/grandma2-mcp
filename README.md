@@ -1271,17 +1271,17 @@ Requires **Python ≥ 3.12**.
 
 ```bash
 # Run all tests
-make test                             # or: python -m pytest -v
+make test                             # or: uv run python -m pytest -v
 
 # Run a subset
-python -m pytest tests/test_vocab.py  # single file
-python -m pytest tests/test_rag_*.py  # RAG tests only
+uv run python -m pytest tests/test_vocab.py  # single file
+uv run python -m pytest tests/test_rag_*.py  # RAG tests only
 
 # Start MCP server
 uv run python -m src.server
 
 # Login test
-python scripts/main.py
+uv run python scripts/main.py
 ```
 
 ## Troubleshooting
