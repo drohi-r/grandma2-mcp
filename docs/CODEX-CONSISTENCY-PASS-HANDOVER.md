@@ -3,10 +3,12 @@ title: Codex Consistency Pass Handover — MA2 Agent
 description: Targeted documentation and metadata consistency cleanup summary for MA2 Agent
 version: 1.0.0
 created: 2026-04-02T04:16:48Z
-last_updated: 2026-04-02T04:41:11Z
+last_updated: 2026-04-04T19:50:00Z
 ---
 
 # Codex Consistency Pass Handover — MA2 Agent
+
+> Historical note: this document describes the targeted documentation consistency pass from `2026-04-02`. It is not the current source of truth for the live browser UI or the latest operator workflow changes. For current usage, start with the repo [README](../README.md).
 
 ## 1. Purpose
 
