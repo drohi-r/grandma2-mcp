@@ -831,6 +831,32 @@ npm install && npm run compile
 
 See [`vscode-mcp-provider/README.md`](vscode-mcp-provider/README.md) for full details.
 
+### Codex
+
+Create a `codex.json` MCP config file:
+
+```json
+{
+  "mcpServers": {
+    "gma2": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/grandma2-mcp", "run", "python", "-m", "src.server"],
+      "env": {
+        "GMA_HOST": "192.168.1.100",
+        "GMA_USER": "administrator",
+        "GMA_PASSWORD": "admin"
+      }
+    }
+  }
+}
+```
+
+Then run Codex with:
+
+```bash
+codex --mcp-config codex.json
+```
+
 ## Safety System
 
 grandMA2 MCP enforces a **3-layer model** where effective permissions are the intersection of all three — no single layer can expand privileges:
