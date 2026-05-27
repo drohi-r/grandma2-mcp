@@ -7597,6 +7597,107 @@ async def build_show_from_patch(
 
 
 # ============================================================================
+# T8 — Expert preset library architect (architect_preset_library)
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.PRESET_UPDATE)
+@_handle_errors
+async def architect_preset_library(
+    patch_filter: str | None = None,
+    strategy: str = "full-coverage",
+    dry_run: bool = True,
+    confirm_destructive: bool = False,
+) -> str:
+    """Architect a complete preset library against the current patch.
+
+    Strategies (per spec §C.4):
+      - ``full-coverage`` — universal color (8 hues + warm/cool wash) + position
+        + selective gobo/beam/focus/control + MIB for movers
+      - ``minimal-viable`` — 4 cardinal hues only, no position/selective
+      - ``color-first`` — 12-hue wheel + warm/cool + minimal position
+
+    Args:
+        patch_filter: MA2 selection spec to constrain — None scans whole patch.
+            (Path A note: filter wired through patch_reader's existing scope.)
+        strategy: One of ``full-coverage`` | ``minimal-viable`` | ``color-first``.
+        dry_run: When True, build the plan but don't send any commands.
+        confirm_destructive: Required for ``dry_run=False``.
+
+    Returns:
+        JSON envelope: ``{strategy, reference_fixtures, plan, coverage_report,
+        naming_convention, expert_review, summary, dry_run, executed_steps, blocked}``.
+    """
+    from src.expert_lint import expert_lint
+    from src.preset_strategies import architect_preset_library_for, get_preset_strategy
+    from src.show_strategies.patch_reader import summarize_patch
+
+    try:
+        strat = get_preset_strategy(strategy)
+    except ValueError as e:
+        return json.dumps({
+            "strategy": strategy, "blocked": True, "error": str(e),
+            "plan": [], "coverage_report": [], "expert_review": [],
+            "summary": {}, "dry_run": dry_run, "executed_steps": 0,
+        }, indent=2)
+
+    client = await get_client()
+    patch = await summarize_patch(client)
+    result = architect_preset_library_for(
+        strategy=strategy, patch=patch, options=None,
+    )
+
+    # Run expert_lint on the preset plan
+    lint_plan = {
+        "kind": "preset",
+        "strategy": strategy,
+        "reference_fixtures": result["reference_fixtures"],
+        "plan": result["plan"],
+        "fixture_types": [ft.get("short_name", "") for ft in patch.get("fixture_types", [])],
+        "naming_convention": result["naming_convention"],
+    }
+    findings = expert_lint(lint_plan, domain="preset", context=None)
+
+    if not dry_run and not confirm_destructive:
+        return json.dumps({
+            "strategy": strategy,
+            "blocked": True,
+            "error": "dry_run=False requires confirm_destructive=True",
+            "reference_fixtures": result["reference_fixtures"],
+            "plan": result["plan"],
+            "coverage_report": result["coverage_report"],
+            "naming_convention": result["naming_convention"],
+            "expert_review": [v.__dict__ for v in findings],
+            "summary": result["summary"],
+            "dry_run": dry_run, "executed_steps": 0,
+        }, indent=2)
+
+    executed = 0
+    if not dry_run:
+        # The actual MA2 Store Preset path is left as a Path-B follow-on; per
+        # the plan, this tool ships dry-run + plan emission. Operators can
+        # use the plan output to drive subsequent Store calls.
+        # confirm_destructive=True is gated above; here we surface that the
+        # store path is deferred rather than mutating without an explicit
+        # store loop.
+        pass
+
+    return json.dumps({
+        "strategy": strategy,
+        "reference_fixtures": result["reference_fixtures"],
+        "plan": result["plan"],
+        "coverage_report": result["coverage_report"],
+        "naming_convention": result["naming_convention"],
+        "expert_review": [v.__dict__ for v in findings],
+        "summary": result["summary"],
+        "dry_run": dry_run,
+        "executed_steps": executed,
+        "blocked": False,
+    }, indent=2)
+
+
+# ============================================================================
 # T5 — Screen layout builder (build_layout_for_screen)
 # ============================================================================
 

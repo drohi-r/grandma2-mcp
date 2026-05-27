@@ -149,6 +149,36 @@ async def task_t5() -> int:
     return 0
 
 
+async def task_t8() -> int:
+    """architect_preset_library dry-run against live Nemesis show."""
+    print("[T8] architect_preset_library(strategy='full-coverage', dry_run=True)")
+    from src.server import architect_preset_library
+    raw = await architect_preset_library(
+        strategy="full-coverage", dry_run=True, confirm_destructive=False,
+    )
+    data = json.loads(raw)
+    if data.get("blocked"):
+        print(f"[T8] FAILED — blocked: {data.get('error')}")
+        return 1
+    summary = data["summary"]
+    refs = data["reference_fixtures"]
+    print("[T8] OK — preset library plan against Nemesis:")
+    print(f"     reference_fixtures (lowest-ID per type): {len(refs)}")
+    print(f"     total_presets : {summary['total_presets']}")
+    print(f"     universal     : {summary['universal']}")
+    print(f"     selective     : {summary['selective']}")
+    print(f"     mib           : {summary['mib']}")
+    coverage = data["coverage_report"]
+    covered = sum(1 for c in coverage if c.get("has_preset"))
+    print(f"     coverage      : {covered}/{len(coverage)} attribute entries with a preset")
+    findings = data["expert_review"]
+    err = [f for f in findings if f.get("severity") == "error"]
+    warn = [f for f in findings if f.get("severity") == "warning"]
+    advice = [f for f in findings if f.get("severity") == "advice"]
+    print(f"     lint          : {len(err)} error / {len(warn)} warning / {len(advice)} advice")
+    return 0
+
+
 async def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -168,8 +198,7 @@ async def main(argv: list[str]) -> int:
     if args.task == "T5":
         return await task_t5()
     if args.task == "T8":
-        print("[T8] not implemented in this script revision")
-        return 1
+        return await task_t8()
     return 1
 
 
