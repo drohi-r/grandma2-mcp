@@ -405,9 +405,14 @@ class TestPathATools:
 
 
 class TestExpertLintWiringInGenerators:
-    """Path-A plan-emitting tools must call ``expert_lint`` before returning."""
+    """Plan-emitting tools must call ``expert_lint`` before returning."""
 
-    PLAN_EMITTERS = ["generate_ma2_macro"]
+    PLAN_EMITTERS = [
+        "generate_ma2_macro",        # T3
+        "build_show_from_patch",     # T4 (Path B)
+        "build_layout_for_screen",   # T5 (Path B)
+        "architect_preset_library",  # T8 (Path B)
+    ]
 
     def test_plan_emitters_call_expert_lint(self):
         from inspect import getsource
@@ -419,6 +424,100 @@ class TestExpertLintWiringInGenerators:
             assert "expert_lint" in src, (
                 f"{tool_name} must call expert_lint before returning its envelope"
             )
+
+
+# ── 11c. Path-B tools have test files + are registered ───────────────────────
+
+class TestPathBTools:
+    """Path-B tools must follow project conventions."""
+
+    NEW_TOOLS = {
+        "check_plugin_available":   "test_plugin_inventory.py",
+        "build_show_from_patch":    "test_build_show_from_patch.py",
+        "build_layout_for_screen":  "test_build_layout.py",
+        "architect_preset_library": "test_architect_preset_library.py",
+    }
+
+    def test_each_new_tool_has_test_file(self):
+        for tool, fname in self.NEW_TOOLS.items():
+            assert (REPO_ROOT / "tests" / fname).exists(), (
+                f"Tool {tool!r} is missing its dedicated test file: tests/{fname}"
+            )
+
+    def test_each_new_tool_registered_in_server(self):
+        server_src = (REPO_ROOT / "src" / "server.py").read_text(encoding="utf-8")
+        for tool in self.NEW_TOOLS:
+            assert f"async def {tool}(" in server_src, (
+                f"Tool {tool!r} not registered in src/server.py"
+            )
+
+
+# ── 11d. Strategy modules stay pure (Path B parallel to expert_lint) ─────────
+
+class TestStrategyModulePurity:
+    """src/show_strategies/, src/preset_strategies/, src/layout_templates/
+    must stay pure — no telnet, asyncio, server imports.
+
+    Exemption: ``src/show_strategies/patch_reader.py`` is the live I/O
+    boundary for the show + preset strategies (T4 + T8 share it). It is
+    allowed to use the telnet client; nothing else in those packages may.
+    """
+
+    PURE_DIRS = [
+        REPO_ROOT / "src" / "show_strategies",
+        REPO_ROOT / "src" / "preset_strategies",
+        REPO_ROOT / "src" / "layout_templates",
+    ]
+    EXEMPT_FILES = {"patch_reader.py"}
+    FORBIDDEN_IMPORTS = {
+        "src.telnet_client",
+        "src.navigation",
+        "src.server",
+        "src.session_manager",
+        "asyncio",
+    }
+
+    def _python_files(self):
+        files: list[Path] = []
+        for d in self.PURE_DIRS:
+            if not d.exists():
+                continue
+            files.extend(
+                f for f in d.glob("*.py") if f.name not in self.EXEMPT_FILES
+            )
+        return files
+
+    def _imported_modules(self, source: str) -> set[str]:
+        modules: set[str] = set()
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    modules.add(node.module)
+        return modules
+
+    def test_no_io_imports(self):
+        for pyfile in self._python_files():
+            source = pyfile.read_text(encoding="utf-8")
+            imports = self._imported_modules(source)
+            for forbidden in self.FORBIDDEN_IMPORTS:
+                assert forbidden not in imports, (
+                    f"{pyfile.relative_to(REPO_ROOT)} imports {forbidden!r} "
+                    "— strategy modules must stay pure (patch_reader is exempt)"
+                )
+
+    def test_no_async_functions(self):
+        for pyfile in self._python_files():
+            tree = ast.parse(pyfile.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.AsyncFunctionDef):
+                    pytest.fail(
+                        f"{pyfile.relative_to(REPO_ROOT)}:{node.lineno}: "
+                        f"async def '{node.name}' — strategy modules must be sync"
+                    )
 
 
 # ── 12. SubTask has workflow field ───────────────────────────────────────────

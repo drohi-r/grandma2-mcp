@@ -12,7 +12,7 @@ last_updated: 2026-04-02T05:20:00Z
 
 ## Project Identity
 
-MCP server exposing **222 tools**, **13 resources**, **10 prompts**, and **46 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
+MCP server exposing **226 tools**, **13 resources**, **10 prompts**, and **46 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
 
 Central rule: **planner decides → skills carry instructions → subagents execute in isolation → tools take narrow actions → memory stores distilled checkpoints**.
 
@@ -24,7 +24,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server — 188 tools + 13 MCP resources + 10 MCP prompts, safety gate |
+| `src/server.py` | FastMCP server — 192 tools + 13 MCP resources + 10 MCP prompts, safety gate |
 | `src/server_orchestration_tools.py` | Registers 34 agentic tools (IDs 110-144, excluding 130) onto FastMCP |
 | `src/telnet_client.py` | Async Telnet (telnetlib3), auth, send/receive, injection prevention |
 | `src/session_manager.py` | Per-operator Telnet session pool (LRU, keepalive, auto-reconnect) |
