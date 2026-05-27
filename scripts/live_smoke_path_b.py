@@ -116,6 +116,39 @@ async def task_t4() -> int:
     return 0
 
 
+async def task_t5() -> int:
+    """build_layout_for_screen dry-run against live console.
+
+    Builds the busking-master template; prints the ASCII preview.
+    Cells reference executors that may or may not exist on Nemesis — this
+    is fine for dry-run; LAYOUT-DANGLE-001 would fire on live execution
+    if the cells point at empty slots.
+    """
+    print("[T5] build_layout_for_screen(screen=1, template='busking-master', dry_run=True)")
+    from src.server import build_layout_for_screen
+    raw = await build_layout_for_screen(
+        screen=1, template="busking-master", dry_run=True,
+    )
+    data = json.loads(raw)
+    if data.get("blocked"):
+        print(f"[T5] FAILED — blocked: {data.get('error')}")
+        return 1
+    summary = data["summary"]
+    print("[T5] OK — busking-master layout dry-run:")
+    print(f"     plan_steps     : {summary['plan_steps']}")
+    print(f"     content_cells  : {summary['content_cells']}")
+    findings = data["expert_review"]
+    err = [f for f in findings if f.get("severity") == "error"]
+    warn = [f for f in findings if f.get("severity") == "warning"]
+    advice = [f for f in findings if f.get("severity") == "advice"]
+    print(f"     lint           : {len(err)} error / {len(warn)} warning / {len(advice)} advice")
+    print()
+    print("     preview (8x5):")
+    for line in data["preview_ascii"].splitlines():
+        print(f"        {line}")
+    return 0
+
+
 async def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -133,8 +166,7 @@ async def main(argv: list[str]) -> int:
     if args.task == "T4":
         return await task_t4()
     if args.task == "T5":
-        print("[T5] not implemented in this script revision")
-        return 1
+        return await task_t5()
     if args.task == "T8":
         print("[T8] not implemented in this script revision")
         return 1

@@ -7597,6 +7597,159 @@ async def build_show_from_patch(
 
 
 # ============================================================================
+# T5 — Screen layout builder (build_layout_for_screen)
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.PROGRAMMER_WRITE)
+@_handle_errors
+async def build_layout_for_screen(
+    screen: int,
+    content: list[dict] | None = None,
+    template: str | None = None,
+    dry_run: bool = True,
+    confirm_destructive: bool = False,
+) -> str:
+    """Build (and optionally apply) a layout for one of the MA2 screens.
+
+    Either ``template`` or ``content`` must be supplied (not both).
+
+    Templates (per spec §B.2): ``busking-master`` | ``preset-access`` |
+    ``executor-monitor`` | ``macro-page`` | ``programmer-view`` |
+    ``troubleshoot-view``.
+
+    Args:
+        screen: Target screen number (1-5 on a full console; 1 on onPC).
+        content: Optional list of ContentSpec cells (mutually exclusive with template).
+        template: Optional template name (mutually exclusive with content).
+        dry_run: When True, build the plan but don't send any commands.
+        confirm_destructive: Required for ``dry_run=False`` (layout writes overwrite
+            screen content).
+
+    Returns:
+        JSON envelope: ``{screen, template, plan, content, preview_ascii,
+        expert_review, summary, dry_run, executed_steps, blocked}``.
+    """
+    from src.expert_lint import expert_lint
+    from src.layout_templates import (
+        build_layout_for,
+        get_template,
+        render_ascii_preview,
+    )
+
+    if template is not None and content is not None:
+        return json.dumps({
+            "screen": screen, "template": template,
+            "blocked": True,
+            "error": "Pass either template OR content, not both.",
+            "plan": [], "content": [], "preview_ascii": "",
+            "expert_review": [], "summary": {},
+            "dry_run": dry_run, "executed_steps": 0,
+        }, indent=2)
+    if template is None and content is None:
+        return json.dumps({
+            "screen": screen, "template": None,
+            "blocked": True,
+            "error": "Either template or content must be supplied.",
+            "plan": [], "content": [], "preview_ascii": "",
+            "expert_review": [], "summary": {},
+            "dry_run": dry_run, "executed_steps": 0,
+        }, indent=2)
+
+    plan_steps: list = []
+    layout_content: list = []
+    grid_cols, grid_rows = 8, 5
+
+    if template is not None:
+        try:
+            tmpl = get_template(template)
+        except ValueError as e:
+            return json.dumps({
+                "screen": screen, "template": template,
+                "blocked": True, "error": str(e),
+                "plan": [], "content": [], "preview_ascii": "",
+                "expert_review": [], "summary": {},
+                "dry_run": dry_run, "executed_steps": 0,
+            }, indent=2)
+        plan_steps, layout_content = build_layout_for(
+            template=template, screen=screen, options=None,
+        )
+        grid_cols = tmpl.default_grid_cols
+        grid_rows = tmpl.default_grid_rows
+    else:
+        # Custom content path — caller-supplied cells. We still emit a
+        # set-screen step and one place-cell step per content entry.
+        plan_steps.append({
+            "order": 1, "kind": "set-screen",
+            "command": f"Screen {screen}",
+            "purpose": f"Switch to screen {screen} before placing cells",
+            "meta": {"screen": screen, "template": None},
+        })
+        for i, cell in enumerate(content or [], start=2):
+            label = cell.get("label") or ""
+            target = cell.get("target", "")
+            x = cell.get("grid_x", 0)
+            y = cell.get("grid_y", 0)
+            plan_steps.append({
+                "order": i, "kind": "place-cell",
+                "command": (
+                    f'LayoutElement {x},{y} {cell.get("kind", "label")} '
+                    f'"{label}" @ {target}'
+                ),
+                "purpose": f"Place cell at ({x},{y})",
+                "meta": dict(cell),
+            })
+        layout_content = list(content or [])
+
+    preview = render_ascii_preview(layout_content, grid_cols=grid_cols, grid_rows=grid_rows)
+
+    # Run expert_lint on the layout content
+    lint_plan = {
+        "kind": "layout",
+        "screen": screen,
+        "template": template,
+        "content": layout_content,
+        "screen_native_resolution": (1920, 1080),
+        "cell_size": (100, 50),
+        "steps": [
+            {"order": s["order"], "command": s["command"],
+             "purpose": s["purpose"]} for s in plan_steps
+        ],
+    }
+    findings = expert_lint(lint_plan, domain="layout", context=None)
+
+    if not dry_run and not confirm_destructive:
+        return json.dumps({
+            "screen": screen, "template": template,
+            "blocked": True,
+            "error": "dry_run=False requires confirm_destructive=True",
+            "plan": plan_steps, "content": layout_content,
+            "preview_ascii": preview,
+            "expert_review": [v.__dict__ for v in findings],
+            "summary": {"plan_steps": len(plan_steps), "content_cells": len(layout_content)},
+            "dry_run": dry_run, "executed_steps": 0,
+        }, indent=2)
+
+    executed = 0
+    if not dry_run:
+        client = await get_client()
+        for step in plan_steps:
+            await client.send_command(step["command"])
+            executed += 1
+
+    return json.dumps({
+        "screen": screen, "template": template,
+        "plan": plan_steps, "content": layout_content,
+        "preview_ascii": preview,
+        "expert_review": [v.__dict__ for v in findings],
+        "summary": {"plan_steps": len(plan_steps), "content_cells": len(layout_content)},
+        "dry_run": dry_run, "executed_steps": executed,
+        "blocked": False,
+    }, indent=2)
+
+
+# ============================================================================
 # T6 — Plugin disambiguation (check_plugin_available)
 # ============================================================================
 

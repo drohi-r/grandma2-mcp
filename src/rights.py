@@ -174,6 +174,7 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "reconfigure_connection":     MA2Right.ADMIN,  # T2 — swaps active connection
     "generate_ma2_macro":         MA2Right.PROGRAM,  # T3 — NL → macro pool write (deferred to Path B)
     "build_show_from_patch":      MA2Right.PROGRAM,  # T4 — creates groups/presets/cues/executors
+    "build_layout_for_screen":    MA2Right.PROGRAM,  # T5 — writes screen layout elements
     # ── Previously unmapped tools (added during hardening pass) ──────────
     # none (0) — read-only inspection / validation
     "classify_show_mode":           MA2Right.NONE,
