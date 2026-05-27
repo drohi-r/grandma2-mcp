@@ -7476,6 +7476,41 @@ async def discover_consoles(
     }, indent=2)
 
 
+# ============================================================================
+# T6 — Plugin disambiguation (check_plugin_available)
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.DISCOVER)
+@_handle_errors
+async def check_plugin_available(
+    plugin_name: str,
+    use_cache: bool = True,
+    cache_ttl_seconds: int = 60,
+) -> str:
+    """Check whether a plugin is loaded in the console plugin pool (SAFE_READ).
+
+    Used by skills (notably ``auto-layout-color-picker``) to decide whether to
+    invoke the plugin path or fall back to manual workflows.
+
+    Args:
+        plugin_name: Human-readable plugin name (e.g. ``"EcubeColorPicker"``).
+        use_cache: When True, reuse cached inventory if fresh.
+        cache_ttl_seconds: How long a cached inventory stays fresh.
+
+    Returns:
+        JSON envelope: ``{plugin_name, available, pool_id, match,
+        last_checked_at, source}``.
+    """
+    from src.plugin_inventory import _default_inventory
+    inv = _default_inventory()
+    result = await inv.lookup(
+        plugin_name, use_cache=use_cache, cache_ttl=cache_ttl_seconds,
+    )
+    return json.dumps(result, indent=2)
+
+
 async def _verify_round_trip(host: str, port: int, user: str, password: str) -> bool:
     """Open a fresh client to the candidate host and try a tiny SAFE_READ."""
     from src.telnet_client import GMA2TelnetClient

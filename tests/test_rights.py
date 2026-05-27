@@ -181,7 +181,7 @@ class TestRightsMappingDrift:
         # without explicit mapping, but all DESTRUCTIVE/WRITE tools MUST be mapped.
         unmapped = tool_names - set(_OPERATION_MIN_RIGHT.keys())
         # Allow unmapped tools only if they're clearly read-only (list_, get_, etc.)
-        _READ_PREFIXES = ("list_", "get_", "discover_", "search_", "info_", "suggest_", "recall_", "assert_", "query_")
+        _READ_PREFIXES = ("list_", "get_", "discover_", "search_", "info_", "suggest_", "recall_", "assert_", "query_", "check_")
         unmapped_non_read = {t for t in unmapped if not any(t.startswith(p) for p in _READ_PREFIXES)}
 
         # All non-read tools must be mapped. Fail if any are missing.

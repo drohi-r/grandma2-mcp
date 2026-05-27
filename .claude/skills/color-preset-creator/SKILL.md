@@ -1,12 +1,30 @@
 ---
 title: Color Preset Creator
 description: Worker instruction module for storing universal color presets in grandMA2 from RGB values — creates the preset pool that color-palette-sequence-builder reads from
-version: 1.0.0
+version: 1.1.0
 created: 2026-03-31T21:52:55Z
-last_updated: 2026-03-31T21:52:55Z
+last_updated: 2026-05-28T00:00:00Z
+tags: [color, presets, manual-path]
+prerequisites: [patch-and-group-builder]
+use_instead_of: []
 ---
 
 # Color Preset Creator
+
+## First decision
+
+This skill is the **manual color preset path**. Before invoking, run:
+
+```python
+check_plugin_available("EcubeColorPicker")
+```
+
+- **`available: true`** → **Stop and use [`auto-layout-color-picker`](../auto-layout-color-picker/SKILL.md) instead** unless the operator explicitly wants manual control. The plugin builds the layout, images, and macros automatically; this skill only stores the preset pool, so the operator ends up with no picker UI.
+- **`available: false`** → Either offer to import the plugin (`Import Plugin N "EcubeColorPicker" /path=...`) or proceed with this skill if the operator wants the bare preset pool.
+
+The manual path is also the right call for non-standard color models (e.g., CMY-only rigs where the plugin's RGB defaults don't fit) or for per-group customisation the plugin doesn't expose.
+
+---
 
 **Worker charter:** DESTRUCTIVE — creates or overwrites color presets in the show's
 preset pool. All presets are stored as **universal** scope so they apply to any

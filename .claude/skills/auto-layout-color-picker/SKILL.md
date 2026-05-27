@@ -1,12 +1,31 @@
 ---
 title: Auto Layout Color Picker
 description: Instruction module for using the grandMA2 auto-layout color picker plugin — reserve pool ranges, verify groups and images, and run the plugin safely for fast color-access layouts
-version: 1.0.0
+version: 1.1.0
 created: 2026-04-02T05:05:00Z
-last_updated: 2026-04-02T05:05:00Z
+last_updated: 2026-05-28T00:00:00Z
+tags: [color, presets, layout, plugin-aware]
+prerequisites: [patch-and-group-builder]
+wraps_plugin: EcubeColorPicker
+use_instead_of: [color-preset-creator]
 ---
 
 # Auto Layout Color Picker
+
+## First decision
+
+Before doing anything else, check whether the plugin is loaded:
+
+```python
+check_plugin_available("EcubeColorPicker")
+```
+
+- **`available: true`** → Use the plugin path. Invoke the plugin from its `pool_id`, then verify the layout / macros / sequences it created. The plugin is purpose-built for this workflow; manual paths are slower and produce inferior layouts.
+- **`available: false`** → Ask the operator: "The auto-layout color-picker plugin isn't loaded. Should I import `EcubeColorPicker.xml` from the MA2 plugin directory, or do you want the manual `color-preset-creator` path?"
+
+Skip the manual path unless the operator explicitly chooses it. The manual path is only the right call when (a) the rig uses a non-standard color model the plugin doesn't handle (e.g., a CMY-only fixture), or (b) the operator wants per-group customisation the plugin doesn't expose.
+
+---
 
 **Worker charter:** DESTRUCTIVE once the plugin is run. Use this skill to prepare, validate, and execute the **auto-layout** color picker workflow only. Do **not** run `HighLowFX` as part of this skill.
 
