@@ -378,6 +378,49 @@ class TestExpertLintPurity:
                     )
 
 
+# ── 11b. Path-A tool conventions ─────────────────────────────────────────────
+
+class TestPathATools:
+    """Each Path-A tool has a registered function and a dedicated test file."""
+
+    NEW_TOOLS = {
+        "suggest_skills_for_task": "test_skill_router.py",
+        "discover_consoles": "test_console_discovery.py",
+        "reconfigure_connection": "test_reconfigure_connection.py",
+        "generate_ma2_macro": "test_macro_generation.py",
+    }
+
+    def test_each_new_tool_has_test_file(self):
+        for tool, fname in self.NEW_TOOLS.items():
+            assert (REPO_ROOT / "tests" / fname).exists(), (
+                f"Tool {tool!r} is missing its dedicated test file: tests/{fname}"
+            )
+
+    def test_each_new_tool_registered_in_server(self):
+        server_src = (REPO_ROOT / "src" / "server.py").read_text(encoding="utf-8")
+        for tool in self.NEW_TOOLS:
+            assert f"async def {tool}(" in server_src, (
+                f"Tool {tool!r} not registered in src/server.py"
+            )
+
+
+class TestExpertLintWiringInGenerators:
+    """Path-A plan-emitting tools must call ``expert_lint`` before returning."""
+
+    PLAN_EMITTERS = ["generate_ma2_macro"]
+
+    def test_plan_emitters_call_expert_lint(self):
+        from inspect import getsource
+        from src import server as _server
+        for tool_name in self.PLAN_EMITTERS:
+            fn = getattr(_server, tool_name, None)
+            assert fn is not None, f"{tool_name} not present in src.server"
+            src = getsource(fn)
+            assert "expert_lint" in src, (
+                f"{tool_name} must call expert_lint before returning its envelope"
+            )
+
+
 # ── 12. SubTask has workflow field ───────────────────────────────────────────
 
 class TestSubTaskWorkflowHygiene:

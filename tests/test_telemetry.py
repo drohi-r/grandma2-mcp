@@ -332,3 +332,16 @@ class TestContextVarPropagation:
         assert _current_session_id.get() == "ses-xyz"
         _current_session_id.reset(token)
         assert _current_session_id.get() == ""
+
+
+# ---------------------------------------------------------------------------
+# Path A — check_ prefix inference (T6 staging)
+# ---------------------------------------------------------------------------
+
+def test_check_prefix_infers_safe_read():
+    """check_* tools (T6 helper check_plugin_available) infer as SAFE_READ."""
+    from src.telemetry import infer_risk_tier
+
+    async def check_thing_exists():
+        return "ok"
+    assert infer_risk_tier(check_thing_exists) == "SAFE_READ"

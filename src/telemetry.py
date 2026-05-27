@@ -36,6 +36,7 @@ _SAFE_READ_PREFIXES: tuple[str, ...] = (
     "suggest_",
     "assert_",
     "recall_",
+    "check_",  # T6 helper `check_plugin_available` lands in Path B; staged here.
 )
 
 
