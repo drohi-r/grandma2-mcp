@@ -86,6 +86,36 @@ async def task_t6(verify_only: bool, confirm: bool) -> int:
     return 0
 
 
+async def task_t4() -> int:
+    """build_show_from_patch dry-run against live Nemesis show."""
+    print("[T4] build_show_from_patch(strategy='rock-band', dry_run=True)")
+    from src.server import build_show_from_patch
+    raw = await build_show_from_patch(
+        strategy="rock-band",
+        options={"songs": 14},
+        dry_run=True,
+        confirm_destructive=False,
+    )
+    data = json.loads(raw)
+    if data.get("blocked"):
+        print(f"[T4] FAILED — blocked: {data.get('error')}")
+        return 1
+    summary = data["summary"]
+    print("[T4] OK — dry-run plan against Nemesis:")
+    print(f"     plan_steps : {summary['plan_steps']}")
+    print(f"     groups     : {summary['groups']}")
+    print(f"     presets    : {summary['presets']}")
+    print(f"     cues       : {summary['cues']}")
+    print(f"     executors  : {summary['executors']}")
+    print(f"     worlds     : {summary['worlds']}")
+    findings = data["expert_review"]
+    err = [f for f in findings if f.get("severity") == "error"]
+    warn = [f for f in findings if f.get("severity") == "warning"]
+    advice = [f for f in findings if f.get("severity") == "advice"]
+    print(f"     lint       : {len(err)} error / {len(warn)} warning / {len(advice)} advice")
+    return 0
+
+
 async def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -101,8 +131,7 @@ async def main(argv: list[str]) -> int:
     if args.task == "T6":
         return await task_t6(verify_only=not args.do_import, confirm=args.confirm)
     if args.task == "T4":
-        print("[T4] not implemented in this script revision")
-        return 1
+        return await task_t4()
     if args.task == "T5":
         print("[T5] not implemented in this script revision")
         return 1

@@ -1,0 +1,680 @@
+{
+  "showfile": "nemesis 25 years v3 clone",
+  "fixture_count": 76,
+  "fixtures": [
+    {
+      "id": 1,
+      "name": "HY B-EYE K25 1",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.001"
+    },
+    {
+      "id": 2,
+      "name": "HY B-EYE K25 2",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.019"
+    },
+    {
+      "id": 3,
+      "name": "HY B-EYE K25 3",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.037"
+    },
+    {
+      "id": 4,
+      "name": "HY B-EYE K25 4",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.055"
+    },
+    {
+      "id": 5,
+      "name": "HY B-EYE K25 5",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.073"
+    },
+    {
+      "id": 6,
+      "name": "HY B-EYE K25 6",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.091"
+    },
+    {
+      "id": 7,
+      "name": "HY B-EYE K25 7",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.109"
+    },
+    {
+      "id": 8,
+      "name": "HY B-EYE K25 8",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.127"
+    },
+    {
+      "id": 9,
+      "name": "HY B-EYE K25 9",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.145"
+    },
+    {
+      "id": 10,
+      "name": "HY B-EYE K25 10",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.163"
+    },
+    {
+      "id": 11,
+      "name": "HY B-EYE K25 11",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.181"
+    },
+    {
+      "id": 12,
+      "name": "HY B-EYE K25 12",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.199"
+    },
+    {
+      "id": 13,
+      "name": "HY B-EYE K25 13",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.217"
+    },
+    {
+      "id": 14,
+      "name": "HY B-EYE K25 14",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.235"
+    },
+    {
+      "id": 15,
+      "name": "HY B-EYE K25 15",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.253"
+    },
+    {
+      "id": 16,
+      "name": "HY B-EYE K25 16",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.271"
+    },
+    {
+      "id": 17,
+      "name": "HY B-EYE K25 17",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.289"
+    },
+    {
+      "id": 18,
+      "name": "HY B-EYE K25 18",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.307"
+    },
+    {
+      "id": 19,
+      "name": "HY B-EYE K25 19",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.325"
+    },
+    {
+      "id": 20,
+      "name": "HY B-EYE K25 20",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.343"
+    },
+    {
+      "id": 21,
+      "name": "HY B-EYE K25 21",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.361"
+    },
+    {
+      "id": 22,
+      "name": "HY B-EYE K25 22",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.379"
+    },
+    {
+      "id": 23,
+      "name": "HY B-EYE K25 23",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.397"
+    },
+    {
+      "id": 24,
+      "name": "HY B-EYE K25 24",
+      "type": "32 Zoom Wash 1240 18 Channel",
+      "patch": "1.415"
+    },
+    {
+      "id": 101,
+      "name": "Sharpy 1",
+      "type": "24 260W Beam PG",
+      "patch": "2.001"
+    },
+    {
+      "id": 102,
+      "name": "Sharpy 2",
+      "type": "24 260W Beam PG",
+      "patch": "2.019"
+    },
+    {
+      "id": 103,
+      "name": "Sharpy 3",
+      "type": "24 260W Beam PG",
+      "patch": "2.037"
+    },
+    {
+      "id": 104,
+      "name": "Sharpy 4",
+      "type": "23 260W Beam PG",
+      "patch": "2.055"
+    },
+    {
+      "id": 105,
+      "name": "Sharpy 5",
+      "type": "23 260W Beam PG",
+      "patch": "2.073"
+    },
+    {
+      "id": 106,
+      "name": "Sharpy 6",
+      "type": "23 260W Beam PG",
+      "patch": "2.091"
+    },
+    {
+      "id": 107,
+      "name": "Sharpy 7",
+      "type": "23 260W Beam PG",
+      "patch": "2.109"
+    },
+    {
+      "id": 108,
+      "name": "Sharpy 8",
+      "type": "23 260W Beam PG",
+      "patch": "2.127"
+    },
+    {
+      "id": 109,
+      "name": "Sharpy 9",
+      "type": "23 260W Beam PG",
+      "patch": "2.145"
+    },
+    {
+      "id": 110,
+      "name": "Sharpy 10",
+      "type": "23 260W Beam PG",
+      "patch": "2.163"
+    },
+    {
+      "id": 111,
+      "name": "Sharpy 11",
+      "type": "23 260W Beam PG",
+      "patch": "2.181"
+    },
+    {
+      "id": 112,
+      "name": "Sharpy 12",
+      "type": "23 260W Beam PG",
+      "patch": "2.199"
+    },
+    {
+      "id": 113,
+      "name": "Sharpy 13",
+      "type": "23 260W Beam PG",
+      "patch": "2.217"
+    },
+    {
+      "id": 114,
+      "name": "Sharpy 14",
+      "type": "23 260W Beam PG",
+      "patch": "2.235"
+    },
+    {
+      "id": 115,
+      "name": "Sharpy 15",
+      "type": "23 260W Beam PG",
+      "patch": "2.253"
+    },
+    {
+      "id": 116,
+      "name": "Sharpy 16",
+      "type": "23 260W Beam PG",
+      "patch": "2.271"
+    },
+    {
+      "id": 201,
+      "name": "X4 Bar 20 1",
+      "type": "30 New Pixel",
+      "patch": "3.001"
+    },
+    {
+      "id": 202,
+      "name": "X4 Bar 20 2",
+      "type": "30 New Pixel",
+      "patch": "3.011"
+    },
+    {
+      "id": 203,
+      "name": "X4 Bar 20 3",
+      "type": "30 New Pixel",
+      "patch": "3.021"
+    },
+    {
+      "id": 204,
+      "name": "X4 Bar 20 4",
+      "type": "30 New Pixel",
+      "patch": "3.031"
+    },
+    {
+      "id": 205,
+      "name": "X4 Bar 20 5",
+      "type": "30 New Pixel",
+      "patch": "3.041"
+    },
+    {
+      "id": 206,
+      "name": "X4 Bar 20 6",
+      "type": "30 New Pixel",
+      "patch": "3.051"
+    },
+    {
+      "id": 207,
+      "name": "X4 Bar 20 7",
+      "type": "30 New Pixel",
+      "patch": "3.061"
+    },
+    {
+      "id": 208,
+      "name": "X4 Bar 20 8",
+      "type": "30 New Pixel",
+      "patch": "3.071"
+    },
+    {
+      "id": 209,
+      "name": "X4 Bar 20 9",
+      "type": "30 New Pixel",
+      "patch": "3.081"
+    },
+    {
+      "id": 210,
+      "name": "X4 Bar 20 10",
+      "type": "30 New Pixel",
+      "patch": "3.091"
+    },
+    {
+      "id": 301,
+      "name": "ColorStrobe 1",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.001"
+    },
+    {
+      "id": 302,
+      "name": "ColorStrobe 2",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.012"
+    },
+    {
+      "id": 303,
+      "name": "ColorStrobe 3",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.023"
+    },
+    {
+      "id": 304,
+      "name": "ColorStrobe 4",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.034"
+    },
+    {
+      "id": 305,
+      "name": "ColorStrobe 5",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.045"
+    },
+    {
+      "id": 306,
+      "name": "ColorStrobe 6",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.056"
+    },
+    {
+      "id": 307,
+      "name": "ColorStrobe 7",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.067"
+    },
+    {
+      "id": 308,
+      "name": "ColorStrobe 8",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.078"
+    },
+    {
+      "id": 309,
+      "name": "ColorStrobe 9",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.089"
+    },
+    {
+      "id": 310,
+      "name": "ColorStrobe 10",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.100"
+    },
+    {
+      "id": 311,
+      "name": "ColorStrobe 11",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.111"
+    },
+    {
+      "id": 312,
+      "name": "ColorStrobe 12",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.122"
+    },
+    {
+      "id": 313,
+      "name": "ColorStrobe 13",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.133"
+    },
+    {
+      "id": 314,
+      "name": "ColorStrobe 14",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.144"
+    },
+    {
+      "id": 315,
+      "name": "ColorStrobe 15",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.155"
+    },
+    {
+      "id": 316,
+      "name": "ColorStrobe 16",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.166"
+    },
+    {
+      "id": 317,
+      "name": "ColorStrobe 17",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.177"
+    },
+    {
+      "id": 318,
+      "name": "ColorStrobe 18",
+      "type": "26 AV Pro Strobe",
+      "patch": "4.188"
+    },
+    {
+      "id": 401,
+      "name": "4-Lite 1",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.001"
+    },
+    {
+      "id": 402,
+      "name": "4-Lite 2",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.003"
+    },
+    {
+      "id": 403,
+      "name": "4-Lite 3",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.005"
+    },
+    {
+      "id": 404,
+      "name": "4-Lite 4",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.007"
+    },
+    {
+      "id": 405,
+      "name": "4-Lite 5",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.009"
+    },
+    {
+      "id": 406,
+      "name": "4-Lite 6",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.011"
+    },
+    {
+      "id": 407,
+      "name": "4-Lite 7",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.013"
+    },
+    {
+      "id": 408,
+      "name": "4-Lite 8",
+      "type": "27 ATOM 4 EYE 00",
+      "patch": "5.015"
+    }
+  ],
+  "fixture_types": [
+    {
+      "id": 1,
+      "long_name": "Universal Attributes",
+      "short_name": "Universal Attributes",
+      "manufacturer": "AutoMA"
+    },
+    {
+      "id": 2,
+      "long_name": "Dimmer",
+      "short_name": "Dim",
+      "manufacturer": "Generic"
+    },
+    {
+      "id": 3,
+      "long_name": "HY B-EYE K25",
+      "short_name": "HYBK25St",
+      "manufacturer": "Clay"
+    },
+    {
+      "id": 4,
+      "long_name": "Sharpy",
+      "short_name": "SharpySL",
+      "manufacturer": "Clay"
+    },
+    {
+      "id": 5,
+      "long_name": "Impression X4 Bar 20",
+      "short_name": "ImX4B2N",
+      "manufacturer": "GLP"
+    },
+    {
+      "id": 6,
+      "long_name": "Robin ColorStrobe",
+      "short_name": "RCStrob1",
+      "manufacturer": "Robe"
+    },
+    {
+      "id": 7,
+      "long_name": "Robin ColorStrobe",
+      "short_name": "RCStrob2",
+      "manufacturer": "Robe"
+    },
+    {
+      "id": 8,
+      "long_name": "Robin ColorStrobe",
+      "short_name": "RCStrob3",
+      "manufacturer": "Robe"
+    },
+    {
+      "id": 9,
+      "long_name": "Robin ColorStrobe",
+      "short_name": "RCStrob4",
+      "manufacturer": "Robe"
+    },
+    {
+      "id": 10,
+      "long_name": "Robin ColorStrobe",
+      "short_name": "RCStrob5",
+      "manufacturer": "Robe"
+    },
+    {
+      "id": 11,
+      "long_name": "Impression X4",
+      "short_name": "ImprX4N",
+      "manufacturer": "GLP"
+    },
+    {
+      "id": 12,
+      "long_name": "Impression X4 Bar 20",
+      "short_name": "ImX4B2C",
+      "manufacturer": "GLP"
+    },
+    {
+      "id": 13,
+      "long_name": "Impression X4 Bar 20",
+      "short_name": "ImX4B2C",
+      "manufacturer": "GLP"
+    },
+    {
+      "id": 14,
+      "long_name": "Impression X4 Bar 20",
+      "short_name": "ImX4B2N",
+      "manufacturer": "GLP"
+    },
+    {
+      "id": 15,
+      "long_name": "Robin CycBar 15",
+      "short_name": "RCB15m1",
+      "manufacturer": "Robe"
+    },
+    {
+      "id": 16,
+      "long_name": "PIXEL BAR 8ch",
+      "short_name": "RGB",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 17,
+      "long_name": "Zoom Wash 1240",
+      "short_name": "Zoom Wash 1240",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 18,
+      "long_name": "AV Pro Strobe",
+      "short_name": "AV Strobe",
+      "manufacturer": "Av"
+    },
+    {
+      "id": 19,
+      "long_name": "ATOM 4 EYE",
+      "short_name": "ATOM 4 Eye",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 20,
+      "long_name": "260W Beam PG",
+      "short_name": "PG 260 Beam",
+      "manufacturer": "18"
+    },
+    {
+      "id": 21,
+      "long_name": "260W Beam PG",
+      "short_name": "PG 260 Beam",
+      "manufacturer": "18"
+    },
+    {
+      "id": 22,
+      "long_name": "Zoom Wash 1240",
+      "short_name": "Zoom Wash 1240",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 23,
+      "long_name": "260W Beam PG",
+      "short_name": "PG 260 Beam",
+      "manufacturer": "18"
+    },
+    {
+      "id": 24,
+      "long_name": "260W Beam PG",
+      "short_name": "PG 260 Beam",
+      "manufacturer": "18"
+    },
+    {
+      "id": 25,
+      "long_name": "PIXEL BAR 8ch",
+      "short_name": "RGB",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 26,
+      "long_name": "AV Pro Strobe",
+      "short_name": "AV Strobe",
+      "manufacturer": "Av"
+    },
+    {
+      "id": 27,
+      "long_name": "ATOM 4 EYE",
+      "short_name": "ATOM 4 Eye",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 28,
+      "long_name": "Baten Bar",
+      "short_name": "Baten",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 29,
+      "long_name": "Baten Bar",
+      "short_name": "Baten",
+      "manufacturer": "AV"
+    },
+    {
+      "id": 30,
+      "long_name": "New Pixel",
+      "short_name": "Av pro-101",
+      "manufacturer": "10"
+    },
+    {
+      "id": 31,
+      "long_name": "Rogue R2X Wash VW",
+      "short_name": "R2XWVW18",
+      "manufacturer": "Chauvet"
+    },
+    {
+      "id": 32,
+      "long_name": "Zoom Wash 1240",
+      "short_name": "Zoom Wash 1240",
+      "manufacturer": "AV"
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "name": "Blinder"
+    },
+    {
+      "id": 2,
+      "name": "Wash"
+    },
+    {
+      "id": 3,
+      "name": "Beam"
+    },
+    {
+      "id": 4,
+      "name": "Bar"
+    },
+    {
+      "id": 5,
+      "name": "Strobe"
+    }
+  ],
+  "sequences_count": 126,
+  "macros_count": 24
+}

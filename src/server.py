@@ -7477,6 +7477,126 @@ async def discover_consoles(
 
 
 # ============================================================================
+# T4 — Expert show creation from patch (build_show_from_patch)
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.CUE_STORE)
+@_handle_errors
+async def build_show_from_patch(
+    strategy: str,
+    options: dict | None = None,
+    dry_run: bool = True,
+    confirm_destructive: bool = False,
+) -> str:
+    """Build an expert-grade show scaffold from the current patch.
+
+    Strategies (per spec §B.1): ``rock-band`` | ``festival`` | ``theatrical``
+    | ``dj`` | ``broadcast`` | ``corporate``.
+
+    Defaults to ``dry_run=True``; mutation requires ``confirm_destructive=True``.
+    The plan is deterministic for a given (strategy, patch, options) triple,
+    and every step is run through ``expert_lint(domain="show")`` before return.
+
+    Args:
+        strategy: One of the six strategies above.
+        options: Optional ``ShowBuildOptions`` dict — overrides strategy defaults
+            (e.g. ``{"songs": 14}``).
+        dry_run: When True, build the plan but do not send any commands.
+        confirm_destructive: Required for ``dry_run=False``. The plan is
+            destructive — it creates groups, presets, cues, executors, worlds.
+
+    Returns:
+        JSON envelope: ``{strategy, plan, rationale, expert_review, summary,
+        dry_run, executed_steps, blocked}``.
+    """
+    from src.expert_lint import expert_lint
+    from src.show_strategies import build_plan_for, get_strategy
+    from src.show_strategies.patch_reader import summarize_patch
+
+    try:
+        strat = get_strategy(strategy)
+    except ValueError as e:
+        return json.dumps({
+            "strategy": strategy, "blocked": True, "error": str(e),
+            "plan": [], "expert_review": [], "summary": {},
+            "dry_run": dry_run, "executed_steps": 0,
+        }, indent=2)
+
+    client = await get_client()
+    patch = await summarize_patch(client)
+    plan = build_plan_for(strategy=strategy, patch=patch, options=options or {})
+
+    # Run expert_lint on a synthesised "show" plan shape derived from the
+    # build plan. The lint module's show rules look for cuelists/cues/worlds;
+    # the build plan is step-oriented, so we project it.
+    cuelists = [{
+        "id": 99, "label": "Main", "tracking": strat.tracking,
+        "priority": "normal", "off_time_ms": None,
+        "cues": [
+            {"id": s["meta"].get("cue_id", 0), "label": s["meta"].get("label", ""),
+             "block": False, "uses_preset": True, "is_mib": False}
+            for s in plan if s["kind"] == "store-cue"
+        ],
+    }]
+    worlds = [{"name": s["meta"]["world_name"], "section": None}
+              for s in plan if s["kind"] == "create-world"]
+    lint_plan = {
+        "kind": "show",
+        "strategy": strategy,
+        "preset_strategy": strat.preset_strategy,
+        "cuelists": cuelists,
+        "fixtures": [],
+        "worlds": worlds,
+        "views": strat.views,
+        "steps": [
+            {"order": s["order"], "command": s["command"],
+             "purpose": s["purpose"]}
+            for s in plan
+        ],
+    }
+    findings = expert_lint(lint_plan, domain="show", context=None)
+
+    if not dry_run and not confirm_destructive:
+        return json.dumps({
+            "strategy": strategy,
+            "blocked": True,
+            "error": "dry_run=False requires confirm_destructive=True",
+            "plan": plan,
+            "expert_review": [v.__dict__ for v in findings],
+            "summary": {"plan_steps": len(plan)},
+            "dry_run": dry_run,
+            "executed_steps": 0,
+        }, indent=2)
+
+    executed = 0
+    if not dry_run:
+        # confirm_destructive=True already enforced above
+        for step in plan:
+            await client.send_command(step["command"])
+            executed += 1
+
+    return json.dumps({
+        "strategy": strategy,
+        "plan": plan,
+        "rationale": [strat.notes],
+        "expert_review": [v.__dict__ for v in findings],
+        "summary": {
+            "plan_steps": len(plan),
+            "groups": sum(1 for s in plan if s["kind"] == "create-group"),
+            "presets": sum(1 for s in plan if s["kind"] == "store-preset"),
+            "cues": sum(1 for s in plan if s["kind"] == "store-cue"),
+            "executors": sum(1 for s in plan if s["kind"] == "assign-executor"),
+            "worlds": sum(1 for s in plan if s["kind"] == "create-world"),
+        },
+        "dry_run": dry_run,
+        "executed_steps": executed,
+        "blocked": False,
+    }, indent=2)
+
+
+# ============================================================================
 # T6 — Plugin disambiguation (check_plugin_available)
 # ============================================================================
 
