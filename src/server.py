@@ -423,6 +423,10 @@ _GMA_USER = os.getenv("GMA_USER", "administrator")
 _GMA_PASSWORD = os.getenv("GMA_PASSWORD", "admin")
 _GMA_SAFETY_LEVEL = os.getenv("GMA_SAFETY_LEVEL", "standard").lower()
 
+# Path to the repo-root .env file (used by reconfigure_connection persist).
+from pathlib import Path as _Path  # noqa: E402
+_ENV_PATH = _Path(__file__).parent.parent / ".env"
+
 
 def _osc_allowed_hosts() -> set[str]:
     raw = os.getenv("GMA_OSC_ALLOWED_HOSTS", "localhost,127.0.0.1,::1")
@@ -467,11 +471,22 @@ def _get_telemetry() -> ToolTelemetry:
 
 
 
-async def _get_session_manager() -> SessionManager:
+async def _get_session_manager():
+    """Return the active session manager. Honours ``GMA_MOCK`` env var.
+
+    Return type is intentionally untyped here: the real path returns
+    :class:`SessionManager`; the mock path returns :class:`MockSessionManager`,
+    which implements the same public surface.
+    """
     global _session_manager
     async with _session_manager_lock:
         if _session_manager is None:
-            _session_manager = SessionManager(host=_GMA_HOST, port=_GMA_PORT)
+            mock_tier = os.environ.get("GMA_MOCK")
+            if mock_tier:
+                from src.mock.session_manager import MockSessionManager
+                _session_manager = MockSessionManager(tier=mock_tier)
+            else:
+                _session_manager = SessionManager(host=_GMA_HOST, port=_GMA_PORT)
             _session_manager.start_keepalive()
     return _session_manager
 
@@ -7394,6 +7409,208 @@ async def suggest_skills_for_task(
         "method": method,
         "warning": warning,
         "suggestions": suggestions,
+    }, indent=2)
+
+
+# ============================================================================
+# T2 — Console portability (discover_consoles, reconfigure_connection)
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.DISCOVER)
+@_handle_errors
+async def discover_consoles(
+    timeout_seconds: int = 5,
+    network: str | None = None,
+    methods: list[str] | None = None,
+) -> str:
+    """Discover grandMA2 consoles via UDP broadcast (SAFE_READ).
+
+    Path A scope: broadcast only. mDNS path requires the optional
+    ``[mdns]`` install (zeroconf) and is documented for Path B.
+
+    Args:
+        timeout_seconds: Listen window after the probe is sent.
+        network: Optional CIDR to constrain the broadcast (e.g. "192.168.1.0/24").
+            None auto-detects local interfaces.
+        methods: List of methods to attempt — subset of {"broadcast", "mdns"}.
+            Default: ["broadcast"].
+
+    Returns:
+        JSON envelope: ``{candidates, scanned_networks, elapsed_ms, note}``.
+    """
+    import time as _time
+
+    from src.discovery import discover_grandma2_broadcast, list_local_networks
+
+    methods_set = set(methods or ["broadcast"])
+    t0 = _time.monotonic()
+    candidates: list[dict] = []
+    scanned: list[str] = []
+    notes: list[str] = []
+
+    if "broadcast" in methods_set:
+        if network:
+            scanned.append(network)
+        else:
+            scanned.extend(list_local_networks())
+        results = await discover_grandma2_broadcast(
+            network=network, timeout_seconds=timeout_seconds,
+        )
+        # Cast TypedDicts to plain dicts for JSON.
+        candidates.extend(dict(r) for r in results)
+
+    if "mdns" in methods_set:
+        notes.append(
+            "mdns method requires the [mdns] optional install "
+            "(pip install 'ma2-agent[mdns]') — Path B"
+        )
+
+    elapsed_ms = (_time.monotonic() - t0) * 1000
+    return json.dumps({
+        "candidates": candidates,
+        "scanned_networks": scanned,
+        "elapsed_ms": round(elapsed_ms, 2),
+        "note": "; ".join(notes) if notes else None,
+    }, indent=2)
+
+
+async def _verify_round_trip(host: str, port: int, user: str, password: str) -> bool:
+    """Open a fresh client to the candidate host and try a tiny SAFE_READ."""
+    from src.telnet_client import GMA2TelnetClient
+    try:
+        async with GMA2TelnetClient(host=host, port=port, user=user, password=password) as c:
+            resp = await c.send_command_with_response("ListVar", timeout=2.0)
+            return bool(resp)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("verify_round_trip(%s:%s) failed: %s", host, port, e)
+        return False
+
+
+def _persist_env(env_path: "_Path", **overrides: str) -> None:
+    """Atomic write — read existing entries, override the named keys, write back.
+
+    Preserves entries we don't touch. Writes to a sibling temp file then renames
+    to provide atomicity on POSIX and Windows. Lines starting with ``#`` are
+    preserved as-is (read into ``existing`` as raw comment lines).
+    """
+    existing: list[tuple[str, str]] = []
+    seen_keys: set[str] = set()
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                # Keep comment / blank lines verbatim with a unique sentinel key.
+                existing.append((f"__raw_{len(existing)}", line))
+                continue
+            if "=" in line:
+                k, _, v = line.partition("=")
+                k = k.strip()
+                existing.append((k, v.strip()))
+                seen_keys.add(k)
+    # Apply overrides — update existing entries in place, append new ones.
+    applied: set[str] = set()
+    new_lines: list[str] = []
+    for key, val in existing:
+        if key.startswith("__raw_"):
+            new_lines.append(val)
+            continue
+        if key in overrides:
+            new_lines.append(f"{key}={overrides[key]}")
+            applied.add(key)
+        else:
+            new_lines.append(f"{key}={val}")
+    for key, val in overrides.items():
+        if key not in applied:
+            new_lines.append(f"{key}={val}")
+    tmp = env_path.with_suffix(env_path.suffix + ".tmp")
+    tmp.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    tmp.replace(env_path)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.SYSTEM_ADMIN)
+@_handle_errors
+async def reconfigure_connection(
+    host: str,
+    port: int = 30000,
+    user: str = "administrator",
+    password: str = "admin",
+    persist: bool = True,
+    verify: bool = True,
+) -> str:
+    """Swap the active console connection and (optionally) persist to .env.
+
+    Atomic swap: rebuilds the SessionManager under the manager lock so in-flight
+    tool calls either complete on the old manager or fail with ConnectionError
+    (operator-recoverable). With ``verify=True`` (default), a fresh client is
+    opened against the candidate host and ``ListVar`` is executed before any
+    swap; failure aborts the call and leaves the previous connection intact.
+
+    Args:
+        host: New console host (IPv4 or hostname).
+        port: Telnet port (default 30000).
+        user: Console user.
+        password: Console password.
+        persist: When True, write GMA_HOST/GMA_PORT/GMA_USER/GMA_PASSWORD to .env.
+        verify: When True, run a SAFE_READ probe before committing the swap.
+
+    Returns:
+        JSON envelope: ``{success, previous_host, new_host, verified, persisted_to,
+        note, warning, error}``.
+    """
+    global _GMA_HOST, _GMA_PORT, _GMA_USER, _GMA_PASSWORD, _session_manager
+
+    previous_host = _GMA_HOST
+    same = (host == _GMA_HOST and port == _GMA_PORT and user == _GMA_USER)
+    if same:
+        return json.dumps({
+            "success": True, "previous_host": previous_host, "new_host": host,
+            "verified": True, "persisted_to": None, "note": "no change",
+            "warning": None, "error": None,
+        }, indent=2)
+
+    verified = True
+    if verify:
+        verified = await _verify_round_trip(host, port, user, password)
+    if verify and not verified:
+        return json.dumps({
+            "success": False, "previous_host": previous_host, "new_host": host,
+            "verified": False, "persisted_to": None, "note": None,
+            "warning": None,
+            "error": f"verify round-trip to {host}:{port} failed",
+        }, indent=2)
+
+    async with _session_manager_lock:
+        old_mgr = _session_manager
+        _GMA_HOST = host
+        _GMA_PORT = port
+        _GMA_USER = user
+        _GMA_PASSWORD = password
+        _session_manager = None  # next get_client() will rebuild
+
+    if old_mgr is not None:
+        try:
+            await old_mgr.close_all()
+        except Exception:  # noqa: BLE001, SIM105
+            pass  # close best-effort; new manager already in place
+
+    persisted_to: str | None = None
+    if persist:
+        _persist_env(
+            _ENV_PATH,
+            GMA_HOST=host,
+            GMA_PORT=str(port),
+            GMA_USER=user,
+            GMA_PASSWORD=password,
+        )
+        persisted_to = str(_ENV_PATH)
+
+    return json.dumps({
+        "success": True, "previous_host": previous_host, "new_host": host,
+        "verified": verified, "persisted_to": persisted_to, "note": None,
+        "warning": None, "error": None,
     }, indent=2)
 
 

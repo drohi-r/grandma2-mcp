@@ -1,0 +1,45 @@
+{
+  "showfile": "mock_show",
+  "groups": [
+    {"id": 1, "name": "Wash"},
+    {"id": 2, "name": "Mover"},
+    {"id": 3, "name": "Bar"},
+    {"id": 4, "name": "Blinder"},
+    {"id": 5, "name": "KEY"},
+    {"id": 6, "name": "Strobe"},
+    {"id": 7, "name": "Audience"},
+    {"id": 8, "name": "Backwash"},
+    {"id": 9, "name": "Frontwash"},
+    {"id": 10, "name": "FX-A"},
+    {"id": 11, "name": "FX-B"},
+    {"id": 12, "name": "FX-C"}
+  ],
+  "presets": [
+    {"type": 4, "id": 1, "name": "Red"},
+    {"type": 4, "id": 2, "name": "Green"},
+    {"type": 4, "id": 3, "name": "Blue"},
+    {"type": 4, "id": 4, "name": "White"},
+    {"type": 2, "id": 1, "name": "Centre"},
+    {"type": 2, "id": 2, "name": "Audience"},
+    {"type": 2, "id": 3, "name": "Stage Left"},
+    {"type": 2, "id": 4, "name": "Stage Right"}
+  ],
+  "sequences": [
+    {
+      "id": 1,
+      "name": "Main",
+      "cues": [
+        {"id": 1, "label": "Open"},
+        {"id": 2, "label": "Verse 1"},
+        {"id": 3, "label": "Chorus 1"},
+        {"id": 4, "label": "Bridge"},
+        {"id": 5, "label": "Outro"}
+      ]
+    }
+  ],
+  "executors": [
+    {"slot": "1.1.1", "label": "Wash Intensity", "priority": "normal"},
+    {"slot": "1.1.2", "label": "Mover Intensity", "priority": "normal"},
+    {"slot": "1.1.3", "label": "Blackout", "priority": "super"}
+  ]
+}

@@ -171,6 +171,7 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "inspect_sessions":           MA2Right.ADMIN,
     "delete_user":                MA2Right.ADMIN,
     "register_decomposition_rule": MA2Right.ADMIN,
+    "reconfigure_connection":     MA2Right.ADMIN,  # T2 — swaps active connection
     # ── Previously unmapped tools (added during hardening pass) ──────────
     # none (0) — read-only inspection / validation
     "classify_show_mode":           MA2Right.NONE,

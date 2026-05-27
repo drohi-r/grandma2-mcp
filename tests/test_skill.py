@@ -282,8 +282,8 @@ class TestSearch:
         """list_all includes DB skills + filesystem skills."""
         for _ in range(3):
             reg.save(_make_skill(id=str(uuid.uuid4())))
-        # 3 DB skills + 45 filesystem skills
-        assert len(reg.list_all()) == 48
+        # 3 DB skills + 46 filesystem skills (45 baseline + connection-setup-workflow from T2)
+        assert len(reg.list_all()) == 49
 
     def test_search_no_matches(self, reg):
         reg.save(_make_skill())
@@ -315,7 +315,7 @@ class TestListAll:
     def test_empty_db_returns_filesystem_skills(self, reg):
         # When DB has no rows, list_all() falls back to filesystem skills
         skills = reg.list_all()
-        assert len(skills) == 45  # all .claude/skills/ directories
+        assert len(skills) == 46  # all .claude/skills/ directories (45 + connection-setup-workflow)
 
 
 # ---------------------------------------------------------------------------
@@ -475,7 +475,7 @@ class TestFilesystemSkillLoading:
 
     def test_list_filesystem_skills_count(self):
         skills = _list_filesystem_skills()
-        assert len(skills) == 45
+        assert len(skills) == 46  # 45 baseline + connection-setup-workflow (T2)
 
     def test_list_filesystem_skills_approval_matches_scope(self):
         skills = _list_filesystem_skills()
@@ -503,7 +503,7 @@ class TestFilesystemSkillLoading:
         assert "fs:ma2-command-rules" in ids
         assert "fs:chaser-builder" in ids
         assert "fs:auto-layout-color-picker" in ids
-        assert len(skills) == 45
+        assert len(skills) == 46  # 45 baseline + connection-setup-workflow (T2)
         reg.close()
 
     def test_registry_search_finds_filesystem_skill(self, tmp_path):
