@@ -52,3 +52,6 @@ doc/grandMA2_KMeans_Complete.json
 agent_data/
 agent_traces/
 .DS_Store
+
+# Claude Code session-local worktrees
+.claude/worktrees/
