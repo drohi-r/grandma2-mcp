@@ -322,7 +322,63 @@ class TestResourcePurity:
                 )
 
 
-# ── 11. SubTask has workflow field ───────────────────────────────────────────
+# ── 11. src/expert_lint/ stays pure (XC2) ────────────────────────────────────
+
+class TestExpertLintPurity:
+    """src/expert_lint/ rule engine must stay pure — no telnet, asyncio, server imports."""
+
+    LINT_DIR = REPO_ROOT / "src" / "expert_lint"
+    FORBIDDEN_IMPORTS = {
+        "src.telnet_client",
+        "src.navigation",
+        "src.server",
+        "src.session_manager",
+        "asyncio",
+    }
+
+    def _python_files(self):
+        if not self.LINT_DIR.exists():
+            return []
+        return list(self.LINT_DIR.glob("*.py"))
+
+    def _imported_modules(self, source: str) -> set[str]:
+        """Return the set of module paths actually imported by a Python file.
+
+        AST-based so docstring mentions of a module name don't trigger.
+        """
+        modules: set[str] = set()
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    modules.add(node.module)
+        return modules
+
+    def test_no_io_imports(self):
+        for pyfile in self._python_files():
+            source = pyfile.read_text(encoding="utf-8")
+            imports = self._imported_modules(source)
+            for forbidden in self.FORBIDDEN_IMPORTS:
+                assert forbidden not in imports, (
+                    f"{pyfile.relative_to(REPO_ROOT)} imports '{forbidden}' "
+                    "— expert_lint rules must stay pure"
+                )
+
+    def test_no_async_functions(self):
+        for pyfile in self._python_files():
+            tree = ast.parse(pyfile.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.AsyncFunctionDef):
+                    pytest.fail(
+                        f"{pyfile.relative_to(REPO_ROOT)}:{node.lineno}: "
+                        f"async def '{node.name}' — expert_lint must be sync"
+                    )
+
+
+# ── 12. SubTask has workflow field ───────────────────────────────────────────
 
 class TestSubTaskWorkflowHygiene:
     def test_subtask_workflow_field_exists(self):
