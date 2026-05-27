@@ -525,3 +525,46 @@ class TestFilesystemSkillLoading:
         assert sk.name != "ma2-command-rules" or sk.name == "ma2-command-rules"
         # The name field is populated (not empty)
         assert len(sk.name) > 0
+
+
+# ---------------------------------------------------------------------------
+# T1 — _parse_front_matter list-field extension
+# ---------------------------------------------------------------------------
+
+def test_front_matter_parses_list_fields():
+    """tags / prerequisites / use_instead_of parse as list[str] when present."""
+    from src.skill import _parse_front_matter
+    raw = (
+        "---\n"
+        "name: x\n"
+        "description: y\n"
+        "tags: [color, presets]\n"
+        "prerequisites: [patch-and-group-builder]\n"
+        "wraps_plugin: auto-layout-color-picker\n"
+        "use_instead_of: []\n"
+        "---\n"
+        "body\n"
+    )
+    meta, body = _parse_front_matter(raw)
+    assert meta.get("tags") == ["color", "presets"]
+    assert meta.get("prerequisites") == ["patch-and-group-builder"]
+    assert meta.get("wraps_plugin") == "auto-layout-color-picker"
+    assert meta.get("use_instead_of") == []
+    assert body.strip() == "body"
+
+
+def test_front_matter_scalar_fields_unchanged():
+    """Existing scalar fields (title, description, version) still parse as strings."""
+    from src.skill import _parse_front_matter
+    raw = (
+        "---\n"
+        "title: Sample\n"
+        "description: A test\n"
+        "version: 1.0.0\n"
+        "---\n"
+        "body\n"
+    )
+    meta, _ = _parse_front_matter(raw)
+    assert meta.get("title") == "Sample"
+    assert meta.get("description") == "A test"
+    assert meta.get("version") == "1.0.0"

@@ -26,9 +26,45 @@ from mcp.server.fastmcp import FastMCP
 
 from .agent_memory import LongTermMemory
 from .orchestrator import Orchestrator
-from .skill import SkillRegistry
+from .skill import Skill, SkillRegistry
 from .skill_improver import SkillImprover
 from .task_decomposer import TaskDecomposer
+
+
+def _enrich_skill_dict(skill: Skill) -> dict:
+    """Return ``skill.to_dict()`` augmented with front-matter list fields.
+
+    For filesystem skills (``id`` prefixed with ``"fs:"``) we re-parse the
+    SKILL.md to surface ``tags`` / ``prerequisites`` / ``wraps_plugin`` /
+    ``use_instead_of`` when present in front matter. For DB skills, those
+    fields default to empty lists / None so the return shape is uniform.
+    """
+    from pathlib import Path
+
+    from .skill import _SKILLS_DIR, _parse_front_matter
+
+    d = skill.to_dict()
+    if skill.id.startswith("fs:"):
+        slug = skill.id.removeprefix("fs:")
+        skill_file = Path(_SKILLS_DIR) / slug / "SKILL.md"
+        if skill_file.exists():
+            meta, _ = _parse_front_matter(skill_file.read_text(encoding="utf-8"))
+            d["tags"] = meta.get("tags") if isinstance(meta.get("tags"), list) else []
+            d["prerequisites"] = (
+                meta.get("prerequisites")
+                if isinstance(meta.get("prerequisites"), list) else []
+            )
+            d["wraps_plugin"] = meta.get("wraps_plugin") or None
+            d["use_instead_of"] = (
+                meta.get("use_instead_of")
+                if isinstance(meta.get("use_instead_of"), list) else []
+            )
+            return d
+    d.setdefault("tags", [])
+    d.setdefault("prerequisites", [])
+    d.setdefault("wraps_plugin", None)
+    d.setdefault("use_instead_of", [])
+    return d
 
 
 def register_orchestration_tools(
@@ -1268,7 +1304,7 @@ def register_orchestration_tools(
             {
                 "query": query,
                 "count": len(skills),
-                "skills": [s.to_dict() for s in skills],
+                "skills": [_enrich_skill_dict(s) for s in skills],
             },
             indent=2,
         )

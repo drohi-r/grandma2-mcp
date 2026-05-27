@@ -7342,6 +7342,62 @@ async def suggest_tool_for_task(
 
 
 # ============================================================================
+# T1 — Skill router (suggest_skills_for_task)
+# Pairs with src/skill_router.py — pure ranking module.
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.DISCOVER)
+@_handle_errors
+async def suggest_skills_for_task(
+    intent: str,
+    top_k: int = 3,
+    include_destructive: bool = True,
+    prefer_semantic: bool = True,
+) -> str:
+    """Suggest skills from .claude/skills/ for a natural-language intent (SAFE_READ).
+
+    Args:
+        intent: What you want to do, e.g. "make me a color picker".
+        top_k: Max number of suggestions to return.
+        include_destructive: When False, drop un-approved DESTRUCTIVE skills.
+        prefer_semantic: When True, attempt embedding-based ranking when a
+            ``GITHUB_MODELS_TOKEN`` env var is set. Path A ships keyword only;
+            this flag controls the warning message rather than the algorithm.
+
+    Returns:
+        JSON-encoded SuggestSkillsResponse: ``{intent, method, warning, suggestions}``.
+    """
+    from src.skill_router import rank_skills
+
+    method: str = "keyword"
+    warning: str | None = None
+    if prefer_semantic and os.environ.get("GITHUB_MODELS_TOKEN"):
+        method = "semantic"
+        warning = "semantic search not yet wired in Path A; returning keyword results"
+    elif prefer_semantic:
+        warning = (
+            "prefer_semantic=True but GITHUB_MODELS_TOKEN is not set; "
+            "using keyword matching."
+        )
+
+    suggestions = rank_skills(
+        intent=intent,
+        top_k=top_k,
+        method="keyword",
+        include_destructive=include_destructive,
+    )
+
+    return json.dumps({
+        "intent": intent,
+        "method": method,
+        "warning": warning,
+        "suggestions": suggestions,
+    }, indent=2)
+
+
+# ============================================================================
 # USER MANAGEMENT TOOLS (Tools 98-100)
 # Require OAuth scope gma2:user:manage (Tier 5 — Admin only)
 # ============================================================================

@@ -375,15 +375,27 @@ def _parse_front_matter(raw: str) -> tuple[dict, str]:
     Returns (meta_dict, body_text).  Uses a lightweight regex parser so no
     PyYAML dependency is required — SKILL.md front matter uses only flat
     ``key: value`` pairs.
+
+    Inline-list syntax (``key: [a, b]``) is parsed as ``list[str]``. An empty
+    list (``key: []``) parses as ``[]``.  Other values remain strings.
     """
     m = _FM_RE.match(raw)
     if not m:
         return {}, raw
-    meta: dict[str, str] = {}
+    meta: dict = {}
     for line in m.group(1).splitlines():
-        if ": " in line:
-            k, _, v = line.partition(": ")
-            meta[k.strip()] = v.strip()
+        if ": " not in line:
+            continue
+        k, _, v = line.partition(": ")
+        k = k.strip()
+        v = v.strip()
+        if v.startswith("[") and v.endswith("]"):
+            inner = v[1:-1].strip()
+            meta[k] = (
+                [x.strip() for x in inner.split(",") if x.strip()] if inner else []
+            )
+        else:
+            meta[k] = v
     return meta, raw[m.end():].strip()
 
 
