@@ -1,9 +1,9 @@
 ---
 title: Advanced Macro Programming
 description: Instruction module for advanced grandMA2 macro techniques — SetVar/GetVar scripting, conditional expressions, CmdDelay, popup macros, and jump target management
-version: 1.0.0
+version: 1.1.0
 created: 2026-03-31T21:00:00Z
-last_updated: 2026-03-31T21:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Advanced Macro Programming
@@ -15,6 +15,20 @@ console commands.
 Invoke when asked to: write a multi-step macro, add a variable to a macro, use conditional
 logic in a macro, build a popup confirmation macro, create a delay loop, or use SetVar/GetVar
 to pass state between macros.
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] All `Store` of selection-dependent targets preceded by explicit `ClearAll` and selection on the same line
+- [ ] `CmdDelay` used for timing, not busy-wait via repeated `Wait`
+- [ ] `SetVar` / `GetVar` pairs scoped within the same macro, or documented as session-scoped
+- [ ] All jump targets validated against current line count (no out-of-range targets)
+- [ ] Destructive commands (`Delete`, `Store /merge`, `new_show`) include `/noconfirm`
+- [ ] `new_show` always includes `/globalsettings` (preserves Telnet)
+- [ ] Macro labels describe intent, not generic placeholders like "Macro 17"
 
 ---
 

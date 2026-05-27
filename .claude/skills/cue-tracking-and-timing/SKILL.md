@@ -1,9 +1,9 @@
 ---
 title: Cue Tracking and Timing
 description: Instruction module for grandMA2 cue tracking modes, Block/Unblock, MIB (Move In Black), cue timing layers, and tracking vs. non-tracking sequence configuration
-version: 1.1.0
+version: 1.2.0
 created: 2026-03-31T21:00:00Z
-last_updated: 2026-03-31T22:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Cue Tracking and Timing
@@ -14,6 +14,21 @@ for grandMA2 sequences. These settings affect how values flow between cues.
 Invoke when asked to: fix tracking bleed, block a cue, set cue timing, configure MIB,
 switch between tracking and non-tracking, edit fade/delay times, or debug a cue that
 shows "wrong" values.
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Tracking discipline declared (track / non-tracking) and consistent across the sequence
+- [ ] Block cues placed at song / act / scene boundaries when tracking is enabled
+- [ ] MIB enabled only on fixtures with movement attributes
+- [ ] Cuelist off-time set to a deliberate value (not the silent default)
+- [ ] Cuelist priorities documented (Super for emergency, Normal default)
+- [ ] Cue notes name the moment (e.g., `verse_2_lift`) rather than numbers
+- [ ] Crossfade defaults documented per cuelist
+- [ ] Soft-LTP / Wrap options used deliberately or explicitly disabled
 
 ---
 

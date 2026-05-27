@@ -1,9 +1,9 @@
 ---
 title: Preset Library Architect
 description: Instruction module for designing and building a complete grandMA2 preset library — slot allocation, universal vs. selective strategy, fixture selection, and store discipline
-version: 1.0.0
+version: 1.1.0
 created: 2026-03-31T18:00:00Z
-last_updated: 2026-03-31T18:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Preset Library Architect
@@ -14,6 +14,22 @@ fixture selection discipline, and `/overwrite` safety.
 
 Invoke when asked to: design a preset library, plan preset slot layout, create all
 preset types for a rig, or establish a preset numbering convention for a show.
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Reference fixture chosen per type (convention: lowest ID of each type)
+- [ ] Universal vs selective decision made per attribute (color/position universal; gobo/beam selective)
+- [ ] At least 4 cardinal-hue color presets (red, green, blue, white)
+- [ ] MIB presets defined for every mover type
+- [ ] Preset numbering follows MA2 type convention (color=4, position=2, gobo=3, beam=5)
+- [ ] Naming convention applied consistently across all presets
+- [ ] Coverage report shows every attribute on every fixture type has at least one preset (full-coverage strategy)
+- [ ] No duplicate preset numbers within a type
+- [ ] No empty preset slots
 
 ---
 

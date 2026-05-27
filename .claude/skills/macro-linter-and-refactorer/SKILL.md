@@ -1,13 +1,26 @@
 ---
 title: Macro Linter and Refactorer
 description: Inspect grandMA2 macros for unsafe patterns, broken jumps, and refactoring opportunities
-version: 1.0.0
+version: 1.1.0
 safety_scope: SAFE_READ
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-04-02T00:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Macro Linter and Refactorer
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Linter covers all 14 patterns from the MACRO-* rule catalog (`src/expert_lint/macro_rules.py`)
+- [ ] Linter output includes rule_id, severity, line, and fix_suggestion per finding
+- [ ] Linter does not modify the macro body — only reports
+- [ ] Linter handles MA2 XML schema validation gracefully (no crash on malformed input)
+- [ ] Refactor mode preserves jump-target offsets across line insertion
+- [ ] Refactor mode never strips comments or empty lines without explicit operator confirmation
+
+---
 
 ## Charter
 

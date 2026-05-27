@@ -1,9 +1,9 @@
 ---
 title: View and Layout Designer
 description: Instruction module for creating and managing grandMA2 custom views, console layouts, and button assignments — executor button placement, view saving/recall, and image library usage
-version: 1.0.0
+version: 1.1.0
 created: 2026-04-01T00:00:00Z
-last_updated: 2026-04-01T00:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # View and Layout Designer
@@ -11,6 +11,19 @@ last_updated: 2026-04-01T00:00:00Z
 **Worker charter:** DESTRUCTIVE (creating layouts modifies show data). Read phase uses SAFE_READ tools only. All write operations require `confirm_destructive=True`.
 
 Invoke when asked to: create a custom view, design a fixture layout, place executor buttons on a layout canvas, assign images to buttons, or save and recall screen arrangements.
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Layout cells have labels (no cryptic "Group 14" placeholders)
+- [ ] Layout content references existing targets (no dangling references to groups/presets/executors)
+- [ ] Layout fits within screen native resolution
+- [ ] Layout density ≤ 70% (leaves room for status / info displays)
+- [ ] Required content for the chosen template is present (e.g., busking-master template includes intensity / color / FX / specials banks)
+- [ ] Layout does not collide with other layouts on the same screen
 
 ---
 

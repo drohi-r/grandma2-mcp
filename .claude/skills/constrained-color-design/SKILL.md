@@ -1,12 +1,27 @@
 ---
 title: Constrained Color Design
 description: Instruction module for monochromatic palette design in grandMA2 — HSB strategy, preset numbering, color lock technique, and song-to-palette mapping
-version: 1.1.0
+version: 1.2.0
 created: 2026-03-30T03:17:46Z
-last_updated: 2026-03-30T11:57:23Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Constrained Color Design
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] HSB model used (not RGB) for palette presets per `.claude/rules/ma2-conventions.md` appearance section
+- [ ] Hue numbering follows the constrained-design table (12 hues × 8 saturations = 96 presets at 4.101-4.196)
+- [ ] Saturation steps consistent across all hues
+- [ ] Brightness clamped to a deliberate value per palette (not 100 by default)
+- [ ] Color lock technique applied to palette presets where appropriate
+- [ ] Palette mapping to song / scene structure is documented
+
+---
 
 ## Why Constrained Palettes Work for Busking
 

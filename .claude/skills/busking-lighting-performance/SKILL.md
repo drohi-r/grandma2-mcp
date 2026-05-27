@@ -1,12 +1,29 @@
 ---
 title: Busking Lighting Performance
 description: Instruction module for live-performance busking on grandMA2 — fader-per-effect model, executor layout, effect layering, and live recovery
-version: 1.0.0
+version: 1.1.0
 created: 2026-03-30T03:17:46Z
-last_updated: 2026-03-30T03:17:46Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Busking Lighting Performance
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Blackout sub-master executor at Super priority, independent of the Grand Master
+- [ ] Speed master bound to the FX bank
+- [ ] Kill-colors / kill-FX / kill-position macros assigned to dedicated executors
+- [ ] Page contains a tap-tempo executor
+- [ ] Wing layout follows the muscle-memory map (intensity left → color → position → beam → FX → specials right)
+- [ ] Strobe-flash button accessible without changing page
+- [ ] Blinders set to High priority
+- [ ] Chase override executors set to Swap priority
+
+---
 
 ## Core Model: Fader-Per-Effect
 

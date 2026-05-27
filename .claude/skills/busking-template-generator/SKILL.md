@@ -1,9 +1,9 @@
 ---
 title: Busking Template Generator
 description: Worker instruction module for generating a complete grandMA2 busking template from patch — fixture groups by type, color/position/beam presets, speed masters, and executor page layout
-version: 1.0.0
+version: 1.1.0
 created: 2026-04-01T00:00:00Z
-last_updated: 2026-04-01T00:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Busking Template Generator
@@ -13,6 +13,23 @@ last_updated: 2026-04-01T00:00:00Z
 Invoke when asked to: build a busking template, generate a busk rig from patch, auto-generate groups and presets, or set up a festival busking page.
 
 Target users: Busking operators at festivals/clubs, emerging EDM artists, venue operators setting up for unknown visiting acts.
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Blackout sub-master executor at Super priority, independent of the Grand Master
+- [ ] At least one speed master and one rate master bound to the FX bank
+- [ ] Kill buttons for color, FX, and position on dedicated executors (rock-band / DJ strategies)
+- [ ] Tap-tempo executor (rock-band / DJ strategies)
+- [ ] Fader bank layout follows the muscle-memory map: intensity left → color → position → beam → FX → specials right
+- [ ] Every executor has an intent label (no "Exec 5" generic labels)
+- [ ] Intensity sub-masters are HTP; color/position/FX executors are LTP (Normal)
+- [ ] Blinder executors set to High priority so flash effects override chases
+- [ ] No two executors share the same slot on the target page
+- [ ] Companion grid layout is contiguous (no empty rows interleaved with content)
 
 ---
 

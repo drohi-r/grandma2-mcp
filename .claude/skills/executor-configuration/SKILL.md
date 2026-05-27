@@ -1,9 +1,9 @@
 ---
 title: Executor Configuration
 description: Instruction module for configuring grandMA2 executors — trigger types, priority levels, start/stop modes, special masters, fader function, and wing layout
-version: 1.0.0
+version: 1.1.0
 created: 2026-03-31T21:00:00Z
-last_updated: 2026-03-31T21:00:00Z
+last_updated: 2026-05-27T00:00:00Z
 ---
 
 # Executor Configuration
@@ -13,6 +13,20 @@ to grandMA2 executors. Changes to executor configuration affect live playback be
 
 Invoke when asked to: set executor priority, configure a flash button, change trigger type,
 assign a speed master to a fader, set autostart, configure kill protect, or assign GO+ mode.
+
+---
+
+## Expert checklist
+
+The output of this skill is "expert" only when it includes ALL of:
+
+- [ ] Priority set deliberately per executor (Super / High / Swap / Normal / Low)
+- [ ] LTP/HTP set deliberately per executor (intensity HTP, color LTP)
+- [ ] Speed / rate / tap masters bound to the executors that need them
+- [ ] Trigger type matches the executor's role (Go vs Time vs CmdDisable)
+- [ ] Wrap and SoftLTP set per cuelist semantic, not default
+- [ ] Restart / autostop / killprotect set per executor role
+- [ ] No executor lacks a label
 
 ---
 
