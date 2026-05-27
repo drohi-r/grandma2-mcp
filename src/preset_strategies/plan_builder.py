@@ -149,7 +149,8 @@ def architect_preset_library_for(
             plan.append(PresetEntry(
                 preset_type=2, preset_id=i, name=name,
                 scope="universal", target_fixture_types=[],
-                values={}, mib_aware=False, color_model=None,
+                values=None,    # declared; pan/tilt filled by reference-fixture store
+                mib_aware=False, color_model=None,
             ))
 
     # 3. Selective gobo/beam/focus/control per fixture type
@@ -176,7 +177,9 @@ def architect_preset_library_for(
                 name=f"{short} {type_names[ptype]} Set",
                 scope="selective",
                 target_fixture_types=[short],
-                values={}, mib_aware=False, color_model=None,
+                values=None,    # declared; gobo/beam/etc fixture-specific values
+                                # filled by reference-fixture store
+                mib_aware=False, color_model=None,
             ))
             next_selective_id += 1
 
@@ -196,7 +199,7 @@ def architect_preset_library_for(
                 name=f"MIB {short}",
                 scope="selective",
                 target_fixture_types=[short],
-                values={"mib": True},
+                values=None,    # declared MIB preset; reference fixture supplies values
                 mib_aware=True,
                 color_model=None,
             ))

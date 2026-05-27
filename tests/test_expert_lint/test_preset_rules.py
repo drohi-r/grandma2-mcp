@@ -220,6 +220,17 @@ def test_empty_001_flags_empty_slot():
     assert any(v.rule_id == "PRESET-EMPTY-001" and v.severity == "error" for v in findings)
 
 
+def test_empty_001_skips_declared_values_none():
+    """values=None signals 'declared by architect; will be populated later' —
+    PRESET-EMPTY-001 must not flag it."""
+    plan = _plan(plan=[
+        {"preset_type": 3, "preset_id": 10, "name": "Mover Gobo",
+         "scope": "selective", "target_fixture_types": ["Mover"], "values": None},
+    ])
+    findings = check_empty_001_empty_preset_slot(plan, None)
+    assert not any(v.rule_id == "PRESET-EMPTY-001" for v in findings)
+
+
 # CLONE-001
 def test_clone_001_clean_when_no_clone_opportunity():
     plan = _plan(plan=[

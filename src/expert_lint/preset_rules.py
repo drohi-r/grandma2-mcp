@@ -280,17 +280,31 @@ def check_mib_001_movers_without_mib_preset(
 def check_empty_001_empty_preset_slot(
     plan: dict, context: dict | None = None
 ) -> list[Violation]:
-    """PRESET-EMPTY-001 (error): preset slot has no stored values."""
+    """PRESET-EMPTY-001 (error): preset slot is stored as empty.
+
+    Convention:
+        ``values=None``  — declared by the architect; will be populated by a
+                            follow-up store-against-reference-fixture pass.
+                            **Not flagged** — empty here is expected.
+        ``values={}``    — populated and broken (store emitted nothing).
+                            Flagged as error.
+        ``values={...}`` — populated and valid. Not flagged.
+
+    The distinction lets ``architect_preset_library`` emit selective / MIB
+    presets without flooding the lint output with false positives.
+    """
     out: list[Violation] = []
     for p in _presets(plan):
-        values = p.get("values", {})
+        values = p.get("values")
+        if values is None:
+            continue  # declared but not yet stored — expected
         if not values:
             out.append(Violation(
                 rule_id="PRESET-EMPTY-001",
                 severity="error",
                 domain="preset",
                 target=f"preset:{p.get('preset_type')}.{p.get('preset_id')}",
-                expert_says=f"Preset {p.get('name')!r} has no stored values",
+                expert_says=f"Preset {p.get('name')!r} is stored but has no values",
                 fix_suggestion="Either populate the preset or remove the empty slot",
             ))
     return out
