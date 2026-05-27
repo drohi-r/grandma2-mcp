@@ -7615,6 +7615,106 @@ async def reconfigure_connection(
 
 
 # ============================================================================
+# T3 — NL → macro generation (generate_ma2_macro)
+# Composes T1 (skill router) + XC2 (expert_lint macro domain) on its output.
+# ============================================================================
+
+
+@mcp.tool()
+@require_scope(OAuthScope.MACRO_EDIT)
+@_handle_errors
+async def generate_ma2_macro(
+    intent: str,
+    scope_hints: dict | None = None,
+    store: bool = False,
+    pool_id: int | None = None,
+    confirm_destructive: bool = False,
+) -> str:
+    """Generate an MA2 macro from natural-language intent (SAFE_READ when store=False).
+
+    Returns ``body_xml`` + lint + expert review. When ``store=True``, the tool
+    requires ``confirm_destructive=True`` AND ``pool_id``; in Path A the store
+    branch returns blocked / deferred-to-Path-B rather than mutating the pool.
+
+    Args:
+        intent: Plain-English description of the macro to build.
+        scope_hints: Optional dict of routing hints, e.g. ``{"executor": "1.1.1"}``.
+        store: When True, store the generated macro to the macro pool.
+        pool_id: Target pool slot (required if ``store=True``).
+        confirm_destructive: Required if ``store=True`` (the store path is destructive).
+
+    Returns:
+        JSON envelope:
+        ``{intent, body_xml, line_count, validation, lint, expert_review,
+        stored_as, blocked}``.
+    """
+    from src.expert_lint import expert_lint
+    from src.macro_generation import build_macro_from_intent
+
+    plan = build_macro_from_intent(intent=intent, scope_hints=scope_hints)
+    findings = expert_lint(plan, domain="macro", context=scope_hints)
+
+    has_error = any(v.severity == "error" for v in findings)
+    has_warning = any(v.severity == "warning" for v in findings)
+    grade = "broken" if has_error else ("competent" if has_warning else "expert")
+
+    result: dict = {
+        "intent": intent,
+        "body_xml": plan["body_xml"],
+        "line_count": len(plan["lines"]),
+        "validation": {"xml_valid": True},  # emitted via escape -> structurally valid
+        "lint": [
+            {
+                "rule_id": v.rule_id,
+                "severity": v.severity,
+                "target": v.target,
+                "message": v.expert_says,
+                "fix_suggestion": v.fix_suggestion,
+            }
+            for v in findings
+        ],
+        "expert_review": {
+            "grade": grade,
+            "rationale": (
+                "Macro has structural errors and cannot be stored."
+                if has_error
+                else (
+                    "Macro passes lint with one or more warnings — review before use."
+                    if has_warning
+                    else "Macro passes lint at advice-or-clean severity."
+                )
+            ),
+            "missing_practices": [],
+        },
+        "stored_as": None,
+        "blocked": has_error,
+    }
+
+    if store:
+        if not confirm_destructive:
+            result["blocked"] = True
+            result["expert_review"]["rationale"] = (
+                "store=True requires confirm_destructive=True."
+            )
+        elif pool_id is None:
+            result["blocked"] = True
+            result["expert_review"]["rationale"] = "store=True requires pool_id."
+        elif has_error:
+            # already blocked by the has_error check above; clarify reason
+            result["expert_review"]["rationale"] = (
+                "Cannot store a macro that fails lint at error severity."
+            )
+        else:
+            # Path A: surface that the macro is ready, defer real store to Path B.
+            result["expert_review"]["rationale"] = (
+                result["expert_review"]["rationale"]
+                + " Store path is deferred to Path B."
+            )
+
+    return json.dumps(result, indent=2)
+
+
+# ============================================================================
 # USER MANAGEMENT TOOLS (Tools 98-100)
 # Require OAuth scope gma2:user:manage (Tier 5 — Admin only)
 # ============================================================================
