@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
 description: MCP server for grandMA2 lighting consoles — 218 MCP tools via Telnet
-version: 1.1.0
+version: 1.2.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-04-04T00:00:00Z
+last_updated: 2026-07-17T21:20:00Z
 ---
 
 <p align="center">
@@ -58,29 +58,34 @@ uv run python -m src.server  # starts MCP server (stdio transport)
 For the local browser UI:
 
 ```bash
-uv run python -m src.ui
+uv run python scripts/run_ui.py    # local-operator defaults (tier:5 scope, auth bypass)
+# or, with explicit env:
+GMA_HOST=192.168.20.179 GMA_PORT=30000 GMA_SCOPE=tier:5 GMA_AUTH_BYPASS=1 uv run python -m src.ui
 ```
 
-Then open `http://127.0.0.1:8092`.
+Then open `http://127.0.0.1:8092` (change with `GMA_UI_PORT`).
 
-For a live console target, run the UI with the same connection env vars as the MCP server:
-
-```bash
-GMA_HOST=192.168.20.179 GMA_PORT=30000 GMA_AUTH_BYPASS=1 uv run python -m src.ui
-```
-
-The browser UI is an operator console for:
-- dashboard and console session status
-- single-slot executor lookup
-- direct sequence inspection
-- patch browsing grouped by fixture type
-- expectation analysis and agent plan/run flows
+The browser UI is an operator console (zero-dependency stdlib server + vanilla JS):
+- **Dashboard** — showfile/version/session tiles, console users, telemetry risk-tier
+  bars, recent agent runs, and a **Divergence Watch** card (snapshot a baseline, then
+  any desk-side change — loaded show, page change, pool edits — is flagged with the
+  exact changed vars and pool IDs; the header chip flips In sync / Diverged)
+- **Playback** — opens with a tile grid of every **assigned** executor on the page
+  (one `List Executor p.1 Thru p.199` telnet command — no per-slot scanning), with
+  SEQ/FX badges and cue counts; clicking a tile loads detail + cue list. Manual
+  single-slot probe and direct sequence load are still available
+- **Patch** — fixture types collapsed to one row each with fixture-ID ranges and
+  universe tags; expand to compact chips; filter auto-expands matches; DMX-universe
+  distribution card
+- **Agent** — goal composer with plan preview (per-step risk chips), a destructive-run
+  confirm modal, run-trace timeline (status, duration, per-step errors), recent trace
+  explorer, and learned-recipe list with use counts
+- **Analysis** — patch expectation compare + telemetry report
 
 Important behavior notes:
-- executor lookup is intentionally single-slot only; the UI does not bulk-scan executor ranges by default
+- the executor overview lists only assigned slots; empty slots are simply absent
 - direct sequence IDs are more reliable than executor-based sequence resolution
-- empty executor slots can produce normal MA2 `NO OBJECTS FOUND FOR LIST` warnings on the console
-- fixture grouping on the Patch view is parsed from live `list fixture` output, not inferred from a full executor scan
+- fixture grouping on the Patch view is parsed from live `list fixture` output
 
 > [!TIP]
 > **Semantic search:** Add `GITHUB_MODELS_TOKEN=ghp_...` to `.env`, then run
