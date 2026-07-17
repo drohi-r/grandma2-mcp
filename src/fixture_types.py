@@ -17,6 +17,7 @@ optional per-type attribute sets (from discover_fixture_type_attributes).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from src.show_strategies.types import PatchSummary
@@ -98,6 +99,12 @@ def capabilities_from_attributes(attribute_names: set[str]) -> dict[str, bool]:
     return caps
 
 
+# Console output may embed ANSI color escapes; attribute rows on 3.9.60 are
+# "ChannelType <no> <no> NAME (Shortname) ..." (live-verified 2026-07-17).
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+_CHANNEL_TYPE_ROW_RE = re.compile(r"ChannelType\s+\d+\s+\d+\s+([A-Z][A-Z0-9_]+)\s*\(")
+
+
 def parse_channel_type_rows(raw: str) -> set[str]:
     """Extract attribute names from discover_fixture_type_attributes output.
 
@@ -107,8 +114,13 @@ def parse_channel_type_rows(raw: str) -> set[str]:
     it; rows without one are skipped.
     """
     names: set[str] = set()
+    raw = _ANSI_RE.sub("", raw)
     for line in raw.splitlines():
         if "ChannelType" not in line:
+            continue
+        match = _CHANNEL_TYPE_ROW_RE.search(line)
+        if match:
+            names.add(match.group(1))
             continue
         _, _, rest = line.partition("ChannelType")
         for token in rest.replace('"', " ").split():
@@ -138,7 +150,7 @@ _FALLBACK_CAPS: list[tuple[tuple[str, ...], dict[str, bool]]] = [
         "dimmer": True, "position": True, "gobo": True, "color_mix": True,
         "beam": True, "focus": True, "control": True,
     }),
-    (("bar", "batten", "pixel"), {
+    (("bar", "batten", "pixel", "led", "rgb"), {
         "dimmer": True, "position": False, "gobo": False, "color_mix": True,
         "beam": False, "focus": False, "control": True,
     }),
@@ -173,7 +185,7 @@ def fallback_capabilities(type_name: str) -> dict[str, bool] | None:
 _CATEGORY_KEYWORDS: list[tuple[tuple[str, ...], str]] = [
     (("blinder", "molefay", "sunstrip"), "blinder"),
     (("strobe", "atomic"), "strobe"),
-    (("bar", "batten", "pixel"), "bar"),
+    (("bar", "batten", "pixel", "led", "rgb"), "bar"),
     (("wash", "b-eye", "aura"), "wash"),
     (("spot", "profile", "beam", "viper", "mover", "hybrid"), "mover"),
     (("dimmer", "par", "fresnel", "conventional", "generic"), "conventional"),
@@ -285,6 +297,22 @@ def build_fixture_type_model(
     for ft in patch.get("fixture_types", []):
         declared[ft.get("long_name", "").strip().lower()] = ft
 
+    def resolve_declared(type_name: str) -> dict:
+        """Match a fixture's type string to a declared fixture type.
+
+        Live patch rows carry composite strings "{type_id} {long_name} {mode}"
+        (e.g. "4 VL3500 Spot 00") while `list fixturetype` declares the bare
+        long_name — fall back to containment when the exact key misses.
+        """
+        key = type_name.strip().lower()
+        exact = declared.get(key)
+        if exact is not None:
+            return exact
+        for long_name, ft in declared.items():
+            if long_name and long_name in key:
+                return ft
+        return {}
+
     for fx in patch.get("fixtures", []):
         type_name = (fx.get("type") or "").strip()
         if not type_name:
@@ -292,8 +320,10 @@ def build_fixture_type_model(
             continue
         rec = model.types.get(type_name)
         if rec is None:
-            decl = declared.get(type_name.lower(), {})
-            attrs = attributes_by_type.get(type_name)
+            decl = resolve_declared(type_name)
+            attrs = attributes_by_type.get(type_name) or attributes_by_type.get(
+                decl.get("long_name", "")
+            )
             if attrs:
                 caps = capabilities_from_attributes(attrs)
                 source = "console"

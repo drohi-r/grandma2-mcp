@@ -79,6 +79,59 @@ class TestCapabilities:
         names = parse_channel_type_rows(raw)
         assert {"PAN", "TILT", "DIM", "COLORRGB1"} <= names
 
+    def test_parse_channel_type_rows_real_console_output(self):
+        # Trimmed from a live 3.9.60.50 capture of the VL3500 Spot
+        # (verify_captures/discover_type_4.json): ANSI escapes in the header,
+        # \n\r line endings, NAME (Shortname) attribute column.
+        raw = (
+            "Executing : \x1b[32mList\x1b[37m\n\r"
+            "\x1b[32m               \x1b[31mNo.  \x1b[32m\x1b[33mAttrib"
+            "                                     \x1b[32mBreak  Coarse  Fine\x1b[37m\n\r"
+            "ChannelType  1 1    DIM (Dim)                                  1      1       None  None   0.00     100.00            Off   Off     On             Off         Default                              0 0 0    0               Off       (1)\n\r"
+            "ChannelType  2 2    PAN (Pan)                                  1      2       3     None   0.00                       Off   Off     Off            Off         Default                              0 0 0    0               Off       (1)\n\r"
+            "ChannelType  3 3    TILT (Tilt)                                1      4       5     None   0.00                       Off   Off     Off            Off         Default                              0 0 0    0               Off       (1)\n\r"
+            "ChannelType  7 7    COLORRGB1 (R)                              1      9       None  None   100.00   100.00            Off   Off     Off            Off         Default                              255 0 0  0               Off       (1)\n\r"
+            "ChannelType 11 11   GOBO1 (G1)                                 1      13      None  None   0.00     0.00              On    Off     Off            Off         Default           Mode!              0 0 0    0               Off       (3)\n\r"
+            "ChannelType 12 12   GOBO1_POS (G1<>)                           1      14      15    None   0.00                       Off   Off     Off            Off         Default           GOBO1              0 0 0    0               Off       (3)\n\r"
+            "ChannelType 27 27   GOBO1WHEELSELECTMSPEED (Gobo1WheelSelect)  1      30      None  None   100.00                     Off   Off     Off            Off         Default                              0 0 0    0               Off       (1)\n\r"
+            "ChannelType 28 28   LAMPCONTROL (LampControl)                  1      31      None  None   0.00                       Off   Off     Off            Off         Default                              0 0 0    0               Off       (18)\n\r"
+            "\rEditSetup/FixtureTypes 3/4 VL3500 Spot 00/Modules 1/Main Module 1 >\x1b[K"
+        )
+        names = parse_channel_type_rows(raw)
+        assert {
+            "DIM", "PAN", "TILT", "COLORRGB1", "GOBO1",
+            "GOBO1_POS", "GOBO1WHEELSELECTMSPEED", "LAMPCONTROL",
+        } <= names
+        caps = capabilities_from_attributes(names)
+        assert caps["dimmer"] and caps["position"] and caps["gobo"] and caps["color_mix"]
+
+    def test_console_attributes_match_composite_type_names(self):
+        # Live patch rows carry composite type strings ("4 VL3500 Spot 00" =
+        # "{type_id} {long_name} {mode}") while attribute discovery keys by
+        # declared long_name — the model must still bind them.
+        patch = {
+            "showfile": "mcp_verify_demo",
+            "fixture_count": 1,
+            "fixtures": [
+                {"id": 1, "name": "Spot 1", "type": "4 VL3500 Spot 00", "patch": "1.001"},
+            ],
+            "fixture_types": [
+                {"id": 4, "long_name": "VL3500 Spot", "short_name": "VL3500S", "manufacturer": "VariLite"},
+            ],
+        }
+        attrs = {"VL3500 Spot": {"DIM", "PAN", "TILT", "COLORRGB1", "GOBO1", "ZOOM", "FOCUS"}}
+        model = build_fixture_type_model(patch, attributes_by_type=attrs)
+        rec = model.types["4 VL3500 Spot 00"]
+        assert rec.capability_source == "console"
+        assert rec.type_id == 4
+        assert rec.capabilities["color_mix"] and rec.capabilities["position"]
+
+    def test_fallback_led_rgb(self):
+        caps = fallback_capabilities("5 LED - RGB 8 bit")
+        assert caps is not None
+        assert caps["dimmer"] and caps["color_mix"]
+        assert not caps["position"]
+
     def test_fallback_known_and_unknown(self):
         caps = fallback_capabilities("Mac Viper Profile")
         assert caps and caps["gobo"] and caps["position"]
