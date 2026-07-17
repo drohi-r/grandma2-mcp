@@ -76,6 +76,28 @@ _GROUP_PATTERNS = re.compile(
     r"\b(group|create\s+group|fixture\s+group)\b", re.IGNORECASE
 )
 
+# Fixture-type intelligence intents (checked before the generic patterns —
+# "create presets from my fixtures" must not fall into the plain PRESET flow)
+_PRESET_FROM_PATCH_PATTERNS = re.compile(
+    r"\bpresets?\b.{0,30}\b(?:from|for)\s+(?:my|the|this)?\s*"
+    r"(?:patch|fixtures|rig)\b"
+    r"|\bpreset\s+librar",
+    re.IGNORECASE,
+)
+_PLUGIN_SETUP_PATTERNS = re.compile(
+    r"\bcolou?r\s*picker\b|\b(?:run|set\s*up|setup|use)\b.{0,30}\bplugin\b",
+    re.IGNORECASE,
+)
+_ID_HYGIENE_PATTERNS = re.compile(
+    r"\brenumber\b|\bfixture\s+(?:numbering|ids?|blocks?)\b|\bid\s+blocks?\b",
+    re.IGNORECASE,
+)
+
+# Fixture range extraction: "fixtures 20-30", "fixture 20 thru 30", "20 to 30"
+_FIXTURE_RANGE_PATTERN = re.compile(
+    r"\bfixtures?\s+(\d+)\s*(?:-|\bthru\b|\bto\b|\.\.)\s*(\d+)\b", re.IGNORECASE
+)
+
 # Object type extraction
 _OBJECT_TYPE_PATTERNS = {
     "fixture": re.compile(r"\bfixture", re.IGNORECASE),
@@ -149,6 +171,12 @@ class DomainPlanner:
             steps = self._build_discover_workflow(goal)
         elif goal.intent == GoalIntent.COMPOSITE:
             steps = self._build_composite_workflow(goal)
+        elif goal.intent == GoalIntent.PRESET_FROM_PATCH:
+            steps = self._build_preset_from_patch_workflow(goal)
+        elif goal.intent == GoalIntent.PLUGIN_SETUP:
+            steps = self._build_plugin_setup_workflow(goal)
+        elif goal.intent == GoalIntent.ID_HYGIENE:
+            steps = self._build_id_hygiene_workflow(goal)
         else:
             # Fallback: discovery
             steps = self._build_discover_workflow(goal)
@@ -169,6 +197,14 @@ class DomainPlanner:
 
     def _classify_intent(self, text: str) -> GoalIntent:
         """Classify the primary intent from goal text."""
+        # Fixture-type intelligence intents — most specific, checked first
+        if _PLUGIN_SETUP_PATTERNS.search(text):
+            return GoalIntent.PLUGIN_SETUP
+        if _ID_HYGIENE_PATTERNS.search(text):
+            return GoalIntent.ID_HYGIENE
+        if _PRESET_FROM_PATCH_PATTERNS.search(text):
+            return GoalIntent.PRESET_FROM_PATCH
+
         # Check for composite (multiple intents)
         matches = sum([
             bool(_PATCH_PATTERNS.search(text)),
@@ -245,12 +281,25 @@ class DomainPlanner:
         if m:
             options["page"] = int(m.group(1))
 
+        # Fixture range: "fixtures 20-30" / "fixture 20 thru 30"
+        m = _FIXTURE_RANGE_PATTERN.search(text)
+        if m:
+            options["fixture_start"] = int(m.group(1))
+            options["fixture_end"] = int(m.group(2))
+
         return options
 
     def _estimate_confidence(self, text: str, intent: GoalIntent) -> float:
         """Estimate how confident we are in the goal classification."""
         if intent == GoalIntent.DISCOVER:
             # Discovery is always safe, so high confidence even for vague goals
+            return 0.9
+        if intent in (
+            GoalIntent.PRESET_FROM_PATCH,
+            GoalIntent.PLUGIN_SETUP,
+            GoalIntent.ID_HYGIENE,
+        ):
+            # Fully console-derived workflows — no free parameters to misread
             return 0.9
 
         # Count how many specific details we extracted
@@ -373,6 +422,104 @@ class DomainPlanner:
                 risk_tier=RiskTier.SAFE_READ,
             ),
         ]
+
+    def _build_preset_from_patch_workflow(self, goal: ParsedGoal) -> list[PlanStep]:
+        """Capability-aware preset creation from the current patch.
+
+        analyze patch types → verify ID blocks → create presets → verify pool.
+        """
+        strategy = "full-coverage"
+        text = goal.raw.lower()
+        if "minimal" in text:
+            strategy = "minimal-viable"
+        elif "color" in text:
+            strategy = "color-first"
+
+        analyze = PlanStep(
+            tool_name="analyze_patch_types",
+            tool_args={},
+            description="Build the fixture-type model of the patch",
+            risk_tier=RiskTier.SAFE_READ,
+        )
+        verify_blocks = PlanStep(
+            tool_name="verify_fixture_id_blocks",
+            tool_args={},
+            description="Verify fixture ID blocks before preset creation",
+            risk_tier=RiskTier.SAFE_READ,
+            depends_on=[analyze.id],
+        )
+        create = PlanStep(
+            tool_name="create_presets_for_patch",
+            tool_args={
+                "strategy": strategy,
+                "dry_run": False,
+                "confirm_destructive": False,
+            },
+            description=f"Store capability-aware presets ({strategy})",
+            risk_tier=RiskTier.DESTRUCTIVE,
+            depends_on=[verify_blocks.id],
+        )
+        verify = build_verify_step(
+            "query_object_list",
+            "Verify presets were stored",
+            tool_args={"object_type": "preset"},
+            depends_on=[create.id],
+        )
+        return [analyze, verify_blocks, create, verify]
+
+    def _build_plugin_setup_workflow(self, goal: ParsedGoal) -> list[PlanStep]:
+        """Plugin-driven setup: availability → precondition dry-run → run."""
+        if goal.names:
+            plugin_name = goal.names[0]
+        elif re.search(r"\bcolou?r\s*picker\b", goal.raw, re.IGNORECASE):
+            plugin_name = "auto-layout-color-picker"
+        else:
+            plugin_name = "auto-layout-color-picker"
+
+        preflight = PlanStep(
+            tool_name="run_preset_plugin",
+            tool_args={"plugin_name": plugin_name, "dry_run": True},
+            description=f"Preflight {plugin_name}: availability, preconditions, selection plan",
+            risk_tier=RiskTier.SAFE_READ,
+        )
+        run = PlanStep(
+            tool_name="run_preset_plugin",
+            tool_args={
+                "plugin_name": plugin_name,
+                "dry_run": False,
+                "confirm_destructive": False,
+            },
+            description=f"Run {plugin_name} with type-ordered selection and output verification",
+            risk_tier=RiskTier.DESTRUCTIVE,
+            depends_on=[preflight.id],
+        )
+        return [preflight, run]
+
+    def _build_id_hygiene_workflow(self, goal: ParsedGoal) -> list[PlanStep]:
+        """Check (and optionally repair) fixture ID block compliance."""
+        verify_blocks = PlanStep(
+            tool_name="verify_fixture_id_blocks",
+            tool_args={},
+            description="Check fixture IDs against the 100-block scheme",
+            risk_tier=RiskTier.SAFE_READ,
+        )
+        steps = [verify_blocks]
+        if re.search(r"\b(fix|repair|renumber|clean)\b", goal.raw, re.IGNORECASE):
+            renumber = PlanStep(
+                tool_name="renumber_fixtures",
+                tool_args={"dry_run": False, "confirm_destructive": False},
+                description="Renumber out-of-block fixtures into their category blocks",
+                risk_tier=RiskTier.DESTRUCTIVE,
+                depends_on=[verify_blocks.id],
+            )
+            recheck = build_verify_step(
+                "verify_fixture_id_blocks",
+                "Re-verify ID blocks after renumbering",
+                tool_args={},
+                depends_on=[renumber.id],
+            )
+            steps.extend([renumber, recheck])
+        return steps
 
     def _build_composite_workflow(self, goal: ParsedGoal) -> list[PlanStep]:
         """Build a composite workflow by chaining multiple sub-workflows.

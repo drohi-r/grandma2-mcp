@@ -43,6 +43,9 @@ class GoalIntent(StrEnum):
     DISCOVER = "discover"
     GROUP = "group"
     COMPOSITE = "composite"
+    PRESET_FROM_PATCH = "preset_from_patch"
+    PLUGIN_SETUP = "plugin_setup"
+    ID_HYGIENE = "id_hygiene"
 
 
 @dataclass

@@ -1,9 +1,9 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 1.0.0
+version: 1.1.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-04-02T05:20:00Z
+last_updated: 2026-07-17T11:14:46Z
 ---
 
 # Project Rules
@@ -12,7 +12,7 @@ last_updated: 2026-04-02T05:20:00Z
 
 ## Project Identity
 
-MCP server exposing **226 tools**, **13 resources**, **10 prompts**, and **46 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
+MCP server exposing **232 tools**, **13 resources**, **10 prompts**, and **46 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
 
 Central rule: **planner decides → skills carry instructions → subagents execute in isolation → tools take narrow actions → memory stores distilled checkpoints**.
 
@@ -24,7 +24,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server — 192 tools + 13 MCP resources + 10 MCP prompts, safety gate |
+| `src/server.py` | FastMCP server — 198 tools + 13 MCP resources + 10 MCP prompts, safety gate |
 | `src/server_orchestration_tools.py` | Registers 34 agentic tools (IDs 110-144, excluding 130) onto FastMCP |
 | `src/telnet_client.py` | Async Telnet (telnetlib3), auth, send/receive, injection prevention |
 | `src/session_manager.py` | Per-operator Telnet session pool (LRU, keepalive, auto-reconnect) |
@@ -40,6 +40,8 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 | `src/agent_memory.py` | WorkingMemory (ephemeral) + LongTermMemory (SQLite session log) + DecisionCheckpoint cache; showfile baseline tracking (`baseline_showfile`, `showfile_changed()`) |
 | `src/console_state.py` | ConsoleStateSnapshot: hydrates all 19 show-memory gaps; `parse_showfile_from_listvar()` |
 | `src/pool_name_index.py` | In-memory pool name/ID registry, zero-cost object resolution |
+| `src/fixture_types.py` | FixtureTypeModel: category classification, attribute capabilities, ID-block verify/renumber plans, type-ordered selection (pure) |
+| `src/plugin_manifests.py` | Declarative plugin requirement manifests (pool ranges, groups, selection discipline) for `run_preset_plugin` (pure) |
 | `src/rights.py` | MA2 native rights enforcement, FeedbackClass, parse_telnet_feedback |
 | `src/telemetry.py` | Per-tool invocation recorder: `tool_invocations` table, latency, risk tier |
 | `src/skill.py` | `Skill` dataclass + `SkillRegistry`: versioned playbooks with lineage + filesystem skill fallback (`_load_filesystem_skill`, `_list_filesystem_skills`) |
@@ -127,7 +129,7 @@ make install-hooks
 - Unit tests import command builders or vocab directly and assert on returned strings.
 - No live console required; live tests are in `tests/test_live_integration.py` (skipped by default).
 - Use `@pytest.mark.asyncio` for async tests.
-- Current counts (2026-04-02): **2783 tests** (2641 passing, 142 skipped, 0 failed).
+- Current counts (2026-07-17): **3118 tests** (2976 passing, 142 skipped, 0 failed).
 
 ---
 
