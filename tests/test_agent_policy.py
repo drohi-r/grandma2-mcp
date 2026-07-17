@@ -59,12 +59,25 @@ class TestPolicyEngine:
         result = engine.validate_plan(plan)
         assert any("mutation" in w.lower() for w in result.warnings)
 
-    def test_confidence_gate_blocks_low_confidence(self):
+    def test_confidence_gate_blocks_low_confidence_destructive(self):
         engine = PolicyEngine()
-        plan = [_step()]
+        plan = [
+            _step(risk=RiskTier.SAFE_READ, description="list"),
+            _step(tool_name="store_cue_with_timing", risk=RiskTier.DESTRUCTIVE,
+                  description="store cue"),
+        ]
         result = engine.validate_plan(plan, confidence=0.3)
         assert result.approved is False
         assert any(v.rule == "confidence_gate" for v in result.violations)
+
+    def test_confidence_gate_allows_low_confidence_discovery_only(self):
+        # Live-verified 2026-07-17: a non-destructive plan IS discovery-only
+        # mode — it must proceed with a warning, not be rejected.
+        engine = PolicyEngine()
+        plan = [_step(risk=RiskTier.SAFE_READ, description="browse effects")]
+        result = engine.validate_plan(plan, confidence=0.3)
+        assert result.approved is True
+        assert any("discovery-only" in w for w in result.warnings)
 
     def test_confidence_gate_passes_high_confidence(self):
         engine = PolicyEngine()

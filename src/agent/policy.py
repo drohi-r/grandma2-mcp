@@ -82,7 +82,7 @@ class PolicyEngine:
         injected.extend(discovery_steps)
 
         # Rule 4: Confidence gate
-        self._check_confidence(confidence, violations, warnings)
+        self._check_confidence(plan, confidence, violations, warnings)
 
         # Rule 5: Connection safety — new_show must preserve connectivity
         self._check_connection_safety(plan, violations, warnings)
@@ -183,21 +183,42 @@ class PolicyEngine:
 
     def _check_confidence(
         self,
+        plan: list[PlanStep],
         confidence: float,
         violations: list[PolicyViolation],
         warnings: list[str],
     ) -> None:
-        """Rule 4: Low confidence goals should route to discovery only."""
-        if confidence < CONFIDENCE_THRESHOLD:
+        """Rule 4: Low confidence goals may only run non-destructive plans.
+
+        A below-threshold goal whose plan contains no DESTRUCTIVE step IS
+        discovery-only already — it proceeds with a warning. Only plans that
+        would mutate show data are rejected. (Live verification 2026-07-17:
+        the old unconditional error rejected even pure browse/list plans
+        while claiming to "route to discovery-only mode".)
+        """
+        if confidence >= CONFIDENCE_THRESHOLD:
+            return
+        has_destructive = any(
+            s.risk_tier == RiskTier.DESTRUCTIVE for s in plan
+        )
+        if has_destructive:
             violations.append(
                 PolicyViolation(
                     rule="confidence_gate",
                     severity="error",
                     message=(
                         f"Goal confidence {confidence:.2f} is below threshold "
-                        f"{CONFIDENCE_THRESHOLD:.2f} — routing to discovery-only mode"
+                        f"{CONFIDENCE_THRESHOLD:.2f} and the plan contains "
+                        f"destructive steps — rephrase the goal with explicit "
+                        f"IDs/counts, or run a discovery goal first"
                     ),
                 )
+            )
+        else:
+            warnings.append(
+                f"Goal confidence {confidence:.2f} is below threshold "
+                f"{CONFIDENCE_THRESHOLD:.2f} — proceeding in discovery-only "
+                f"mode (plan has no destructive steps)"
             )
 
     def _check_connection_safety(
