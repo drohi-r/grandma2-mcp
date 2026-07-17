@@ -40,8 +40,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 | `src/agent_memory.py` | WorkingMemory (ephemeral) + LongTermMemory (SQLite session log) + DecisionCheckpoint cache; showfile baseline tracking (`baseline_showfile`, `showfile_changed()`) |
 | `src/console_state.py` | ConsoleStateSnapshot: hydrates all 19 show-memory gaps; `parse_showfile_from_listvar()` |
 | `src/pool_name_index.py` | In-memory pool name/ID registry, zero-cost object resolution |
-| `src/fixture_types.py` | FixtureTypeModel: category classification, attribute capabilities, ID-block verify/renumber plans, type-ordered selection (pure) |
-| `src/plugin_manifests.py` | Declarative plugin requirement manifests (pool ranges, groups, selection discipline) for `run_preset_plugin` (pure) |
+| `src/fixture_types.py` + `src/plugin_manifests.py` | FixtureTypeModel (categories, capabilities, ID-block verify, type-ordered selection) + plugin requirement manifests — both pure |
 | `src/rights.py` | MA2 native rights enforcement, FeedbackClass, parse_telnet_feedback |
 | `src/telemetry.py` | Per-tool invocation recorder: `tool_invocations` table, latency, risk tier |
 | `src/skill.py` | `Skill` dataclass + `SkillRegistry`: versioned playbooks with lineage + filesystem skill fallback (`_load_filesystem_skill`, `_list_filesystem_skills`) |
