@@ -179,7 +179,7 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     # ── Fixture-type intelligence tools ──────────────────────────────────
     "analyze_patch_types":          MA2Right.NONE,     # read-only patch model
     "verify_fixture_id_blocks":     MA2Right.NONE,     # read-only block report
-    "renumber_fixtures":            MA2Right.SETUP,    # rewrites fixture IDs in the patch
+    "renumber_fixtures":            MA2Right.NONE,     # plan-only: emits manual renumber steps (FixId not assignable via telnet)
     "select_fixtures_by_type_order": MA2Right.PROGRAM, # programmer selection writes
     "run_preset_plugin":            MA2Right.PROGRAM,  # runs plugin that writes pools
     "create_presets_for_patch":     MA2Right.PROGRAM,  # stores presets

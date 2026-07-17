@@ -86,13 +86,12 @@ class TestWorkflows:
     def test_id_hygiene_with_repair(self):
         _, steps = planner.plan_from_text("fix my fixture numbering")
         tools = [s.tool_name for s in steps]
-        assert tools == [
-            "verify_fixture_id_blocks",
-            "renumber_fixtures",
-            "verify_fixture_id_blocks",
-        ]
-        assert steps[1].risk_tier == RiskTier.DESTRUCTIVE
-        assert steps[1].tool_args["confirm_destructive"] is False
+        assert tools == ["verify_fixture_id_blocks", "renumber_fixtures"]
+        # renumber_fixtures is plan-only (fixture IDs not assignable via
+        # telnet, live-verified 2026-07-17) — the step must be SAFE_READ
+        # and must not pass dry_run=False, which the tool now blocks.
+        assert steps[1].risk_tier == RiskTier.SAFE_READ
+        assert steps[1].tool_args == {}
 
 
 class TestGroupRangeFix:

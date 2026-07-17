@@ -505,20 +505,20 @@ class DomainPlanner:
         )
         steps = [verify_blocks]
         if re.search(r"\b(fix|repair|renumber|clean)\b", goal.raw, re.IGNORECASE):
+            # renumber_fixtures is plan-only: fixture IDs cannot be changed
+            # over telnet (live-verified 2026-07-17) — the step produces the
+            # manual Patch & Fixture Schedule instructions for the operator.
             renumber = PlanStep(
                 tool_name="renumber_fixtures",
-                tool_args={"dry_run": False, "confirm_destructive": False},
-                description="Renumber out-of-block fixtures into their category blocks",
-                risk_tier=RiskTier.DESTRUCTIVE,
+                tool_args={},
+                description=(
+                    "Produce the renumbering plan (manual Patch & Fixture "
+                    "Schedule steps — fixture IDs are not assignable via telnet)"
+                ),
+                risk_tier=RiskTier.SAFE_READ,
                 depends_on=[verify_blocks.id],
             )
-            recheck = build_verify_step(
-                "verify_fixture_id_blocks",
-                "Re-verify ID blocks after renumbering",
-                tool_args={},
-                depends_on=[renumber.id],
-            )
-            steps.extend([renumber, recheck])
+            steps.append(renumber)
         return steps
 
     def _build_composite_workflow(self, goal: ParsedGoal) -> list[PlanStep]:

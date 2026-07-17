@@ -14038,7 +14038,7 @@ async def verify_fixture_id_blocks(discover_attributes: bool = False) -> str:
 
 
 @mcp.tool()
-@require_scope(OAuthScope.PATCH_WRITE)
+@require_scope(OAuthScope.STATE_READ)
 @_handle_errors
 async def renumber_fixtures(
     dry_run: bool = True,
