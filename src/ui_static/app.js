@@ -10,6 +10,10 @@ const state = {
   fixtures: [],
   typeGroups: {},
   selectedFixtureId: null,
+  expandedTypes: new Set(),
+  execsLoaded: false,
+  execs: [],
+  selectedExec: null,
   hasBaseline: false,
   lastPlan: null,
   running: false,
@@ -50,6 +54,9 @@ const el = {
   snapshotBtn:      $("#snapshot-btn"),
   divergenceCheckBtn: $("#divergence-check-btn"),
   // Playback
+  execGrid:         $("#exec-grid"),
+  execOverviewBadge:  $("#exec-overview-badge"),
+  execOverviewRefresh: $("#exec-overview-refresh"),
   execId:           $("#exec-id"),
   execLookup:       $("#exec-lookup"),
   execDetail:       $("#exec-detail"),
@@ -66,6 +73,7 @@ const el = {
   patchList:        $("#patch-list"),
   patchDetail:      $("#patch-detail"),
   patchTypeSummary: $("#patch-type-summary"),
+  patchUniverses:   $("#patch-universes"),
   // Agent
   planForm:         $("#plan-form"),
   goalInput:        $("#goal-input"),
@@ -168,6 +176,7 @@ function activateView(name) {
   el.navBtns.forEach((b) => b.classList.toggle("active", b.dataset.view === name));
   el.views.forEach((v) => v.classList.toggle("active", v.dataset.view === name));
   if (name === "patch" && !state.fixturesLoaded) loadFixtures();
+  if (name === "playback" && !state.execsLoaded) loadExecOverview();
   if (name === "agent") { loadTraces(); loadRecipes(); }
 }
 
@@ -313,10 +322,72 @@ function renderCues(cues, contextLabel) {
     : `<div class="empty">${esc(contextLabel || "No cues parsed")}</div>`;
 }
 
-async function lookupExecutor() {
-  const id = Number(el.execId.value);
+function renderExecGrid() {
+  el.execOverviewBadge.textContent = state.execs.length;
+  if (!state.execs.length) {
+    el.execGrid.innerHTML = `<div class="empty">No assigned executors on page ${state.page}.</div>`;
+    return;
+  }
+  el.execGrid.innerHTML = `<div class="exec-grid">` + state.execs.map((x) => {
+    const sel = state.selectedExec === x.id ? " selected" : "";
+    const kind = x.sequence_id != null
+      ? `<span class="exec-tile-kind seq">SEQ ${x.sequence_id}</span>`
+      : (x.effect_id != null ? `<span class="exec-tile-kind fx">FX ${x.effect_id}</span>` : `<span class="exec-tile-kind">—</span>`);
+    const meta = x.sequence_id != null
+      ? `${x.cue_count ?? "?"} cues${x.chaser ? " · chaser" : ""}`
+      : (x.effect_id != null ? "effect" : "");
+    return `<div class="exec-tile${sel}" data-exec="${x.id}">
+      <div class="exec-tile-head"><span class="exec-tile-no">${x.page}.${x.id}</span>${kind}</div>
+      <div class="exec-tile-name" title="${esc(x.name)}">${esc(x.name || "(unnamed)")}</div>
+      <div class="exec-tile-meta">${esc(meta)}</div>
+    </div>`;
+  }).join("") + `</div>`;
+  el.execGrid.querySelectorAll(".exec-tile").forEach((tile) =>
+    tile.addEventListener("click", () => selectExecutor(Number(tile.dataset.exec))));
+}
+
+async function loadExecOverview(force = false) {
+  el.execGrid.innerHTML = `<div class="loading">Scanning page ${state.page}</div>`;
+  el.execOverviewBadge.textContent = "…";
+  if (force) await apiPost("/api/cache/clear");
+  const data = await api(`/api/executors-overview?page=${state.page}`);
+  state.execs = data.executors || [];
+  state.execsLoaded = true;
+  renderExecGrid();
+}
+
+function selectExecutor(id) {
+  state.selectedExec = id;
+  renderExecGrid();
+  const x = state.execs.find((e) => e.id === id);
+  if (!x) return lookupExecutor(id);
+
+  el.execDetail.innerHTML = kvTable([
+    ["Executor", `${x.page}.${x.id}`],
+    ["Name", x.name || "--"],
+    ["Assigned", x.sequence_id != null ? `Sequence ${x.sequence_id}` : (x.effect_id != null ? `Effect ${x.effect_id}` : "--")],
+    ["Width", x.width],
+    ["Priority", x.priority || "--"],
+    ["Chaser", x.chaser ? "On" : "Off"],
+  ]);
+
+  if (x.sequence_id != null) {
+    el.seqId.value = String(x.sequence_id);
+    el.seqCues.innerHTML = `<div class="loading">Loading cues for Seq ${x.sequence_id}</div>`;
+    loadSequence();
+  } else {
+    renderCues([], x.effect_id != null
+      ? `Executor ${x.page}.${x.id} runs Effect ${x.effect_id} — no cue list.`
+      : "Nothing sequence-like on this executor.");
+  }
+}
+
+async function lookupExecutor(idOverride) {
+  const id = Number(idOverride || el.execId.value);
   if (!id || id < 1) return;
-  el.execDetail.innerHTML = `<div class="loading">Looking up ${state.page}.${id}</div>`;
+  state.selectedExec = id;
+  renderExecGrid();
+  el.execDetail.innerHTML = `<div class="loading">Probing ${state.page}.${id}</div>`;
 
   const data = await api(`/api/executor-detail?page=${state.page}&executor_id=${id}`);
   const info = data.executor_info;
@@ -332,9 +403,6 @@ async function lookupExecutor() {
   ]);
   if (data.has_sequence) el.seqId.value = String(data.sequence_id);
   renderCues(data.parsed_cues || [], data.has_sequence ? `Sequence ${data.sequence_id} has no parsed cues` : "No sequence linked to this executor");
-  el.seqInfo.innerHTML = data.has_sequence
-    ? kvTable([["Source", `Executor ${data.page}.${data.executor_id}`], ["Sequence", `Seq ${data.sequence_id}`]])
-    : "";
 }
 
 async function loadSequence(ev) {
@@ -355,6 +423,46 @@ async function loadSequence(ev) {
 
 /* ── Patch ───────────────────────────────────────────── */
 
+function fixtureIdRange(fixtures) {
+  const ids = fixtures.map((f) => f.fixture_id).filter((n) => n != null).sort((a, b) => a - b);
+  if (!ids.length) return "";
+  // Compress into ranges: [1..10, 50] → "1–10, 50"
+  const parts = [];
+  let start = ids[0], prev = ids[0];
+  for (let i = 1; i <= ids.length; i++) {
+    if (ids[i] === prev + 1) { prev = ids[i]; continue; }
+    parts.push(start === prev ? `${start}` : `${start}–${prev}`);
+    start = prev = ids[i];
+  }
+  return parts.join(", ");
+}
+
+function universeOf(patch) {
+  const m = /^(\d+)\./.exec(patch || "");
+  return m ? Number(m[1]) : null;
+}
+
+function renderUniverseSummary() {
+  const byUniverse = {};
+  let unpatched = 0;
+  for (const f of state.fixtures) {
+    const u = universeOf(f.patch);
+    if (u == null) { unpatched++; continue; }
+    byUniverse[u] = (byUniverse[u] || 0) + 1;
+  }
+  const rows = Object.entries(byUniverse).sort((a, b) => Number(a[0]) - Number(b[0]));
+  const max = Math.max(...rows.map(([, n]) => n), 1);
+  el.patchUniverses.innerHTML = rows.length
+    ? rows.map(([u, n]) =>
+        `<div class="bar-row">
+           <span class="bar-label">Universe ${u}</span>
+           <div class="bar-track"><div class="bar-fill read" style="width:${Math.round((n / max) * 100)}%"></div></div>
+           <span class="bar-value">${n}</span>
+         </div>`).join("") +
+      (unpatched ? `<div class="stat-sub" style="margin-top:6px">${unpatched} unpatched</div>` : "")
+    : `<div class="empty">No DMX addresses parsed</div>`;
+}
+
 async function loadFixtures() {
   el.patchList.innerHTML = `<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>`;
   const data = await api("/api/fixtures");
@@ -366,14 +474,17 @@ async function loadFixtures() {
   state.typeGroups = data.type_groups || {};
   state.fixturesLoaded = true;
   state.selectedFixtureId = null;
+  state.expandedTypes = new Set();
 
   const total = data.total_count || state.fixtures.length;
   const types = data.type_count || Object.keys(state.typeGroups).length;
   el.patchStat.textContent = `${types} types · ${total} fixtures`;
   el.patchTypeSummary.innerHTML = Object.keys(state.typeGroups).length
-    ? kvTable(Object.entries(state.typeGroups).map(([name, g]) => [name, `${g.count}`]))
+    ? Object.entries(state.typeGroups).map(([name, g]) =>
+        `<div class="list-item"><span class="list-item-name">${esc(name)}</span><span class="list-item-meta">${g.count}</span></div>`).join("")
     : `<div class="empty">No fixture types found</div>`;
   el.patchDetail.innerHTML = `<div class="empty">Select a fixture</div>`;
+  renderUniverseSummary();
   renderFixtureList();
 }
 
@@ -389,20 +500,27 @@ function renderFixtureList() {
     });
     if (!fixtures.length) continue;
     matchCount += fixtures.length;
-    html += `<div class="type-group">
+
+    // Filtered groups auto-expand; otherwise collapsed unless toggled open.
+    const expanded = q ? true : state.expandedTypes.has(typeName);
+    const universes = [...new Set(fixtures.map((f) => universeOf(f.patch)).filter((u) => u != null))];
+    const uniLabel = universes.length ? `U${universes.join(", U")}` : "unpatched";
+
+    html += `<div class="type-group${expanded ? "" : " collapsed"}" data-type="${esc(typeName)}">
       <div class="type-group-header">
-        <span class="type-group-name">${esc(typeName)}</span>
-        <span class="type-group-count">${fixtures.length}</span>
+        <span class="type-group-meta">
+          <span class="type-group-caret">▼</span>
+          <span class="type-group-name">${esc(typeName)}</span>
+          <span class="type-group-range">${esc(fixtureIdRange(fixtures))}</span>
+        </span>
+        <span class="type-group-count">${fixtures.length} · ${esc(uniLabel)}</span>
       </div>
-      <div class="type-group-body">${fixtures.map((f) => {
+      <div class="type-group-body"><div class="fixture-chips">${fixtures.map((f) => {
         const sel = state.selectedFixtureId === f.fixture_id ? " selected" : "";
-        const label = f.label || `Fixture ${f.fixture_id}`;
-        const meta = f.patch && f.patch !== "(-)" ? `DMX ${f.patch}` : "Unpatched";
-        return `<div class="list-item interactive${sel}" data-fid="${f.fixture_id}">
-          <span class="list-item-name">${esc(label)}</span>
-          <span class="list-item-meta">${esc(meta)}</span>
-        </div>`;
-      }).join("")}</div>
+        const patched = f.patch && f.patch !== "(-)";
+        const label = f.label ? `${f.fixture_id} · ${f.label}` : `${f.fixture_id}`;
+        return `<span class="fixture-chip${sel}${patched ? "" : " unpatched"}" data-fid="${f.fixture_id}" title="${esc(f.label || "")} ${patched ? "DMX " + esc(f.patch) : "unpatched"}">${esc(label)}</span>`;
+      }).join("")}</div></div>
     </div>`;
   }
 
@@ -410,9 +528,15 @@ function renderFixtureList() {
   el.patchBadge.textContent = matchCount;
 
   el.patchList.querySelectorAll(".type-group-header").forEach((h) =>
-    h.addEventListener("click", () => h.parentElement.classList.toggle("collapsed")));
-  el.patchList.querySelectorAll(".list-item").forEach((item) =>
-    item.addEventListener("click", () => selectFixture(Number(item.dataset.fid))));
+    h.addEventListener("click", () => {
+      const group = h.parentElement;
+      const name = group.dataset.type;
+      group.classList.toggle("collapsed");
+      if (group.classList.contains("collapsed")) state.expandedTypes.delete(name);
+      else state.expandedTypes.add(name);
+    }));
+  el.patchList.querySelectorAll(".fixture-chip").forEach((chip) =>
+    chip.addEventListener("click", (e) => { e.stopPropagation(); selectFixture(Number(chip.dataset.fid)); }));
 }
 
 function selectFixture(id) {
@@ -627,13 +751,17 @@ function wire() {
   el.pageInput.addEventListener("change", () => {
     state.page = Number(el.pageInput.value || 1);
     syncPageRefs();
+    state.execsLoaded = false;
+    state.selectedExec = null;
+    if (document.querySelector(".nav-btn.active")?.dataset.view === "playback") loadExecOverview();
   });
+  el.execOverviewRefresh.addEventListener("click", () => loadExecOverview(true));
   // Divergence
   el.snapshotBtn.addEventListener("click", snapshotBaseline);
   el.divergenceCheckBtn.addEventListener("click", () => checkDivergence(true));
   el.divergenceChip.addEventListener("click", () => checkDivergence(true));
   // Playback
-  el.execLookup.addEventListener("click", lookupExecutor);
+  el.execLookup.addEventListener("click", () => lookupExecutor());
   el.execId.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); lookupExecutor(); } });
   el.seqForm.addEventListener("submit", loadSequence);
   // Patch

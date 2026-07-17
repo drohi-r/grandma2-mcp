@@ -107,37 +107,48 @@
 
         <!-- PLAYBACK (executors + sequences) -->
         <section class="view" data-view="playback">
-          <div class="toolbar">
-            <label class="field-label">Executor
-              <input id="exec-id" type="number" min="1" placeholder="e.g. 15">
-            </label>
-            <button id="exec-lookup" class="btn-sm">Lookup</button>
-            <span class="toolbar-hint">Probes one slot on page <span class="page-ref">1</span> — no bulk scans, the console stays responsive.</span>
-          </div>
           <div class="split-panel">
             <div class="panel-main">
               <div class="card">
-                <div class="card-header">Executor Status</div>
-                <div class="card-body" id="exec-detail">
-                  <div class="empty">Enter an executor number and press Lookup.</div>
+                <div class="card-header">
+                  <span>Assigned Executors — page <span class="page-ref">1</span></span>
+                  <span class="badge" id="exec-overview-badge">…</span>
+                  <button id="exec-overview-refresh" class="btn-icon btn-tiny" title="Re-scan page">&#x21bb;</button>
+                </div>
+                <div class="card-body" id="exec-grid">
+                  <div class="loading">Scanning page</div>
                 </div>
               </div>
               <div class="card">
                 <div class="card-header">Cue List <span class="badge" id="seq-badge">0</span></div>
                 <div class="card-body flush scroll-y" id="seq-cues">
-                  <div class="empty">Cues appear here from an executor lookup or a direct sequence load.</div>
+                  <div class="empty">Select an executor above, or load a sequence directly.</div>
                 </div>
               </div>
             </div>
             <div class="panel-side">
               <div class="card">
-                <div class="card-header">Sequence Inspector</div>
+                <div class="card-header">Executor Detail</div>
+                <div class="card-body" id="exec-detail">
+                  <div class="empty">Select an executor tile.</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Manual Lookup</div>
                 <div class="card-body">
                   <form id="seq-form">
-                    <label class="field-label">Sequence ID
-                      <input id="seq-id" type="number" min="1" placeholder="e.g. 90">
-                    </label>
-                    <div class="btn-row"><button type="submit" class="btn-sm">Load cues</button></div>
+                    <div class="toolbar-group">
+                      <label class="field-label">Executor
+                        <input id="exec-id" type="number" min="1" placeholder="e.g. 15">
+                      </label>
+                      <button type="button" id="exec-lookup" class="btn-sm">Probe</button>
+                    </div>
+                    <div class="toolbar-group" style="margin-top:10px">
+                      <label class="field-label">Sequence ID
+                        <input id="seq-id" type="number" min="1" placeholder="e.g. 90">
+                      </label>
+                      <button type="submit" class="btn-sm">Load cues</button>
+                    </div>
                   </form>
                   <div id="seq-info" style="margin-top:12px"></div>
                 </div>
@@ -168,8 +179,12 @@
                 <div class="card-body" id="patch-detail"><div class="empty">Select a fixture</div></div>
               </div>
               <div class="card">
+                <div class="card-header">DMX Universes</div>
+                <div class="card-body" id="patch-universes"></div>
+              </div>
+              <div class="card">
                 <div class="card-header">Type Summary</div>
-                <div class="card-body" id="patch-type-summary"></div>
+                <div class="card-body flush" id="patch-type-summary"></div>
               </div>
             </div>
           </div>

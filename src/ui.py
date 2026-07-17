@@ -198,15 +198,24 @@ def _parse_fixture_rows(raw_response: str) -> list[dict[str, Any]]:
 def _parse_sequence_cues(raw_response: str) -> list[dict[str, Any]]:
     cues: list[dict[str, Any]] = []
     for line in raw_response.splitlines():
-        text = line.strip()
+        text = _strip_ansi(line).strip()
         if not text or "cue" not in text.lower():
+            continue
+        if text.startswith("Executing") or text.startswith("Error"):
             continue
         cue_match = re.search(r"\bCue\s+([0-9]+(?:\.[0-9]+)?)", text, re.IGNORECASE)
         label_match = re.search(r'Name\s*[=:]\s*"?(.*?)"?$', text, re.IGNORECASE)
+        label = label_match.group(1) if label_match else ""
+        if not label and cue_match:
+            # Grid rows: "Cue 1 1 Time 12 Normal ..." — drop the redundant
+            # "Cue <n> <n>" prefix so the row reads as attributes only.
+            label = re.sub(
+                r"^Cue\s+[0-9.]+(?:\s+[0-9.]+)?\s*", "", text
+            ).strip()
         cues.append({
             "raw": text,
             "cue": cue_match.group(1) if cue_match else None,
-            "label": label_match.group(1) if label_match else "",
+            "label": label,
         })
     return cues
 
@@ -383,6 +392,72 @@ async def _fixture_inventory() -> dict[str, Any]:
     }
 
 
+_EXEC_ROW_RE = re.compile(
+    r"^Exec\s+(?P<page>\d+)\.(?P<id>\d+)\s+No\.=\S+\s+Name=(?P<name>.*?)"
+    r"(?=\s+(?:Sequence=|Effect=|Width=|$))",
+)
+
+
+def _parse_executor_rows(raw_response: str) -> list[dict[str, Any]]:
+    """Parse `List Executor p.a Thru p.b` output — one row per ASSIGNED slot.
+
+    Live row shape (3.9.60, ANSI stripped):
+      Exec   1.15  No.=1.15 Name=Sequ Sequence=Seq 90(5) Width=1 Chaser=off ...
+      Exec   1.16  No.=1.16 Name=Dimmer Sin Effect=Effect 1 Width=1 ...
+    Names may contain spaces, so the name is everything up to the next
+    known key token.
+    """
+    rows: list[dict[str, Any]] = []
+    for line in raw_response.splitlines():
+        text = _strip_ansi(line).strip()
+        if not text.startswith("Exec "):
+            continue
+        match = _EXEC_ROW_RE.match(text)
+        if not match:
+            continue
+        seq = re.search(r"\bSequence=Seq\s+(\d+)(?:\((\d+)\))?", text)
+        effect = re.search(r"\bEffect=Effect\s+(\d+)", text)
+        width = re.search(r"\bWidth=(\d+)", text)
+        chaser = re.search(r"\bChaser=(\w+)", text)
+        priority = re.search(r"\bPriority=(\w+)", text)
+        rows.append({
+            "page": int(match.group("page")),
+            "id": int(match.group("id")),
+            "name": match.group("name").strip(),
+            "sequence_id": int(seq.group(1)) if seq else None,
+            "cue_count": int(seq.group(2)) if seq and seq.group(2) else None,
+            "effect_id": int(effect.group(1)) if effect else None,
+            "width": int(width.group(1)) if width else 1,
+            "chaser": bool(chaser and chaser.group(1).lower() == "on"),
+            "priority": priority.group(1) if priority else "",
+        })
+    return rows
+
+
+async def _executors_overview(page: int) -> dict[str, Any]:
+    """All assigned executors on a page — ONE telnet command, cached.
+
+    `List Executor <page>.1 Thru <page>.199` lists only assigned slots
+    (live-verified 2026-07-17 on 3.9.60.50; .999/.240 upper bounds are
+    rejected with NUMBER TOO LARGE, .199 is accepted).
+    """
+
+    async def fetch() -> str:
+        client = await server.get_client()
+        raw = await client.send_command_with_response(
+            f"List Executor {page}.1 Thru {page}.199", timeout=15
+        )
+        return json.dumps({"raw_response": raw, "risk_tier": "SAFE_READ"})
+
+    payload = await _cached_call(f"executors_overview:{page}", fetch)
+    rows = _parse_executor_rows(payload.get("raw_response", ""))
+    return {
+        "page": page,
+        "executors": rows,
+        "count": len(rows),
+    }
+
+
 async def _health() -> dict[str, Any]:
     """Header health strip: showfile + version + session, one cached var read."""
     payload = await _cached_call("sysvars", server.list_system_variables)
@@ -553,6 +628,9 @@ async def _route_api(method: str, path: str, query: dict[str, list[str]], body: 
                 dry_run=bool(body.get("dry_run", False)),
             )
         )
+
+    if method == "GET" and path == "/api/executors-overview":
+        return HTTPStatus.OK, _json_bytes(await _executors_overview(_query_int(query, "page", 1)))
 
     if method == "GET" and path == "/api/health":
         return HTTPStatus.OK, _json_bytes(await _health())

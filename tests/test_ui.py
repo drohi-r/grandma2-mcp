@@ -205,3 +205,32 @@ def test_list_traces_and_read_trace(tmp_path, monkeypatch):
     assert full["goal"] == "list all groups"
     assert "error" in ui_mod._read_trace("run_zzzzzz999999")
     assert "error" in ui_mod._read_trace("../../etc/passwd")
+
+
+# --- _parse_executor_rows (live-verified 2026-07-17, `List Executor p.1 Thru p.199`) ---
+
+def test_parse_executor_rows_sequence_and_effect():
+    from src.ui import _parse_executor_rows
+    raw = (
+        "Executing : \x1b[32mList\x1b[37m Executor 1.1 Thru 1.199\n"
+        "Exec   1.15  \x1b[33mNo.\x1b[37m=1.15 \x1b[33mName\x1b[37m=Sequ \x1b[31mSequence=\x1b[37mSeq 90(5) \x1b[32mWidth=\x1b[37m1 \x1b[32mChaser=\x1b[37moff \x1b[32mPriority=\x1b[37mNormal\n"
+        "Exec   1.16  No.=1.16 Name=Dimmer Sin Effect=Effect 1 Width=1\n"
+    )
+    rows = _parse_executor_rows(raw)
+    assert len(rows) == 2
+    seq = rows[0]
+    assert (seq["id"], seq["name"], seq["sequence_id"], seq["cue_count"]) == (15, "Sequ", 90, 5)
+    assert seq["chaser"] is False and seq["priority"] == "Normal"
+    fx = rows[1]
+    assert (fx["id"], fx["name"], fx["effect_id"], fx["sequence_id"]) == (16, "Dimmer Sin", 1, None)
+
+
+def test_parse_sequence_cues_skips_echo_and_strips_prefix():
+    raw = (
+        "Executing : \x1b[32mList\x1b[37m \x1b[32mCue\x1b[37m Sequence 7\n"
+        "Cue 1 1 Time 12 Normal None Infinite Infinite (1)\n"
+    )
+    cues = _parse_sequence_cues(raw)
+    assert len(cues) == 1
+    assert cues[0]["cue"] == "1"
+    assert cues[0]["label"] == "Time 12 Normal None Infinite Infinite (1)"
