@@ -183,6 +183,9 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "select_fixtures_by_type_order": MA2Right.PROGRAM, # programmer selection writes
     "run_preset_plugin":            MA2Right.PROGRAM,  # runs plugin that writes pools
     "create_presets_for_patch":     MA2Right.PROGRAM,  # stores presets
+    # ── Console divergence detection (read-only) ─────────────────────────
+    "snapshot_console_baseline":    MA2Right.NONE,
+    "detect_console_divergence":    MA2Right.NONE,
     # ── Previously unmapped tools (added during hardening pass) ──────────
     # none (0) — read-only inspection / validation
     "classify_show_mode":           MA2Right.NONE,
