@@ -104,7 +104,10 @@ class TestVerifyFixtureIdBlocks:
         data = json.loads(await verify_fixture_id_blocks())
         assert data["compliant"] is False
         assert data["out_of_block"][0]["fixture_id"] == 50
-        assert data["proposed_commands"] == ["Assign Fixture 50 /fixid=100"]
+        assert data["proposed_commands"] == [
+            "Setup → Patch & Fixture Schedule → set FixId of "
+            "fixture 50 (Stray) to 100"
+        ]
 
 
 class TestRenumberFixtures:
@@ -115,30 +118,25 @@ class TestRenumberFixtures:
         mock_hydrate.return_value = _model_and_patch()
         data = json.loads(await renumber_fixtures())
         assert data["dry_run"] is True
+        assert data["plan_only"] is True
         assert data["executed"] == 0
-        assert data["commands"] == ["Assign Fixture 50 /fixid=100"]
+        assert data["commands"] == [
+            "Setup → Patch & Fixture Schedule → set FixId of "
+            "fixture 50 (Stray) to 100"
+        ]
 
     @pytest.mark.asyncio
     @patch("src.server._hydrate_fixture_type_model")
-    async def test_blocked_without_confirm(self, mock_hydrate):
+    async def test_never_executes_even_when_confirmed(self, mock_hydrate):
+        # Live-verified 2026-07-17 (v3.9.60.50): FixId cannot be assigned
+        # over telnet, so the tool is plan-only regardless of flags.
         from src.server import renumber_fixtures
         mock_hydrate.return_value = _model_and_patch()
-        data = json.loads(await renumber_fixtures(dry_run=False))
+        data = json.loads(await renumber_fixtures(dry_run=False, confirm_destructive=True))
+        assert data["plan_only"] is True
         assert data["blocked"] is True
         assert data["executed"] == 0
-
-    @pytest.mark.asyncio
-    @patch("src.server.get_client")
-    @patch("src.server._hydrate_fixture_type_model")
-    async def test_executes_when_confirmed(self, mock_hydrate, mock_get_client):
-        from src.server import renumber_fixtures
-        mock_hydrate.return_value = _model_and_patch()
-        client = MagicMock()
-        client.send_command_with_response = AsyncMock(return_value="OK")
-        mock_get_client.return_value = client
-        data = json.loads(await renumber_fixtures(dry_run=False, confirm_destructive=True))
-        assert data["executed"] == 1
-        client.send_command_with_response.assert_awaited_with("Assign Fixture 50 /fixid=100")
+        assert "CANNOT ASSIGN" in data["plan_only_reason"]
 
 
 class TestSelectFixturesByTypeOrder:

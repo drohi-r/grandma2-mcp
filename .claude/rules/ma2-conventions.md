@@ -1,9 +1,9 @@
 ---
 title: MA2 Command Conventions
 description: Live-verified MA2 command rules, quoting, navigation, and data directory layout
-version: 1.0.0
+version: 1.1.0
 created: 2026-03-29T21:44:45Z
-last_updated: 2026-03-29T21:44:45Z
+last_updated: 2026-07-17T19:35:00Z
 ---
 
 # MA2 Command Conventions
@@ -141,6 +141,23 @@ importexport/
 **Rule:** When adding features to a working macro, insert new lines around existing logic — do not modify lines that perform critical Store operations.
 
 **Jump target convention:** `Go Macro 1."name".N` targets Line N (1-based) = XML index N-1. When inserting lines, use an index shift table to remap all jump targets.
+
+---
+
+## Fixture ID renumbering — NOT possible over telnet (live-verified 2026-07-17, v3.9.60.50)
+
+Fixture IDs (FixId/ChaId) **cannot be changed via any telnet command**. Every variant returns `Error #66: CANNOT ASSIGN`:
+
+| Attempt | Context | Result |
+|---------|---------|--------|
+| `Assign Fixture <n> /fixid=<new>` | root | Error #66 |
+| `Assign Fixture <n> /FixId=<new>` (also `/ChaId`, `/fixtureid`, `/id`, combined) | EditSetup and LiveSetup layer contexts | Error #66 |
+| `Move Fixture <n> At <new>` | EditSetup layer context | Error #72 COMMAND NOT EXECUTED |
+| `Set Fixture <n> /FixId=<new>` | any | `Set` expands to `Setup` (opens Setup screen) — no-op |
+
+Control test: `Assign Fixture <n> /name="X"` in the LiveSetup layer context **works** and applies instantly — the property-assign mechanism is fine; FixId specifically is console-side read-only (shown red in `list` headers alongside ChaId/FixtureType).
+
+**Consequence:** `renumber_fixtures` is plan-only. It emits manual operator steps for Setup → Patch & Fixture Schedule; verify afterwards with `verify_fixture_id_blocks`.
 
 ---
 

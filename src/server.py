@@ -14045,23 +14045,27 @@ async def renumber_fixtures(
     confirm_destructive: bool = False,
 ) -> str:
     """
-    Renumber out-of-block fixtures into their category's 100-block (DESTRUCTIVE).
+    Plan renumbering of out-of-block fixtures into their category's 100-block (PLAN-ONLY).
 
-    Re-reads the patch fresh (never acts on a stale model), computes the
-    renumbering plan from verify_fixture_id_blocks, and executes
-    ``Assign Fixture <old> /fixid=<new>`` per entry.
-
-    WARNING: renumbering changes fixture IDs that groups, presets, and macros
-    may reference by number. Review the plan (dry_run=True, the default) and
-    your group contents before executing.
+    Re-reads the patch fresh (never acts on a stale model) and computes the
+    renumbering plan from verify_fixture_id_blocks. This tool NEVER executes:
+    fixture IDs cannot be changed over telnet — live-verified 2026-07-17
+    (v3.9.60.50): ``Assign Fixture <old> /fixid=<new>`` and every
+    property-assign variant (FixId/ChaId at root, in the EditSetup and
+    LiveSetup layer contexts, and via ``Move``) return Error #66 CANNOT
+    ASSIGN, while sibling properties like ``/name=`` apply fine — the FixId
+    column is console-side read-only. Renumbering must be done by the
+    operator in Setup → Patch & Fixture Schedule; the returned ``commands``
+    are manual dialog steps.
 
     Args:
-        dry_run: When True (default), return the plan without sending commands.
-        confirm_destructive: Must be True to execute with dry_run=False.
+        dry_run: Retained for API compatibility; every call is a dry run.
+        confirm_destructive: Retained for API compatibility; execution is
+            never possible, so this flag has no effect.
 
     Returns:
-        str: JSON with renumber_plan, commands, executed, per-command
-        responses, blocked, risk_tier.
+        str: JSON with renumber_plan, commands (manual operator steps),
+        executed (always 0), plan_only, blocked, risk_tier.
     """
     from src.fixture_types import renumber_commands, verify_id_blocks
 
@@ -14074,29 +14078,23 @@ async def renumber_fixtures(
         "commands": commands,
         "warning": (
             "Renumbering changes fixture IDs referenced by groups, presets, "
-            "and macros. Verify references before executing."
+            "and macros. Verify references before renumbering in the dialog."
         ),
-        "dry_run": dry_run,
+        "plan_only": True,
+        "plan_only_reason": (
+            "Fixture IDs cannot be changed over telnet on grandMA2 "
+            "(live-verified 2026-07-17, v3.9.60.50: every FixId assign "
+            "variant returns Error #66 CANNOT ASSIGN). Apply the steps in "
+            "Setup → Patch & Fixture Schedule, then re-run "
+            "verify_fixture_id_blocks to confirm."
+        ),
+        "dry_run": True,
         "executed": 0,
-        "risk_tier": "DESTRUCTIVE",
+        "risk_tier": "SAFE_READ",
     }
-    if dry_run:
-        return json.dumps(envelope, indent=2)
-    if not confirm_destructive:
+    if not dry_run:
         envelope["blocked"] = True
-        envelope["error"] = (
-            "Renumbering modifies the patch. Set confirm_destructive=True to proceed."
-        )
-        return json.dumps(envelope, indent=2)
-
-    client = await get_client()
-    responses = []
-    for cmd in commands:
-        raw = await client.send_command_with_response(cmd)
-        responses.append({"command": cmd, "response": raw})
-    envelope["executed"] = len(responses)
-    envelope["responses"] = responses
-    envelope["blocked"] = False
+        envelope["error"] = envelope["plan_only_reason"]
     return json.dumps(envelope, indent=2)
 
 

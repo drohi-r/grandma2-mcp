@@ -443,14 +443,21 @@ def verify_id_blocks(
 
 
 def renumber_commands(renumber_plan: list[dict]) -> list[str]:
-    """Build MA2 commands for a renumber plan (skips unplannable entries).
+    """Build operator instructions for a renumber plan (skips unplannable entries).
 
-    Uses ``Assign Fixture <old> /fixid=<new>``. Renumbering changes the
-    fixture's ID, which groups/presets reference — callers must warn before
-    executing.
+    Fixture IDs CANNOT be changed over telnet on MA2 — live-verified
+    2026-07-17 (v3.9.60.50): ``Assign Fixture <old> /fixid=<new>`` and every
+    property-assign variant (FixId/ChaId, root, EditSetup and LiveSetup layer
+    contexts, ``Move``) return Error #66 CANNOT ASSIGN, while sibling
+    properties like ``/name=`` apply fine. The FixId column is console-side
+    read-only. Renumbering must be done in the EditSetup patch dialog, so
+    this returns manual operator steps rather than executable commands.
     """
     return [
-        f"Assign Fixture {e['old_id']} /fixid={e['new_id']}"
+        (
+            f"Setup → Patch & Fixture Schedule → set FixId of "
+            f"fixture {e['old_id']} ({e.get('name', '?')}) to {e['new_id']}"
+        )
         for e in renumber_plan
         if e.get("new_id") is not None
     ]

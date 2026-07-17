@@ -1,16 +1,17 @@
 """
 Live tests — fixture-type intelligence tools against a real grandMA2 console.
 
-Verifies the two live-UNVERIFIED assumptions of the fixture-type build:
+Verifies the two live-verified behaviors of the fixture-type build:
   1. ChannelType attribute-discovery parsing against real EditSetup output
-  2. The ``Assign Fixture <old> /fixid=<new>`` renumbering command
+  2. Fixture ID renumbering is NOT possible over telnet (Error #66) — the
+     renumber_fixtures tool must stay plan-only
 plus end-to-end sanity of the read-only tools and plugin preflight.
 
 Usage (on the console PC / office machine):
     # Read-only layers:
     uv run pytest tests/test_live_fixture_types.py --live -v -s
 
-    # Including the renumber round-trip (modifies + restores the patch):
+    # Including the renumber probes (sends one refused command, no changes):
     uv run pytest tests/test_live_fixture_types.py --live --destructive -v -s
 """
 
@@ -96,17 +97,20 @@ class TestTypeOrderedSelectionExecute:
 @pytest.mark.live
 @pytest.mark.destructive
 class TestRenumberRoundTrip:
-    """LIVE-VERIFY 2: the /fixid renumber command — round-trips one fixture.
+    """LIVE-VERIFY 2: fixture IDs cannot be renumbered over telnet.
 
-    Picks the highest fixture ID in the patch, renumbers it to a free scratch
-    ID (9500+), verifies via re-read, then renumbers it back. If the /fixid
-    syntax is wrong on this MA2 version, the first assert fails and nothing
-    was changed.
+    Live-verified 2026-07-17 (v3.9.60.50): every FixId assign variant
+    (``Assign Fixture <old> /fixid=<new>`` at root, /FixId= in the EditSetup
+    and LiveSetup layer contexts, ``Move``) returns Error #66 CANNOT ASSIGN
+    while sibling properties like /name= apply fine — FixId is console-side
+    read-only. These tests pin that behavior: the console must refuse the
+    command and leave the patch untouched, and renumber_fixtures must stay
+    plan-only.
     """
 
     SCRATCH_ID = 9500
 
-    async def test_fixid_round_trip(self, live_client):
+    async def test_fixid_refused_and_patch_untouched(self, live_client):
         from src.show_strategies.patch_reader import summarize_patch
 
         patch = await summarize_patch(live_client)
@@ -124,18 +128,30 @@ class TestRenumberRoundTrip:
 
         after = await summarize_patch(live_client)
         after_ids = {f["id"] for f in after["fixtures"]}
-        try:
-            assert scratch in after_ids and victim not in after_ids, (
-                f"'Assign Fixture {victim} /fixid={scratch}' did not take effect — "
-                f"the /fixid syntax is NOT valid on this console version. "
-                f"Response was: {resp!r}. renumber_fixtures must be reworked "
-                "(e.g. via EditSetup patch edit)."
+        if scratch in after_ids:
+            # A future MA2 version accepted /fixid — restore and flag so the
+            # plan-only downgrade can be revisited.
+            await live_client.send_command_with_response(
+                f"Assign Fixture {scratch} /fixid={victim}"
             )
-        finally:
-            # Restore regardless — if the first command worked, undo it.
-            if scratch in after_ids:
-                await live_client.send_command_with_response(
-                    f"Assign Fixture {scratch} /fixid={victim}"
-                )
-                restored = await summarize_patch(live_client)
-                assert victim in {f["id"] for f in restored["fixtures"]}
+            restored = await summarize_patch(live_client)
+            assert victim in {f["id"] for f in restored["fixtures"]}
+            pytest.fail(
+                "/fixid was ACCEPTED on this console version — "
+                "renumber_fixtures can be upgraded from plan-only."
+            )
+        assert "CANNOT ASSIGN" in resp, (
+            f"Expected Error #66 CANNOT ASSIGN, got: {resp!r}"
+        )
+        assert after_ids == ids, "patch changed despite the refused command"
+
+    async def test_renumber_fixtures_is_plan_only(self, live_client):
+        data = json.loads(
+            await renumber_fixtures(dry_run=False, confirm_destructive=True)
+        )
+        assert data["plan_only"] is True
+        assert data["executed"] == 0
+        assert data["blocked"] is True
+        assert "CANNOT ASSIGN" in data["plan_only_reason"]
+        # Manual dialog steps, not telnet commands
+        assert all("/fixid=" not in c for c in data["commands"])

@@ -232,10 +232,13 @@ class TestVerifyIdBlocks:
 
     def test_renumber_commands(self):
         cmds = renumber_commands([
-            {"old_id": 50, "new_id": 100},
+            {"old_id": 50, "new_id": 100, "name": "Spot stray"},
             {"old_id": 999, "new_id": None, "error": "full"},
         ])
-        assert cmds == ["Assign Fixture 50 /fixid=100"]
+        assert cmds == [
+            "Setup → Patch & Fixture Schedule → set FixId of "
+            "fixture 50 (Spot stray) to 100"
+        ]
 
 
 # ---------------------------------------------------------------- selection
