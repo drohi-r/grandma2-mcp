@@ -176,6 +176,13 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     "build_show_from_patch":      MA2Right.PROGRAM,  # T4 — creates groups/presets/cues/executors
     "build_layout_for_screen":    MA2Right.PROGRAM,  # T5 — writes screen layout elements
     "architect_preset_library":   MA2Right.PROGRAM,  # T8 — preset library architect (store path deferred)
+    # ── Fixture-type intelligence tools ──────────────────────────────────
+    "analyze_patch_types":          MA2Right.NONE,     # read-only patch model
+    "verify_fixture_id_blocks":     MA2Right.NONE,     # read-only block report
+    "renumber_fixtures":            MA2Right.NONE,     # plan-only: emits manual renumber steps (FixId not assignable via telnet)
+    "select_fixtures_by_type_order": MA2Right.PROGRAM, # programmer selection writes
+    "run_preset_plugin":            MA2Right.PROGRAM,  # runs plugin that writes pools
+    "create_presets_for_patch":     MA2Right.PROGRAM,  # stores presets
     # ── Previously unmapped tools (added during hardening pass) ──────────
     # none (0) — read-only inspection / validation
     "classify_show_mode":           MA2Right.NONE,
