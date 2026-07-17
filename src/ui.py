@@ -228,7 +228,9 @@ def _parse_console_users(raw_response: str) -> list[dict[str, Any]]:
             "name": match.group("name"),
             "profile": match.group("profile") or "",
             "rights": match.group("rights"),
-            "logged_in": match.group("logged_in") == "1",
+            # LoggedIn column is a session count (administrator can hold
+            # several logins) — any non-zero value means logged in.
+            "logged_in": int(match.group("logged_in")) > 0,
         })
     return users
 
@@ -381,6 +383,105 @@ async def _fixture_inventory() -> dict[str, Any]:
     }
 
 
+async def _health() -> dict[str, Any]:
+    """Header health strip: showfile + version + session, one cached var read."""
+    payload = await _cached_call("sysvars", server.list_system_variables)
+    variables = payload.get("variables", {}) if isinstance(payload, dict) else {}
+    sessions = await _cached_call("sessions", server.inspect_sessions)
+    session_list = sessions.get("sessions", []) if isinstance(sessions, dict) else []
+    connected = any(s.get("connected") for s in session_list)
+    return {
+        "showfile": variables.get("$SHOWFILE", ""),
+        "version": variables.get("$VERSION", ""),
+        "user": variables.get("$USER", ""),
+        "faderpage": variables.get("$FADERPAGE", ""),
+        "host": getattr(server, "_GMA_HOST", ""),
+        "connected": connected,
+        "session": session_list[0] if session_list else None,
+    }
+
+
+def _traces_dir() -> str:
+    from src.agent.trace import TRACES_DIR
+
+    return os.path.abspath(TRACES_DIR)
+
+
+_RUN_ID_RE = re.compile(r"^run_[0-9a-f]{6,}$")
+
+
+def _list_traces(limit: int = 25) -> dict[str, Any]:
+    """Newest-first summaries of agent execution traces on disk."""
+    base = _traces_dir()
+    entries: list[tuple[float, str]] = []
+    try:
+        for name in os.listdir(base):
+            if name.endswith(".json"):
+                full = os.path.join(base, name)
+                entries.append((os.path.getmtime(full), full))
+    except OSError:
+        return {"traces": [], "traces_dir": base}
+    entries.sort(reverse=True)
+
+    traces: list[dict[str, Any]] = []
+    for _, full in entries[:limit]:
+        try:
+            with open(full, encoding="utf-8") as fh:
+                data = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            continue
+        steps = data.get("steps", [])
+        traces.append({
+            "run_id": data.get("run_id", os.path.basename(full)),
+            "goal": data.get("goal", ""),
+            "result": data.get("result", ""),
+            "step_count": len(steps),
+            "failed_steps": sum(1 for s in steps if s.get("status") == "failed"),
+            "duration_ms": data.get("total_duration_ms", 0),
+            "started_at": data.get("started_at", ""),
+            "policy_warnings": data.get("policy_warnings", []),
+        })
+    return {"traces": traces, "traces_dir": base}
+
+
+def _read_trace(run_id: str) -> dict[str, Any]:
+    if not _RUN_ID_RE.match(run_id):
+        return {"error": f"Invalid run id: {run_id!r}"}
+    base = _traces_dir()
+    try:
+        for name in os.listdir(base):
+            if name.endswith(".json") and run_id in name:
+                with open(os.path.join(base, name), encoding="utf-8") as fh:
+                    return json.load(fh)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"error": f"Failed to read trace: {exc}"}
+    return {"error": f"No trace found for {run_id}"}
+
+
+def _list_recipes() -> dict[str, Any]:
+    from src.agent.memory import WorkflowMemory
+
+    try:
+        memory = WorkflowMemory()
+        recipes = memory.recall_recipe()
+    except Exception as exc:  # noqa: BLE001 — recipe DB is optional
+        return {"recipes": [], "error": str(exc)}
+    recipes.sort(key=lambda r: (r.get("use_count", 0), r.get("last_used_at") or ""), reverse=True)
+    return {
+        "recipes": [
+            {
+                "name": r.get("name", ""),
+                "step_count": len(r.get("steps", [])),
+                "tools": [s.get("tool_name", "") for s in r.get("steps", [])],
+                "tags": r.get("tags", []),
+                "use_count": r.get("use_count", 0),
+                "last_used_at": r.get("last_used_at"),
+            }
+            for r in recipes
+        ]
+    }
+
+
 async def _route_api(method: str, path: str, query: dict[str, list[str]], body: dict[str, Any]) -> tuple[int, bytes]:
     if method == "GET" and path == "/api/config":
         return HTTPStatus.OK, _json_bytes({
@@ -452,6 +553,24 @@ async def _route_api(method: str, path: str, query: dict[str, list[str]], body: 
                 dry_run=bool(body.get("dry_run", False)),
             )
         )
+
+    if method == "GET" and path == "/api/health":
+        return HTTPStatus.OK, _json_bytes(await _health())
+
+    if method == "GET" and path == "/api/divergence":
+        return HTTPStatus.OK, _json_bytes(await _call_json(server.detect_console_divergence))
+
+    if method == "POST" and path == "/api/divergence/snapshot":
+        return HTTPStatus.OK, _json_bytes(await _call_json(server.snapshot_console_baseline))
+
+    if method == "GET" and path == "/api/agent/traces":
+        return HTTPStatus.OK, _json_bytes(_list_traces(_query_int(query, "limit", 25)))
+
+    if method == "GET" and path == "/api/agent/trace":
+        return HTTPStatus.OK, _json_bytes(_read_trace(_query_value(query, "run_id")))
+
+    if method == "GET" and path == "/api/agent/recipes":
+        return HTTPStatus.OK, _json_bytes(_list_recipes())
 
     if method == "POST" and path == "/api/cache/clear":
         _CACHE.clear()

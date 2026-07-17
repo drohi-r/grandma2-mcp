@@ -164,3 +164,44 @@ def test_match_fixture_type_no_match():
 def test_match_fixture_type_case_insensitive():
     types = ["Mac Aura XB"]
     assert _match_fixture_type("1 front MAC AURA XB 1.001", types) == "Mac Aura XB"
+
+
+# --- multi-login counts (live-verified 2026-07-17: LoggedIn is a session count) ---
+
+def test_parse_console_users_multi_login_count():
+    raw = "1 administrator ***** Default Admin 2\n2 guest  Default Playback 0\n"
+    users = _parse_console_users(raw)
+    assert users[0]["logged_in"] is True
+    assert users[1]["logged_in"] is False
+
+
+# --- agent trace listing ---
+
+def test_list_traces_and_read_trace(tmp_path, monkeypatch):
+    import json as _json
+    from src import ui as ui_mod
+
+    trace = {
+        "run_id": "run_abcdef123456",
+        "goal": "list all groups",
+        "result": "success",
+        "total_duration_ms": 120,
+        "started_at": "2026-07-17T00:00:00+00:00",
+        "steps": [{"tool_name": "query_object_list", "status": "completed"}],
+        "policy_warnings": [],
+    }
+    (tmp_path / "run_abcdef123456.json").write_text(_json.dumps(trace), encoding="utf-8")
+    (tmp_path / "corrupt.json").write_text("{nope", encoding="utf-8")
+    monkeypatch.setattr(ui_mod, "_traces_dir", lambda: str(tmp_path))
+
+    listing = ui_mod._list_traces()
+    assert len(listing["traces"]) == 1
+    entry = listing["traces"][0]
+    assert entry["run_id"] == "run_abcdef123456"
+    assert entry["step_count"] == 1
+    assert entry["failed_steps"] == 0
+
+    full = ui_mod._read_trace("run_abcdef123456")
+    assert full["goal"] == "list all groups"
+    assert "error" in ui_mod._read_trace("run_zzzzzz999999")
+    assert "error" in ui_mod._read_trace("../../etc/passwd")

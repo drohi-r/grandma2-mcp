@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "ma2-ui",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "ma2-agent-ui"],
+      "port": 8092,
+      "autoPort": false
+    },
+    {
       "name": "mcp-sse",
       "runtimeExecutable": "uv",
       "runtimeArgs": ["run", "python", "-c", "from src.server import mcp; mcp.run(transport='sse')"],
