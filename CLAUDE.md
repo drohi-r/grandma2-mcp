@@ -57,8 +57,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 | `src/agent/policy.py` | Plan-level governance (extends `src/vocab.py` safety) |
 | `src/agent/verification.py` | Post-mutation state verification |
 | `src/agent/memory.py` | SQLite workflow memory (conventions, recipes, run history) |
-| `src/agent/trace.py` | Structured JSON execution traces |
-| `src/agent/state.py` | Data models: RunContext, PlanStep, Checkpoint |
+| `src/agent/trace.py` + `src/agent/state.py` | Structured JSON execution traces + data models (RunContext, PlanStep, Checkpoint) |
 | `src/agent/workflows/` | Workflow templates: patch, preset, playback, common |
 
 **Responsibility map:** see `doc/responsibility-map.md`.
