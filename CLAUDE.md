@@ -1,9 +1,9 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 1.1.0
+version: 1.2.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-07-17T11:14:46Z
+last_updated: 2026-07-17T13:48:21Z
 ---
 
 # Project Rules
@@ -12,7 +12,7 @@ last_updated: 2026-07-17T11:14:46Z
 
 ## Project Identity
 
-MCP server exposing **232 tools**, **13 resources**, **10 prompts**, and **46 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
+MCP server exposing **234 tools**, **13 resources**, **10 prompts**, and **46 skills** so AI assistants can control a grandMA2 lighting console via Telnet. Includes an **agent harness** (`src/agent/`) for autonomous multi-step execution with planning, policy enforcement, verification, and audit traces.
 
 Central rule: **planner decides → skills carry instructions → subagents execute in isolation → tools take narrow actions → memory stores distilled checkpoints**.
 
@@ -24,7 +24,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server — 198 tools + 13 MCP resources + 10 MCP prompts, safety gate |
+| `src/server.py` | FastMCP server — 200 tools + 13 MCP resources + 10 MCP prompts, safety gate |
 | `src/server_orchestration_tools.py` | Registers 34 agentic tools (IDs 110-144, excluding 130) onto FastMCP |
 | `src/telnet_client.py` | Async Telnet (telnetlib3), auth, send/receive, injection prevention |
 | `src/session_manager.py` | Per-operator Telnet session pool (LRU, keepalive, auto-reconnect) |
@@ -128,7 +128,7 @@ make install-hooks
 - Unit tests import command builders or vocab directly and assert on returned strings.
 - No live console required; live tests are in `tests/test_live_integration.py` (skipped by default).
 - Use `@pytest.mark.asyncio` for async tests.
-- Current counts (2026-07-17): **3128 tests** (2978 passing, 150 skipped, 0 failed).
+- Current counts (2026-07-17): **3150 tests** (3000 passing, 150 skipped, 0 failed).
 
 ---
 
@@ -163,7 +163,7 @@ AgentRuntime (runtime.py)
   → ExecutionTrace (trace.py) — JSON audit artifacts
 ```
 
-Preferred top-level automation path: `plan_agent_goal(goal)` to preview, then `run_agent_goal(goal, auto_confirm, dry_run)` to execute through the richer agent harness.
+Preferred top-level automation path: `plan_agent_goal(goal)` to preview, then `run_agent_goal(goal, auto_confirm, dry_run)` to execute through the richer agent harness. The runtime replays proven recipes for identical goals (captured on success, destructive confirms re-gated) and guards every DESTRUCTIVE step with a showfile-divergence preflight.
 Lower-level rule-based orchestration remains available via `decompose_task(goal, ...)` and `run_task(goal, ...)` in `src/server_orchestration_tools.py`.
 `DomainPlanner` uses its own `PlanStep` model. Use `src/agent_bridge.py` to convert between `PlanStep` and main's `SubTask` for cross-system interop.
 

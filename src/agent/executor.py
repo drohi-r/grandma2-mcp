@@ -20,11 +20,16 @@ from src.agent.state import (
     StepStatus,
 )
 from src.agent.verification import Verifier
+from src.vocab import RiskTier
 
 logger = logging.getLogger(__name__)
 
 # Type for the confirmation callback: receives a PlanStep, returns True to proceed
 ConfirmCallback = Callable[[PlanStep], Awaitable[bool]]
+
+# Pre-destructive guard: receives the PlanStep about to run, returns an error
+# message to abort the run (e.g. console state diverged) or None to proceed.
+PreflightCallback = Callable[[PlanStep], Awaitable[str | None]]
 
 DEFAULT_MAX_RETRIES = 2
 RETRY_DELAYS = [1.0, 2.0, 4.0]  # seconds between retries
@@ -39,11 +44,13 @@ class StepExecutor:
         policy: PolicyEngine,
         verifier: Verifier,
         max_retries: int = DEFAULT_MAX_RETRIES,
+        preflight: PreflightCallback | None = None,
     ):
         self._tools = tool_registry
         self._policy = policy
         self._verifier = verifier
         self._max_retries = max_retries
+        self._preflight = preflight
 
     async def execute_plan(
         self,
@@ -99,6 +106,24 @@ class StepExecutor:
                 step.status = StepStatus.SKIPPED
                 step.error = f"Deferred: {decision.reason}"
                 continue
+
+            # Pre-destructive guard: abort if console state diverged
+            if self._preflight and step.risk_tier == RiskTier.DESTRUCTIVE:
+                try:
+                    divergence = await self._preflight(step)
+                except Exception as e:  # noqa: BLE001 — guard failure must not crash
+                    logger.warning("Preflight check errored (proceeding): %s", e)
+                    divergence = None
+                if divergence:
+                    logger.warning(
+                        "Preflight aborted destructive step %s: %s",
+                        step.description, divergence,
+                    )
+                    step.status = StepStatus.FAILED
+                    step.error = f"Preflight: {divergence}"
+                    self._skip_dependents(step, context)
+                    context.status = RunStatus.ABORTED
+                    break
 
             # Execute with retries
             await self._execute_with_retries(step, context)

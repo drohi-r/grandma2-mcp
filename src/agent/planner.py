@@ -12,6 +12,11 @@ from typing import Any
 
 from src.agent.state import GoalIntent, ParsedGoal, PlanStep
 from src.agent.workflows.common import build_verify_step
+from src.agent.workflows.effects import (
+    build_chaser_workflow,
+    build_effect_workflow,
+    build_matricks_workflow,
+)
 from src.agent.workflows.patch import build_patch_workflow
 from src.agent.workflows.playback import build_playback_workflow
 from src.agent.workflows.preset import build_preset_workflow
@@ -90,6 +95,18 @@ _PLUGIN_SETUP_PATTERNS = re.compile(
 )
 _ID_HYGIENE_PATTERNS = re.compile(
     r"\brenumber\b|\bfixture\s+(?:numbering|ids?|blocks?)\b|\bid\s+blocks?\b",
+    re.IGNORECASE,
+)
+
+# Live-programming intents (checked before the generic patterns)
+_CHASER_PATTERNS = re.compile(r"\bchasers?\b|\bchase\b", re.IGNORECASE)
+_EFFECT_PATTERNS = re.compile(
+    r"\beffects?\b|\bdimmer\s+wave\b|\btilt\s+wave\b|\bcircle\s+effect\b",
+    re.IGNORECASE,
+)
+_MATRICKS_PATTERNS = re.compile(
+    r"\bmatricks\b|\binterleave\b|\bevery\s+(?:other|2nd|second|3rd|third)\b"
+    r"|\bodd\s*/?\s*even\b",
     re.IGNORECASE,
 )
 
@@ -177,6 +194,12 @@ class DomainPlanner:
             steps = self._build_plugin_setup_workflow(goal)
         elif goal.intent == GoalIntent.ID_HYGIENE:
             steps = self._build_id_hygiene_workflow(goal)
+        elif goal.intent == GoalIntent.EFFECT:
+            steps = build_effect_workflow(goal)
+        elif goal.intent == GoalIntent.CHASER:
+            steps = build_chaser_workflow(goal)
+        elif goal.intent == GoalIntent.MATRICKS:
+            steps = build_matricks_workflow(goal)
         else:
             # Fallback: discovery
             steps = self._build_discover_workflow(goal)
@@ -204,6 +227,16 @@ class DomainPlanner:
             return GoalIntent.ID_HYGIENE
         if _PRESET_FROM_PATCH_PATTERNS.search(text):
             return GoalIntent.PRESET_FROM_PATCH
+
+        # Live-programming intents — before the generic patterns so
+        # "color chaser on executor 5" doesn't fall into PLAYBACK and
+        # "tilt effect on the movers" doesn't fall into DISCOVER.
+        if _MATRICKS_PATTERNS.search(text):
+            return GoalIntent.MATRICKS
+        if _CHASER_PATTERNS.search(text):
+            return GoalIntent.CHASER
+        if _EFFECT_PATTERNS.search(text):
+            return GoalIntent.EFFECT
 
         # Check for composite (multiple intents)
         matches = sum([
@@ -551,6 +584,9 @@ class DomainPlanner:
             preset_goal = ParsedGoal(
                 raw=goal.raw,
                 intent=GoalIntent.PRESET,
+                object_type="preset",
+                count=goal.count,
+                fixture_type=goal.fixture_type,
                 options=goal.options,
                 names=goal.names,
             )
@@ -564,6 +600,9 @@ class DomainPlanner:
             playback_goal = ParsedGoal(
                 raw=goal.raw,
                 intent=GoalIntent.PLAYBACK,
+                object_type=goal.object_type,
+                count=goal.count,
+                fixture_type=goal.fixture_type,
                 options=goal.options,
                 names=goal.names,
             )
