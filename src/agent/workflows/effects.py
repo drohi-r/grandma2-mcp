@@ -177,11 +177,29 @@ def build_chaser_workflow(goal: ParsedGoal) -> list[PlanStep]:
 
 
 def build_matricks_workflow(goal: ParsedGoal) -> list[PlanStep]:
-    """MAtricks workflow: select fixtures → apply MAtricks → read back state."""
+    """MAtricks workflow: hydrate → select fixtures → apply MAtricks → read back.
+
+    MAtricks has no telnet readback; get_matricks_state serves the
+    write-tracked snapshot, which requires hydrate_console_state to have run
+    first (live-verified 2026-07-17: the readback step failed with "No
+    snapshot available" without it). Note also that on v3.9.60.50 a telnet
+    ``MAtricksInterleave`` is accepted but does NOT constrain a subsequent
+    ``At`` to the sub-selection — the tracked state is advisory, not proof
+    of console-side sub-selection behavior.
+    """
     steps: list[PlanStep] = []
     text = goal.raw
 
+    hydrate = PlanStep(
+        tool_name="hydrate_console_state",
+        tool_args={},
+        description="Hydrate console snapshot so MAtricks state is trackable",
+        risk_tier=RiskTier.SAFE_READ,
+    )
+    steps.append(hydrate)
+
     select = _build_selection_step(goal)
+    select.depends_on = [hydrate.id]
     steps.append(select)
 
     tool_args: dict = {"action": "interleave", "value": 2}

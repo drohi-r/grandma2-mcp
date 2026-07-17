@@ -345,6 +345,13 @@ class DomainPlanner:
             specificity += 1
         if re.findall(r'"[^"]+"', text):
             specificity += 1
+        # Explicit object IDs ("effect 1", "executor 16", "group 1") are the
+        # strongest specificity signal — live verification 2026-07-17 showed
+        # fully-specified goals scoring 0.4 and being rejected without this.
+        id_refs = len(_ID_PATTERN.findall(text)) + len(
+            re.findall(r"\beffect\s+\d+\b", text, re.IGNORECASE)
+        )
+        specificity += min(id_refs, 2)
 
         # More details = higher confidence
         if specificity >= 3:

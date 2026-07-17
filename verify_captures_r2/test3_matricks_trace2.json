@@ -1,0 +1,68 @@
+{
+  "run_id": "run_1f95ad598760",
+  "goal": "interleave 2 on group 1 \"every other\"",
+  "plan": [
+    {
+      "step": "Select fixtures from group 1",
+      "tool": "select_fixtures_by_group",
+      "risk": "SAFE_WRITE"
+    },
+    {
+      "step": "Apply MAtricks interleave 2",
+      "tool": "manage_matricks",
+      "risk": "SAFE_WRITE"
+    },
+    {
+      "step": "Verify: Read back tracked MAtricks state",
+      "tool": "get_matricks_state",
+      "risk": "SAFE_READ"
+    }
+  ],
+  "steps": [
+    {
+      "step_id": "6d141cbb-0842-4951-a5df-6d9ae110eb4f",
+      "tool_name": "select_fixtures_by_group",
+      "tool_args": {
+        "group_id": 1
+      },
+      "status": "completed",
+      "risk_tier": "SAFE_WRITE",
+      "result_summary": "{\n  \"command_sent\": \"group 1\",\n  \"raw_response\": \"Executing : \\u001b[32mGroup\\u001b[37m 1\\n\\r\\r [Channel]>\\u001b[K\",\n  \"group_id\": 1,\n  \"risk_tier\": \"SAFE_WRITE\"\n}",
+      "verification": null,
+      "duration_ms": 548,
+      "timestamp": "2026-07-17T14:02:46.802880+00:00"
+    },
+    {
+      "step_id": "b3a1163d-f356-4fa2-a703-d019efabd3ad",
+      "tool_name": "manage_matricks",
+      "tool_args": {
+        "action": "interleave",
+        "value": 2
+      },
+      "status": "completed",
+      "risk_tier": "SAFE_WRITE",
+      "result_summary": "{\n  \"command_sent\": \"MAtricksInterleave 2\",\n  \"raw_response\": \"Executing : \\u001b[32mMAtricksInterleave\\u001b[37m 2\\n\\r\\r [Channel]>\\u001b[K\",\n  \"risk_tier\": \"SAFE_WRITE\"\n}",
+      "verification": null,
+      "duration_ms": 535,
+      "timestamp": "2026-07-17T14:02:47.352422+00:00"
+    },
+    {
+      "step_id": "4af8de04-5267-46f8-ad5a-0a566fec2c1b",
+      "tool_name": "get_matricks_state",
+      "tool_args": {},
+      "status": "failed",
+      "risk_tier": "SAFE_READ",
+      "result_summary": "{\"error\": \"No snapshot available. Call hydrate_console_state first.\"}",
+      "verification": null,
+      "duration_ms": 7,
+      "timestamp": "2026-07-17T14:02:50.913422+00:00"
+    }
+  ],
+  "result": "partial_failure",
+  "started_at": "2026-07-17T14:02:43.358563+00:00",
+  "completed_at": "2026-07-17T14:02:50.920931+00:00",
+  "policy_warnings": [
+    "Plan starts with a mutation \u2014 consider prepending discovery steps to inspect current console state first"
+  ],
+  "total_duration_ms": 7562
+}

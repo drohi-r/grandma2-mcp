@@ -1,0 +1,329 @@
+===JSON===
+{
+  "safe_run1": "success",
+  "recipe_after_run1": [
+    {
+      "name": "list all groups",
+      "steps": [
+        {
+          "id": "aeecb121-d31a-48d2-8d6e-4d9551e513dc",
+          "tool_name": "query_object_list",
+          "tool_args": {
+            "object_type": "group"
+          },
+          "description": "List all groups",
+          "risk_tier": "SAFE_READ",
+          "depends_on": []
+        }
+      ],
+      "tags": [
+        "discover",
+        "group"
+      ],
+      "use_count": 1,
+      "created_at": "2026-07-17T14:04:39.723755+00:00",
+      "last_used_at": "2026-07-17T14:05:02.400462+00:00"
+    }
+  ],
+  "safe_run2": "success",
+  "recipe_after_run2": [
+    {
+      "name": "list all groups",
+      "steps": [
+        {
+          "id": "aeecb121-d31a-48d2-8d6e-4d9551e513dc",
+          "tool_name": "query_object_list",
+          "tool_args": {
+            "object_type": "group"
+          },
+          "description": "List all groups",
+          "risk_tier": "SAFE_READ",
+          "depends_on": []
+        }
+      ],
+      "tags": [
+        "discover",
+        "group"
+      ],
+      "use_count": 2,
+      "created_at": "2026-07-17T14:04:39.723755+00:00",
+      "last_used_at": "2026-07-17T14:05:06.396502+00:00"
+    }
+  ],
+  "dest_run1": "success",
+  "dest_recipe": [
+    {
+      "name": "make a color chaser with 4 cues into sequence 92 on executor 17",
+      "steps": [
+        {
+          "id": "b2ba7b57-58eb-41ad-9419-e157e9572cb9",
+          "tool_name": "select_fixtures_by_type_order",
+          "tool_args": {
+            "execute": true
+          },
+          "description": "Select the whole rig in fixture-type order",
+          "risk_tier": "SAFE_WRITE",
+          "depends_on": []
+        },
+        {
+          "id": "46a31f90-39dc-481e-a099-f0485405e8c3",
+          "tool_name": "apply_preset",
+          "tool_args": {
+            "preset_type": "color",
+            "preset_id": 1
+          },
+          "description": "Recall color preset 1 for chaser step 1",
+          "risk_tier": "SAFE_WRITE",
+          "depends_on": [
+            "b2ba7b57-58eb-41ad-9419-e157e9572cb9"
+          ]
+        },
+        {
+          "id": "52103a9b-c040-40f2-ac1f-7fd59404f5df",
+          "tool_name": "store_cue_with_timing",
+          "tool_args": {
+            "cue_id": 1,
+            "sequence_id": 92,
+            "cue_name": "Chase 1",
+            "confirm_destructive": false
+          },
+          "description": "Store chaser cue 1 into sequence 92",
+          "risk_tier": "DESTRUCTIVE",
+          "depends_on": [
+            "46a31f90-39dc-481e-a099-f0485405e8c3"
+          ]
+        },
+        {
+          "id": "407ad13d-6cf6-4802-8ba9-dcb36ac4da85",
+          "tool_name": "apply_preset",
+          "tool_args": {
+            "preset_type": "color",
+            "preset_id": 2
+          },
+          "description": "Recall color preset 2 for chaser step 2",
+          "risk_tier": "SAFE_WRITE",
+          "depends_on": [
+            "52103a9b-c040-40f2-ac1f-7fd59404f5df"
+          ]
+        },
+        {
+          "id": "ac5e9c29-e24f-4941-bcd5-0520e996adff",
+          "tool_name": "store_cue_with_timing",
+          "tool_args": {
+            "cue_id": 2,
+            "sequence_id": 92,
+            "cue_name": "Chase 2",
+            "confirm_destructive": false
+          },
+          "description": "Store chaser cue 2 into sequence 92",
+          "risk_tier": "DESTRUCTIVE",
+          "depends_on": [
+            "407ad13d-6cf6-4802-8ba9-dcb36ac4da85"
+          ]
+        },
+        {
+          "id": "42e79d5b-2d94-46eb-bee6-1d9321081ab8",
+          "tool_name": "apply_preset",
+          "tool_args": {
+            "preset_type": "color",
+            "preset_id": 3
+          },
+          "description": "Recall color preset 3 for chaser step 3",
+          "risk_tier": "SAFE_WRITE",
+          "depends_on": [
+            "ac5e9c29-e24f-4941-bcd5-0520e996adff"
+          ]
+        },
+        {
+          "id": "7d7a0c55-146e-4821-8811-0df4a7b95f12",
+          "tool_name": "store_cue_with_timing",
+          "tool_args": {
+            "cue_id": 3,
+            "sequence_id": 92,
+            "cue_name": "Chase 3",
+            "confirm_destructive": false
+          },
+          "description": "Store chaser cue 3 into sequence 92",
+          "risk_tier": "DESTRUCTIVE",
+          "depends_on": [
+            "42e79d5b-2d94-46eb-bee6-1d9321081ab8"
+          ]
+        },
+        {
+          "id": "b9874fa7-bddc-48eb-83e1-0b5a0e932615",
+          "tool_name": "apply_preset",
+          "tool_args": {
+            "preset_type": "color",
+            "preset_id": 4
+          },
+          "description": "Recall color preset 4 for chaser step 4",
+          "risk_tier": "SAFE_WRITE",
+          "depends_on": [
+            "7d7a0c55-146e-4821-8811-0df4a7b95f12"
+          ]
+        },
+        {
+          "id": "1bd7d0ac-8e5b-43e6-bc3b-76059165f6cc",
+          "tool_name": "store_cue_with_timing",
+          "tool_args": {
+            "cue_id": 4,
+            "sequence_id": 92,
+            "cue_name": "Chase 4",
+            "confirm_destructive": false
+          },
+          "description": "Store chaser cue 4 into sequence 92",
+          "risk_tier": "DESTRUCTIVE",
+          "depends_on": [
+            "b9874fa7-bddc-48eb-83e1-0b5a0e932615"
+          ]
+        },
+        {
+          "id": "2d3bcf99-c354-40fe-9731-ae8d260291e0",
+          "tool_name": "assign_object",
+          "tool_args": {
+            "mode": "assign",
+            "source_type": "Sequence",
+            "source_id": 92,
+            "target_type": "Executor",
+            "target_id": 17,
+            "confirm_destructive": false
+          },
+          "description": "Assign sequence 92 to executor 17",
+          "risk_tier": "DESTRUCTIVE",
+          "depends_on": [
+            "1bd7d0ac-8e5b-43e6-bc3b-76059165f6cc"
+          ]
+        },
+        {
+          "id": "2e69f7d8-be61-4f00-b9be-a8f695884afe",
+          "tool_name": "query_object_list",
+          "tool_args": {
+            "object_type": "sequence"
+          },
+          "description": "Verify: Verify chaser sequence 92 exists",
+          "risk_tier": "SAFE_READ",
+          "depends_on": [
+            "2d3bcf99-c354-40fe-9731-ae8d260291e0"
+          ]
+        }
+      ],
+      "tags": [
+        "chaser",
+        "sequence"
+      ],
+      "use_count": 0,
+      "created_at": "2026-07-17T14:05:21.928627+00:00",
+      "last_used_at": null
+    }
+  ],
+  "dest_recipe_confirm_flags": [
+    {
+      "tool": "select_fixtures_by_type_order",
+      "confirm": null
+    },
+    {
+      "tool": "apply_preset",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "confirm": false
+    },
+    {
+      "tool": "apply_preset",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "confirm": false
+    },
+    {
+      "tool": "apply_preset",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "confirm": false
+    },
+    {
+      "tool": "apply_preset",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "confirm": false
+    },
+    {
+      "tool": "assign_object",
+      "confirm": false
+    },
+    {
+      "tool": "query_object_list",
+      "confirm": null
+    }
+  ],
+  "dest_run2": "success",
+  "dest_run2_steps": [
+    {
+      "tool": "select_fixtures_by_type_order",
+      "status": "completed",
+      "confirm": null
+    },
+    {
+      "tool": "apply_preset",
+      "status": "completed",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "status": "completed",
+      "confirm": true
+    },
+    {
+      "tool": "apply_preset",
+      "status": "completed",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "status": "completed",
+      "confirm": true
+    },
+    {
+      "tool": "apply_preset",
+      "status": "completed",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "status": "completed",
+      "confirm": true
+    },
+    {
+      "tool": "apply_preset",
+      "status": "completed",
+      "confirm": null
+    },
+    {
+      "tool": "store_cue_with_timing",
+      "status": "completed",
+      "confirm": true
+    },
+    {
+      "tool": "assign_object",
+      "status": "completed",
+      "confirm": true
+    },
+    {
+      "tool": "query_object_list",
+      "status": "completed",
+      "confirm": null
+    }
+  ],
+  "dest_recipe_after_replay": [
+    {
+      "name": "make a color chaser with 4 cues into sequence 92 on executor 17",
+      "use_count": 1
+    }
+  ]
+}

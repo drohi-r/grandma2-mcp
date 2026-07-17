@@ -1,9 +1,9 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 1.2.0
+version: 1.3.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-07-17T13:48:21Z
+last_updated: 2026-07-17T21:20:00Z
 ---
 
 # Project Rules
@@ -45,6 +45,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 | `src/telemetry.py` | Per-tool invocation recorder: `tool_invocations` table, latency, risk tier |
 | `src/skill.py` | `Skill` dataclass + `SkillRegistry`: versioned playbooks with lineage + filesystem skill fallback (`_load_filesystem_skill`, `_list_filesystem_skills`) |
 | `src/skill_improver.py` | `SkillImprover`: repair suggestions + promotion candidates (read-only) |
+| `src/ui.py` + `src/ui_static/` | Local browser operator console (stdlib HTTP, port 8092): dashboard, divergence watch, executor grid, patch browser, agent cockpit |
 | `src/tools.py` | Global GMA2 telnet client accessor — `get_client()` used by all tools |
 | `src/categorization/` | ML-based tool categorization: K-Means clustering + auto-labeling |
 | `rag/` | crawl → chunk → embed → store → retrieve pipeline |

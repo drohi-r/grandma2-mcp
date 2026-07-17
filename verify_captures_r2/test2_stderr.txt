@@ -1,0 +1,15 @@
+2026-07-17 19:56:42,622 - src.telnet_client - INFO - Connecting to 127.0.0.1:30000...
+2026-07-17 19:56:42,623 - telnetlib3.client - INFO - Connected to <Peer 127.0.0.1 30000>
+2026-07-17 19:56:45,138 - src.telnet_client - INFO - Successfully connected to 127.0.0.1:30000
+2026-07-17 19:56:45,138 - src.telnet_client - INFO - Logging in as administrator...
+2026-07-17 19:56:45,643 - src.telnet_client - INFO - Login completed (response received)
+2026-07-17 19:56:45,643 - src.session_manager - INFO - Created session for operator 'administrator' as console user 'administrator'
+2026-07-17 19:56:48,206 - src.agent.runtime - INFO - Goal classified: intent=preset_from_patch, object_type=fixture, confidence=0.90
+2026-07-17 19:56:48,206 - src.agent.runtime - INFO - Plan generated: 4 steps
+2026-07-17 19:56:48,744 - src.agent.runtime - INFO - Run run_65020e19e32f started: create presets from my fixtures
+2026-07-17 19:56:52,531 - src.agent.executor - INFO - Step completed: Build the fixture-type model of the patch (attempt 1)
+2026-07-17 19:56:55,778 - src.agent.executor - INFO - Step completed: Verify fixture ID blocks before preset creation (attempt 1)
+2026-07-17 19:56:56,327 - src.agent.executor - WARNING - Preflight aborted destructive step Store capability-aware presets (full-coverage): showfile changed since run start ('mcp_verify_demo' -> 'mcp_verify2') — console state diverged; re-run the goal against the new show
+2026-07-17 19:56:56,327 - src.agent.executor - INFO - Skipping dependent step: Verify: Verify presets were stored
+2026-07-17 19:56:56,335 - src.agent.trace - INFO - Trace written to C:\Users\d_rak\grandma2-mcp\src\agent\..\..\agent_traces\run_65020e19e32f.json
+2026-07-17 19:56:56,335 - src.agent.runtime - INFO - Run run_65020e19e32f completed: result=aborted, steps=4, duration=8122ms

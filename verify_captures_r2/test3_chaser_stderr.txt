@@ -1,0 +1,30 @@
+2026-07-17 19:59:06,141 - src.telnet_client - INFO - Connecting to 127.0.0.1:30000...
+2026-07-17 19:59:06,142 - telnetlib3.client - INFO - Connected to <Peer 127.0.0.1 30000>
+2026-07-17 19:59:08,672 - src.telnet_client - INFO - Successfully connected to 127.0.0.1:30000
+2026-07-17 19:59:08,672 - src.telnet_client - INFO - Logging in as administrator...
+2026-07-17 19:59:09,193 - src.telnet_client - INFO - Login completed (response received)
+2026-07-17 19:59:09,193 - src.session_manager - INFO - Created session for operator 'administrator' as console user 'administrator'
+2026-07-17 19:59:09,649 - src.agent.runtime - INFO - Goal classified: intent=chaser, object_type=sequence, confidence=0.60
+2026-07-17 19:59:09,650 - src.agent.runtime - INFO - Plan generated: 11 steps
+2026-07-17 19:59:10,189 - src.agent.runtime - INFO - Run run_0672200df363 started: make a color chaser with 4 cues into sequence 90 on executor 15
+2026-07-17 19:59:16,093 - src.agent.executor - INFO - Step completed: Select the whole rig in fixture-type order (attempt 1)
+2026-07-17 19:59:16,628 - src.agent.executor - INFO - Step completed: Recall color preset 1 for chaser step 1 (attempt 1)
+2026-07-17 19:59:17,709 - src.agent.executor - INFO - Step completed: Store chaser cue 1 into sequence 90 (attempt 1)
+2026-07-17 19:59:18,245 - src.agent.executor - INFO - Step completed: Recall color preset 2 for chaser step 2 (attempt 1)
+2026-07-17 19:59:19,311 - src.agent.executor - INFO - Step completed: Store chaser cue 2 into sequence 90 (attempt 1)
+2026-07-17 19:59:19,847 - src.agent.executor - INFO - Step completed: Recall color preset 3 for chaser step 3 (attempt 1)
+2026-07-17 19:59:20,912 - src.agent.executor - INFO - Step completed: Store chaser cue 3 into sequence 90 (attempt 1)
+2026-07-17 19:59:21,448 - src.agent.executor - INFO - Step completed: Recall color preset 4 for chaser step 4 (attempt 1)
+2026-07-17 19:59:22,501 - src.agent.executor - INFO - Step completed: Store chaser cue 4 into sequence 90 (attempt 1)
+2026-07-17 19:59:23,568 - src.agent.executor - INFO - Step completed: Assign sequence 90 to executor 15 (attempt 1)
+2026-07-17 19:59:23,568 - src.server - ERROR - Unexpected error in get_object_info: get_object_info() missing 2 required positional arguments: 'object_type' and 'object_id'
+Traceback (most recent call last):
+  File "C:\Users\d_rak\grandma2-mcp\src\server.py", line 533, in wrapper
+    result = await func(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_object_info() missing 2 required positional arguments: 'object_type' and 'object_id'
+2026-07-17 19:59:23,578 - src.agent.executor - WARNING - Verification failed for Assign sequence 90 to executor 15: Expected assignment=None not found in response
+2026-07-17 19:59:24,120 - src.agent.executor - INFO - Step completed: Verify: Verify chaser sequence 90 exists (attempt 1)
+2026-07-17 19:59:24,127 - src.agent.runtime - INFO - Stored recipe 'make a color chaser with 4 cues into sequence 90 on executor 15' from successful run
+2026-07-17 19:59:24,135 - src.agent.trace - INFO - Trace written to C:\Users\d_rak\grandma2-mcp\src\agent\..\..\agent_traces\run_0672200df363.json
+2026-07-17 19:59:24,135 - src.agent.runtime - INFO - Run run_0672200df363 completed: result=success, steps=11, duration=14472ms

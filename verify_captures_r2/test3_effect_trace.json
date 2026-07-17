@@ -1,0 +1,34 @@
+{
+  "run_id": "run_52f75d052a1f",
+  "goal": "put effect 1 on executor 16 for group 1",
+  "plan": [
+    {
+      "step": "List the effect pool",
+      "tool": "list_effects_pool",
+      "risk": "SAFE_READ"
+    },
+    {
+      "step": "Select fixtures from group 1",
+      "tool": "select_fixtures_by_group",
+      "risk": "SAFE_WRITE"
+    },
+    {
+      "step": "Assign effect 1 to executor 16",
+      "tool": "assign_effect_to_executor",
+      "risk": "DESTRUCTIVE"
+    },
+    {
+      "step": "Verify: Verify effect pool state after assignment",
+      "tool": "list_effects_pool",
+      "risk": "SAFE_READ"
+    }
+  ],
+  "steps": [],
+  "result": "aborted",
+  "started_at": "2026-07-17T14:01:01.088531+00:00",
+  "completed_at": "2026-07-17T14:01:01.089531+00:00",
+  "policy_warnings": [
+    "Goal confidence 0.40 is below threshold 0.50 \u2014 routing to discovery-only mode"
+  ],
+  "total_duration_ms": 1
+}

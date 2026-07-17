@@ -33,6 +33,7 @@ class StepRecord:
     verification: dict[str, Any] | None
     duration_ms: int
     timestamp: str
+    error: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -45,6 +46,7 @@ class StepRecord:
             "verification": self.verification,
             "duration_ms": self.duration_ms,
             "timestamp": self.timestamp,
+            "error": self.error,
         }
 
 
@@ -118,6 +120,7 @@ def build_step_record(step: PlanStep) -> StepRecord:
         verification=step.verification.to_dict() if step.verification else None,
         duration_ms=_step_duration_ms(step),
         timestamp=step.started_at.isoformat() if step.started_at else "",
+        error=step.error or "",
     )
 
 
