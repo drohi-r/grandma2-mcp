@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/xsl" href="styles/sequ@html@default.xsl"?>
+<?xml-stylesheet type="text/xsl" href="styles/sequ@executorsheet.xsl" alternate="yes"?>
+<?xml-stylesheet type="text/xsl" href="styles/sequ@trackingsheet.xsl" alternate="yes"?>
+<MA xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.malighting.de/grandma2/xml/MA" xsi:schemaLocation="http://schemas.malighting.de/grandma2/xml/MA http://schemas.malighting.de/grandma2/xml/3.9.60/MA.xsd" major_vers="3" minor_vers="9" stream_vers="60">
+	<Info datetime="2026-07-17T20:04:07" showfile="mcp_verify_demo" />
+	<Sequ index="90" timecode_slot="255" forced_position_mode="0">
+		<Cue xsi:nil="true" />
+		<Cue index="1">
+			<Number number="1" sub_number="0" />
+			<CueDatas>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="1" channel_id="1" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="2" channel_id="2" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="3" channel_id="3" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="4" channel_id="4" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="5" channel_id="5" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="6" channel_id="6" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="7" channel_id="7" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="8" channel_id="8" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="9" channel_id="9" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="10" channel_id="10" attribute_name="DIM" />
+					<Value>100</Value>
+				</CueData>
+			</CueDatas>
+			<CuePart index="0">
+				<CuePartPresetTiming>
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+				</CuePartPresetTiming>
+			</CuePart>
+		</Cue>
+		<Cue index="2">
+			<Number number="2" sub_number="0" />
+			<CueDatas>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="1" channel_id="1" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="2" channel_id="2" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="3" channel_id="3" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="4" channel_id="4" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="5" channel_id="5" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="6" channel_id="6" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="7" channel_id="7" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="8" channel_id="8" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="9" channel_id="9" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+				<CueData value_multipart_index="0" effect_multipart_index="0">
+					<Channel fixture_id="10" channel_id="10" attribute_name="DIM" />
+					<Value>50</Value>
+				</CueData>
+			</CueDatas>
+			<CuePart index="0">
+				<CuePartPresetTiming>
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+					<PresetTiming />
+				</CuePartPresetTiming>
+			</CuePart>
+		</Cue>
+	</Sequ>
+</MA>

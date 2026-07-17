@@ -1,0 +1,29 @@
+{
+  "run_id": "run_bf9edcafb946",
+  "goal": "interleave 2 on group 1",
+  "plan": [
+    {
+      "step": "Select fixtures from group 1",
+      "tool": "select_fixtures_by_group",
+      "risk": "SAFE_WRITE"
+    },
+    {
+      "step": "Apply MAtricks interleave 2",
+      "tool": "manage_matricks",
+      "risk": "SAFE_WRITE"
+    },
+    {
+      "step": "Verify: Read back tracked MAtricks state",
+      "tool": "get_matricks_state",
+      "risk": "SAFE_READ"
+    }
+  ],
+  "steps": [],
+  "result": "aborted",
+  "started_at": "2026-07-17T14:02:33.114970+00:00",
+  "completed_at": "2026-07-17T14:02:33.115971+00:00",
+  "policy_warnings": [
+    "Goal confidence 0.40 is below threshold 0.50 \u2014 routing to discovery-only mode"
+  ],
+  "total_duration_ms": 1
+}

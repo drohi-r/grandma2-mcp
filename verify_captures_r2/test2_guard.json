@@ -1,0 +1,193 @@
+{
+  "dry_run_plan": {
+    "dry_run": true,
+    "goal": "create presets from my fixtures",
+    "intent": "preset_from_patch",
+    "confidence": 0.9,
+    "plan": [
+      {
+        "id": "69217c7a-ff4a-43c8-9f19-31eb42396b1e",
+        "tool_name": "analyze_patch_types",
+        "tool_args": {},
+        "description": "Build the fixture-type model of the patch",
+        "risk_tier": "SAFE_READ",
+        "depends_on": [],
+        "status": "pending",
+        "result": null,
+        "error": null,
+        "started_at": null,
+        "completed_at": null,
+        "verification": null,
+        "retry_count": 0
+      },
+      {
+        "id": "f3bd960a-c424-4e33-b745-4c0a56fb2a42",
+        "tool_name": "verify_fixture_id_blocks",
+        "tool_args": {},
+        "description": "Verify fixture ID blocks before preset creation",
+        "risk_tier": "SAFE_READ",
+        "depends_on": [
+          "69217c7a-ff4a-43c8-9f19-31eb42396b1e"
+        ],
+        "status": "pending",
+        "result": null,
+        "error": null,
+        "started_at": null,
+        "completed_at": null,
+        "verification": null,
+        "retry_count": 0
+      },
+      {
+        "id": "6363eaca-247c-4efb-9ac5-e5b18bd2b8b7",
+        "tool_name": "create_presets_for_patch",
+        "tool_args": {
+          "strategy": "full-coverage",
+          "dry_run": false,
+          "confirm_destructive": false
+        },
+        "description": "Store capability-aware presets (full-coverage)",
+        "risk_tier": "DESTRUCTIVE",
+        "depends_on": [
+          "f3bd960a-c424-4e33-b745-4c0a56fb2a42"
+        ],
+        "status": "pending",
+        "result": null,
+        "error": null,
+        "started_at": null,
+        "completed_at": null,
+        "verification": null,
+        "retry_count": 0
+      },
+      {
+        "id": "ed0934c2-c716-44f1-998c-d80f0f250408",
+        "tool_name": "query_object_list",
+        "tool_args": {
+          "object_type": "preset"
+        },
+        "description": "Verify: Verify presets were stored",
+        "risk_tier": "SAFE_READ",
+        "depends_on": [
+          "6363eaca-247c-4efb-9ac5-e5b18bd2b8b7"
+        ],
+        "status": "pending",
+        "result": null,
+        "error": null,
+        "started_at": null,
+        "completed_at": null,
+        "verification": null,
+        "retry_count": 0
+      }
+    ],
+    "policy_warnings": []
+  },
+  "building_blocks": {
+    "before_load": "mcp_verify_demo",
+    "after_load": "mcp_verify2"
+  },
+  "level_c_plan": [
+    {
+      "tool": "analyze_patch_types",
+      "destructive": false,
+      "risk": "SAFE_READ"
+    },
+    {
+      "tool": "verify_fixture_id_blocks",
+      "destructive": false,
+      "risk": "SAFE_READ"
+    },
+    {
+      "tool": "create_presets_for_patch",
+      "destructive": false,
+      "risk": "DESTRUCTIVE"
+    },
+    {
+      "tool": "query_object_list",
+      "destructive": false,
+      "risk": "SAFE_READ"
+    }
+  ],
+  "first_destructive_index": 2,
+  "level_c_trace": {
+    "run_id": "run_65020e19e32f",
+    "goal": "create presets from my fixtures",
+    "plan": [
+      {
+        "step": "Build the fixture-type model of the patch",
+        "tool": "analyze_patch_types",
+        "risk": "SAFE_READ"
+      },
+      {
+        "step": "Verify fixture ID blocks before preset creation",
+        "tool": "verify_fixture_id_blocks",
+        "risk": "SAFE_READ"
+      },
+      {
+        "step": "Store capability-aware presets (full-coverage)",
+        "tool": "create_presets_for_patch",
+        "risk": "DESTRUCTIVE"
+      },
+      {
+        "step": "Verify: Verify presets were stored",
+        "tool": "query_object_list",
+        "risk": "SAFE_READ"
+      }
+    ],
+    "steps": [
+      {
+        "step_id": "0f095e71-d91e-49bb-a119-995f1f9a5b05",
+        "tool_name": "analyze_patch_types",
+        "tool_args": {},
+        "status": "completed",
+        "risk_tier": "SAFE_READ",
+        "result_summary": "{\n  \"types\": {\n    \"4 VL3500 Spot 00\": {\n      \"type_id\": 4,\n      \"name\": \"4 VL3500 Spot 00\",\n      \"short_name\": \"VL3500S\",\n      \"category\": \"mover\",\n      \"capabilities\": {\n        \"dimmer\": true,\n        \"position\": true,\n        \"gobo\": true,\n        \"color_mix\": true,\n        \"beam\": true,\n        \"focus\": true,\n        \"control\": true\n      },\n      \"capability_source\": \"fallback\",\n      \"member_ids\": [\n        1,\n        2,\n        3,\n        4,\n        5,\n        6,\n        7,\n        ...(truncated)",
+        "verification": null,
+        "duration_ms": 3787,
+        "timestamp": "2026-07-17T13:56:48.744092+00:00"
+      },
+      {
+        "step_id": "bbe22e6d-2b67-4ec7-907e-3e5229d4467b",
+        "tool_name": "verify_fixture_id_blocks",
+        "tool_args": {},
+        "status": "completed",
+        "risk_tier": "SAFE_READ",
+        "result_summary": "{\n  \"categories\": {\n    \"mover\": {\n      \"category\": \"mover\",\n      \"block\": [\n        100,\n        199\n      ],\n      \"member_count\": 10,\n      \"in_block\": 0,\n      \"out_of_block\": [\n        1,\n        2,\n        3,\n        4,\n        5,\n        6,\n        7,\n        8,\n        9,\n        10\n      ],\n      \"free_slots\": 1\n    },\n    \"bar\": {\n      \"category\": \"bar\",\n      \"block\": [\n        200,\n        299\n      ],\n      \"member_count\": 100,\n      \"in_block\": 1,\n      \"out_of_block\": [\n       ...(truncated)",
+        "verification": null,
+        "duration_ms": 3245,
+        "timestamp": "2026-07-17T13:56:52.531872+00:00"
+      },
+      {
+        "step_id": "90feb601-bc1c-496a-be34-d7739ca2bc56",
+        "tool_name": "create_presets_for_patch",
+        "tool_args": {
+          "strategy": "full-coverage",
+          "dry_run": false,
+          "confirm_destructive": true
+        },
+        "status": "failed",
+        "risk_tier": "DESTRUCTIVE",
+        "result_summary": "",
+        "verification": null,
+        "duration_ms": 0,
+        "timestamp": ""
+      },
+      {
+        "step_id": "62fd9131-dff1-4c9a-8c64-4748f7c4d0c3",
+        "tool_name": "query_object_list",
+        "tool_args": {
+          "object_type": "preset"
+        },
+        "status": "skipped",
+        "risk_tier": "SAFE_READ",
+        "result_summary": "",
+        "verification": null,
+        "duration_ms": 0,
+        "timestamp": ""
+      }
+    ],
+    "result": "aborted",
+    "started_at": "2026-07-17T13:56:48.205296+00:00",
+    "completed_at": "2026-07-17T13:56:56.328053+00:00",
+    "policy_warnings": [],
+    "total_duration_ms": 8122
+  }
+}

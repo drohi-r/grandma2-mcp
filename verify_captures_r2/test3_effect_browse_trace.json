@@ -1,0 +1,29 @@
+{
+  "run_id": "run_cfa0ec6a52cb",
+  "goal": "add a tilt wave effect on the movers",
+  "plan": [
+    {
+      "step": "List the effect pool",
+      "tool": "list_effects_pool",
+      "risk": "SAFE_READ"
+    },
+    {
+      "step": "Select the whole rig in fixture-type order",
+      "tool": "select_fixtures_by_type_order",
+      "risk": "SAFE_WRITE"
+    },
+    {
+      "step": "Verify: Browse the predefined effect library for candidates",
+      "tool": "browse_effect_library",
+      "risk": "SAFE_READ"
+    }
+  ],
+  "steps": [],
+  "result": "aborted",
+  "started_at": "2026-07-17T14:02:03.582161+00:00",
+  "completed_at": "2026-07-17T14:02:03.582161+00:00",
+  "policy_warnings": [
+    "Goal confidence 0.40 is below threshold 0.50 \u2014 routing to discovery-only mode"
+  ],
+  "total_duration_ms": 0
+}

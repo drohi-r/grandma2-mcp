@@ -1,0 +1,134 @@
+{
+  "baseline": {
+    "baseline": {
+      "vars": {
+        "$SHOWFILE": "mcp_verify_demo",
+        "$USER": "administrator",
+        "$USERPROFILE": "Default",
+        "$FADERPAGE": "1",
+        "$BUTTONPAGE": "1",
+        "$CHANNELPAGE": "1",
+        "$SELECTEDEXEC": "1.1.6"
+      },
+      "pools": {
+        "group": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8
+        ],
+        "sequence": [],
+        "macro": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          31,
+          32,
+          34
+        ],
+        "world": [
+          1
+        ],
+        "filter": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ]
+      },
+      "captured_at": 1784296522.6178932
+    },
+    "risk_tier": "SAFE_READ"
+  },
+  "clean": {
+    "diverged": false,
+    "changed_vars": {},
+    "pool_changes": {},
+    "baseline_age_seconds": 3.2,
+    "risk_tier": "SAFE_READ"
+  },
+  "after_page_change": {
+    "diverged": true,
+    "changed_vars": {
+      "$FADERPAGE": {
+        "baseline": "1",
+        "current": "2"
+      },
+      "$BUTTONPAGE": {
+        "baseline": "1",
+        "current": "2"
+      }
+    },
+    "pool_changes": {},
+    "baseline_age_seconds": 6.9,
+    "risk_tier": "SAFE_READ",
+    "warning": "Console state changed outside this session \u2014 write-tracked dimensions (MAtricks, park, filter VTE, console modes) may be stale. Re-hydrate before DESTRUCTIVE operations."
+  },
+  "after_group_store": {
+    "diverged": true,
+    "changed_vars": {
+      "$FADERPAGE": {
+        "baseline": "1",
+        "current": "2"
+      },
+      "$BUTTONPAGE": {
+        "baseline": "1",
+        "current": "2"
+      }
+    },
+    "pool_changes": {
+      "group": {
+        "added": [
+          99
+        ],
+        "removed": []
+      }
+    },
+    "baseline_age_seconds": 12.3,
+    "risk_tier": "SAFE_READ",
+    "warning": "Console state changed outside this session \u2014 write-tracked dimensions (MAtricks, park, filter VTE, console modes) may be stale. Re-hydrate before DESTRUCTIVE operations."
+  },
+  "after_group_delete": {
+    "diverged": false,
+    "changed_vars": {},
+    "pool_changes": {},
+    "baseline_age_seconds": 16.5,
+    "risk_tier": "SAFE_READ"
+  }
+}

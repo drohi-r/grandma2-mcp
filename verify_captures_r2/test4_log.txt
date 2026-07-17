@@ -1,0 +1,68 @@
+src.agent.runtime INFO Goal classified: intent=discover, object_type=group, confidence=0.90
+src.agent.runtime INFO Reusing recipe 'list all groups' (1 steps, use_count=0)
+src.agent.runtime INFO Plan generated: 1 steps
+src.telnet_client INFO Connecting to 127.0.0.1:30000...
+telnetlib3.client INFO Connected to <Peer 127.0.0.1 30000>
+src.telnet_client INFO Successfully connected to 127.0.0.1:30000
+src.telnet_client INFO Logging in as administrator...
+src.telnet_client INFO Login completed (response received)
+src.session_manager INFO Created session for operator 'administrator' as console user 'administrator'
+src.agent.runtime INFO Run run_c5f72db44b24 started: list all groups
+src.agent.executor INFO Step completed: List all groups (attempt 1)
+src.agent.trace INFO Trace written to C:\Users\d_rak\grandma2-mcp\src\agent\..\..\agent_traces\run_c5f72db44b24.json
+src.agent.runtime INFO Run run_c5f72db44b24 completed: result=success, steps=1, duration=3978ms
+src.agent.runtime INFO Goal classified: intent=discover, object_type=group, confidence=0.90
+src.agent.runtime INFO Reusing recipe 'list all groups' (1 steps, use_count=1)
+src.agent.runtime INFO Plan generated: 1 steps
+src.agent.runtime INFO Run run_c257f5687ae3 started: list all groups
+src.agent.executor INFO Step completed: List all groups (attempt 1)
+src.agent.trace INFO Trace written to C:\Users\d_rak\grandma2-mcp\src\agent\..\..\agent_traces\run_c257f5687ae3.json
+src.agent.runtime INFO Run run_c257f5687ae3 completed: result=success, steps=1, duration=1082ms
+src.agent.runtime INFO Goal classified: intent=chaser, object_type=sequence, confidence=0.60
+src.agent.runtime INFO Plan generated: 11 steps
+src.agent.runtime INFO Run run_03d0687d0935 started: make a color chaser with 4 cues into sequence 92 on executor 17
+src.agent.executor INFO Step completed: Select the whole rig in fixture-type order (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 1 for chaser step 1 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 1 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 2 for chaser step 2 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 2 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 3 for chaser step 3 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 3 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 4 for chaser step 4 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 4 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Assign sequence 92 to executor 17 (attempt 1)
+src.server ERROR Unexpected error in get_object_info: get_object_info() missing 2 required positional arguments: 'object_type' and 'object_id'
+Traceback (most recent call last):
+  File "C:\Users\d_rak\grandma2-mcp\src\server.py", line 533, in wrapper
+    result = await func(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_object_info() missing 2 required positional arguments: 'object_type' and 'object_id'
+src.agent.executor WARNING Verification failed for Assign sequence 92 to executor 17: Expected assignment=None not found in response
+src.agent.executor INFO Step completed: Verify: Verify chaser sequence 92 exists (attempt 1)
+src.agent.runtime INFO Stored recipe 'make a color chaser with 4 cues into sequence 92 on executor 17' from successful run
+src.agent.trace INFO Trace written to C:\Users\d_rak\grandma2-mcp\src\agent\..\..\agent_traces\run_03d0687d0935.json
+src.agent.runtime INFO Run run_03d0687d0935 completed: result=success, steps=11, duration=14432ms
+src.agent.runtime INFO Goal classified: intent=chaser, object_type=sequence, confidence=0.60
+src.agent.runtime INFO Reusing recipe 'make a color chaser with 4 cues into sequence 92 on executor 17' (11 steps, use_count=0)
+src.agent.runtime INFO Plan generated: 11 steps
+src.agent.runtime INFO Run run_3d1ab8f7b260 started: make a color chaser with 4 cues into sequence 92 on executor 17
+src.agent.executor INFO Step completed: Select the whole rig in fixture-type order (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 1 for chaser step 1 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 1 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 2 for chaser step 2 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 2 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 3 for chaser step 3 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 3 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Recall color preset 4 for chaser step 4 (attempt 1)
+src.agent.executor INFO Step completed: Store chaser cue 4 into sequence 92 (attempt 1)
+src.agent.executor INFO Step completed: Assign sequence 92 to executor 17 (attempt 1)
+src.server ERROR Unexpected error in get_object_info: get_object_info() missing 2 required positional arguments: 'object_type' and 'object_id'
+Traceback (most recent call last):
+  File "C:\Users\d_rak\grandma2-mcp\src\server.py", line 533, in wrapper
+    result = await func(*args, **kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^
+TypeError: get_object_info() missing 2 required positional arguments: 'object_type' and 'object_id'
+src.agent.executor WARNING Verification failed for Assign sequence 92 to executor 17: Expected assignment=None not found in response
+src.agent.executor INFO Step completed: Verify: Verify chaser sequence 92 exists (attempt 1)
+src.agent.trace INFO Trace written to C:\Users\d_rak\grandma2-mcp\src\agent\..\..\agent_traces\run_3d1ab8f7b260.json
+src.agent.runtime INFO Run run_3d1ab8f7b260 completed: result=success, steps=11, duration=14484ms
