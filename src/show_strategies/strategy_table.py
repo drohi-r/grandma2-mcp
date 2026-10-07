@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from src.show_strategies.types import Strategy
 
-
 STRATEGIES: dict[str, Strategy] = {
     "rock-band": Strategy(
         name="rock-band",

@@ -112,7 +112,7 @@ class MockGMA2TelnetClient:
     async def disconnect(self) -> None:
         self._connected = False
 
-    async def __aenter__(self) -> "MockGMA2TelnetClient":
+    async def __aenter__(self) -> MockGMA2TelnetClient:
         await self.connect()
         await self.login()
         return self

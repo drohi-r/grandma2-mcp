@@ -11,7 +11,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal, TypedDict
 
-
 CueDensity = Literal["sparse", "normal", "dense"]
 PresetStrategy = Literal["minimal-viable", "full-coverage", "color-first"]
 Tracking = Literal["track", "track-with-block", "non-tracking"]

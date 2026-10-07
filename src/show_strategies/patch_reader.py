@@ -58,7 +58,7 @@ _GROUP_ROW_RE = re.compile(
 _SHOWFILE_RE = re.compile(r"\$SHOWFILE\s*=\s*(?P<sf>\S.+?)\s*$", re.MULTILINE)
 
 
-async def summarize_patch(client: "GMA2TelnetClient") -> PatchSummary:
+async def summarize_patch(client: GMA2TelnetClient) -> PatchSummary:
     """Read the current patch state via SAFE_READ commands.
 
     Returns a typed :class:`PatchSummary`. All counts are derived from the

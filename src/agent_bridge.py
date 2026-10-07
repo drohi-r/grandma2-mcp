@@ -28,9 +28,8 @@ PlanStep → SubTask
 
 from __future__ import annotations
 
-from src.agent.state import PlanStep, StepStatus
+from src.agent.state import PlanStep
 from src.task_decomposer import SubTask
-from src.vocab import RiskTier
 
 
 def subtask_to_planstep(subtask: SubTask) -> PlanStep:

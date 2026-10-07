@@ -29,7 +29,6 @@ from src.show_strategies.types import (
     Strategy,
 )
 
-
 _GENERIC_TYPE_NAMES = ("universal attributes", "dimmer")
 _MOVER_KEYWORDS = ("mover", "head", "spot", "wash", "b-eye", "beam")
 _DEFAULT_SECTIONS = ["intro", "verse", "chorus", "bridge", "outro"]

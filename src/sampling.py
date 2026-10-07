@@ -15,7 +15,6 @@ import logging
 
 from mcp.types import (
     CreateMessageResult,
-    ModelHint,
     ModelPreferences,
     SamplingMessage,
     TextContent,

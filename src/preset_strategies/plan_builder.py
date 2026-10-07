@@ -25,7 +25,6 @@ from src.preset_strategies.types import (
 )
 from src.show_strategies.types import PatchSummary
 
-
 # Cardinal hues used in spec §C.4 — 4 / 8 / 12 progressions:
 _CARDINAL_HUES_4 = [
     ("Red",   (100, 0,   0)),
@@ -219,17 +218,11 @@ def architect_preset_library_for(
             attr_lower = attr.lower()
             covered_by: list[str] = []
             for p in plan:
-                if p.get("scope") == "universal" and p.get("preset_type") == 4 and attr in ("R", "G", "B"):
-                    covered_by.append(f"{p['preset_type']}.{p['preset_id']}")
-                elif p.get("scope") == "universal" and p.get("preset_type") == 2 and attr in ("Pan", "Tilt"):
+                if p.get("scope") == "universal" and p.get("preset_type") == 4 and attr in ("R", "G", "B") or p.get("scope") == "universal" and p.get("preset_type") == 2 and attr in ("Pan", "Tilt"):
                     covered_by.append(f"{p['preset_type']}.{p['preset_id']}")
                 elif p.get("scope") == "selective" and short in p.get("target_fixture_types", []):
                     pt = p.get("preset_type")
-                    if pt == 3 and attr_lower.startswith("gobo"):
-                        covered_by.append(f"{pt}.{p['preset_id']}")
-                    elif pt == 5 and attr_lower in {"zoom", "iris"}:
-                        covered_by.append(f"{pt}.{p['preset_id']}")
-                    elif pt == 6 and attr_lower == "focus":
+                    if pt == 3 and attr_lower.startswith("gobo") or pt == 5 and attr_lower in {"zoom", "iris"} or pt == 6 and attr_lower == "focus":
                         covered_by.append(f"{pt}.{p['preset_id']}")
             coverage.append({
                 "fixture_type": short,

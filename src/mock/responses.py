@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import Callable
+from collections.abc import Callable
 
 # Regex -> response (string OR callable that takes the raw command).
 _RESPONSES: list[tuple[re.Pattern, str | Callable[[str], str]]] = [

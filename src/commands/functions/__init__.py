@@ -122,18 +122,18 @@ from .labeling import (
 
 # Macro Placeholder / Condition Function Keywords
 from .macro import (
+    VALID_CONDITION_OPERATORS,
+    macro_condition_line,
     macro_with_input_after,
     macro_with_input_before,
-    macro_condition_line,
     record_macro,
-    VALID_CONDITION_OPERATORS,
 )
 
 # Master Function Keywords
 from .masters import (
+    list_masters,
     master_at,
     special_master_at,
-    list_masters,
 )
 
 # MAtricks Command Keywords
@@ -236,6 +236,33 @@ from .store import (
     update_cue,
 )
 
+# System / Console / RDM / Chaser / Effect parameter builders
+from .system import (
+    SPECIAL_MASTER_NAMES,
+    call_plugin,
+    chaser_rate,
+    chaser_skip,
+    chaser_speed,
+    chaser_xfade,
+    lock_console,
+    lua_execute,
+    rdm_automatch,
+    rdm_autopatch,
+    rdm_info,
+    rdm_list,
+    rdm_setpatch,
+    rdm_unmatch,
+    reboot_console,
+    reload_plugins,
+    restart_console,
+    run_lua,
+    send_chat,
+    set_effect_parameter,
+    set_special_master,
+    shutdown_console,
+    unlock_console,
+)
+
 # User Management Function Keywords (Login, Logout, Store/Delete User)
 from .users import (
     build_assign_world_to_user_profile,
@@ -244,33 +271,6 @@ from .users import (
     build_login,
     build_logout,
     build_store_user,
-)
-
-# System / Console / RDM / Chaser / Effect parameter builders
-from .system import (
-    lock_console,
-    unlock_console,
-    call_plugin,
-    run_lua,
-    lua_execute,
-    reload_plugins,
-    reboot_console,
-    restart_console,
-    shutdown_console,
-    send_chat,
-    set_special_master,
-    SPECIAL_MASTER_NAMES,
-    rdm_automatch,
-    rdm_autopatch,
-    rdm_list,
-    rdm_info,
-    rdm_setpatch,
-    rdm_unmatch,
-    chaser_rate,
-    chaser_speed,
-    chaser_skip,
-    chaser_xfade,
-    set_effect_parameter,
 )
 
 # Values Function Keywords (At)
