@@ -10,6 +10,7 @@ Usage:
 
 import asyncio
 import functools
+import inspect
 import json
 import logging
 import os
@@ -403,6 +404,14 @@ from src.server_orchestration_tools import register_orchestration_tools
 from src.session_manager import SessionManager
 from src.telemetry import ToolTelemetry, infer_risk_tier
 from src.console_feedback import annotate_tool_result
+from src.mcp_features import (
+    ACTIVITY_RESOURCE_URI,
+    active_context,
+    ask_destructive_confirmation,
+    needs_destructive_confirmation,
+    notify_resource_updated,
+    report_progress,
+)
 from src.telnet_client import GMA2TelnetClient, collect_transport_warnings, hold_connection
 from src.tools import set_gma2_client
 from src.vocab import RiskTier, build_v39_spec, classify_command, classify_token
@@ -530,28 +539,48 @@ def _handle_errors(func):
     Risk tier and operator identity are inferred once at decoration time.
     """
     _risk_tier = infer_risk_tier(func)
+    _accepts_confirm = "confirm_destructive" in inspect.signature(func).parameters
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs) -> str:
         t0 = time.monotonic()
-        result: str = ""
-        error_class: str | None = None
-        transport_warnings: list[str] = []
-        try:
-            with collect_transport_warnings() as transport_warnings:
-                result = await func(*args, **kwargs)
-        except ConnectionError as e:
-            logger.error("Connection error in %s: %s", func.__name__, e)
-            error_class = "ConnectionError"
-            result = json.dumps({"error": f"Connection failed: {e}", "blocked": True}, indent=2)
-        except RuntimeError as e:
-            logger.error("Runtime error in %s: %s", func.__name__, e)
-            error_class = "RuntimeError"
-            result = json.dumps({"error": f"Runtime error: {e}", "blocked": True}, indent=2)
-        except Exception as e:
-            logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
-            error_class = type(e).__name__
-            result = json.dumps({"error": f"Unexpected error: {e}", "blocked": True}, indent=2)
+
+        async def _invoke(call_kwargs: dict) -> tuple[str, str | None, list[str]]:
+            warnings: list[str] = []
+            try:
+                with collect_transport_warnings() as warnings:
+                    return await func(*args, **call_kwargs), None, warnings
+            except ConnectionError as e:
+                logger.error("Connection error in %s: %s", func.__name__, e)
+                error = {"error": f"Connection failed: {e}", "blocked": True}
+                return json.dumps(error, indent=2), "ConnectionError", warnings
+            except RuntimeError as e:
+                logger.error("Runtime error in %s: %s", func.__name__, e)
+                error = {"error": f"Runtime error: {e}", "blocked": True}
+                return json.dumps(error, indent=2), "RuntimeError", warnings
+            except Exception as e:
+                logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
+                error = {"error": f"Unexpected error: {e}", "blocked": True}
+                return json.dumps(error, indent=2), type(e).__name__, warnings
+
+        result, error_class, transport_warnings = await _invoke(kwargs)
+        ctx = active_context(mcp)
+
+        # A destructive tool blocked only for want of confirm_destructive: ask the
+        # human in the MCP client (elicitation). Only an explicit accept re-runs it.
+        if (
+            _accepts_confirm
+            and kwargs.get("confirm_destructive") is not True
+            and needs_destructive_confirmation(result)
+        ):
+            reason = str(json.loads(result).get("error", ""))
+            answer = await ask_destructive_confirmation(ctx, func.__name__, kwargs, reason)
+            if answer is True:
+                result, error_class, transport_warnings = await _invoke({**kwargs, "confirm_destructive": True})
+                result = _with_fields(result, confirmed_by="elicitation")
+            elif answer is False:
+                result = _with_fields(result, elicitation="declined")
+
         # Uniform reply contract: every JSON object reply gets ``ok``; console
         # rejections hidden in raw_response become structured console_errors.
         try:
@@ -576,9 +605,26 @@ def _handle_errors(func):
                 )
             except Exception:  # noqa: BLE001, SIM105
                 pass  # telemetry must never break a tool call
+
+        # Console changed → tell subscribers of the activity resource (after the
+        # telemetry row exists, so a re-read sees this call).
+        if _risk_tier != "SAFE_READ" and error_class is None and '"ok": true' in result:
+            await notify_resource_updated(ctx, ACTIVITY_RESOURCE_URI)
         return result
 
     return wrapper
+
+
+def _with_fields(result: str, **fields) -> str:
+    """Add fields to a JSON object reply (non-object replies are returned unchanged)."""
+    try:
+        data = json.loads(result)
+    except (TypeError, ValueError):
+        return result
+    if not isinstance(data, dict):
+        return result
+    data.update(fields)
+    return json.dumps(data, indent=2, default=str)
 
 
 # ============================================================
@@ -977,6 +1023,8 @@ async def run_command_batch(
         }, indent=2)
 
     client = await get_client()
+    ctx = active_context(mcp)
+    progress_every = max(1, len(lines) // 50)
     started = time.monotonic()
     failed: list[dict] = []
     executed = 0
@@ -989,6 +1037,8 @@ async def run_command_batch(
             )
             executed += 1
             last_reply = raw
+            if lineno % progress_every == 0 or lineno == len(lines):
+                await report_progress(ctx, lineno, len(lines), f"line {lineno}/{len(lines)}")
             errors = find_console_errors(raw, cmd)
             popup = find_pending_popup(raw)
             if errors or popup:
@@ -11182,6 +11232,18 @@ async def send_osc(
 # ============================================================
 
 
+@mcp.resource(ACTIVITY_RESOURCE_URI)
+def resource_console_activity() -> str:
+    """
+    Recent console-changing tool calls made through this server (live).
+
+    Read from the local telemetry log — no console I/O. Subscribe to get a
+    notifications/resources/updated message after every change.
+    """
+    rows = _get_telemetry().recent_changes(limit=25)
+    return json.dumps({"changes": rows, "count": len(rows)}, indent=2, default=str)
+
+
 @mcp.resource("ma2://docs/rights-matrix")
 def resource_rights_matrix() -> str:
     """
@@ -14141,6 +14203,7 @@ async def run_agent_goal(
             "goal": goal,
             "intent": parsed_goal.intent.value,
             "confidence": parsed_goal.confidence,
+            "notes": getattr(parsed_goal, "notes", []),
             "plan": [s.to_dict() for s in plan],
             "policy_warnings": warnings,
         }, indent=2)
@@ -14149,10 +14212,24 @@ async def run_agent_goal(
     async def _auto_confirm(step) -> bool:
         return True
 
-    trace = await runtime.run(
-        goal,
-        on_confirm=_auto_confirm if auto_confirm else None,
-    )
+    # Without auto_confirm, ask the human per destructive step when the client
+    # supports elicitation; otherwise the run stops at the first destructive step.
+    ctx = active_context(mcp)
+
+    async def _elicit_confirm(step) -> bool:
+        answer = await ask_destructive_confirmation(
+            ctx, step.tool_name, dict(step.tool_args), f"Agent step: {step.description}",
+        )
+        return answer is True
+
+    on_confirm = _auto_confirm if auto_confirm else None
+    if on_confirm is None and ctx is not None:
+        from src.mcp_features import client_supports_elicitation, elicitation_enabled
+
+        if elicitation_enabled() and client_supports_elicitation(ctx):
+            on_confirm = _elicit_confirm
+
+    trace = await runtime.run(goal, on_confirm=on_confirm)
     return trace.to_json()
 
 

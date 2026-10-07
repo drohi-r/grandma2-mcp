@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
 description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
-version: 1.2.2
+version: 1.2.3
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-07T22:11:08Z
+last_updated: 2026-10-07T22:17:13Z
 ---
 
 <p align="center">
@@ -708,10 +708,11 @@ Read from the cached snapshot — **no telnet round-trips required**.
 
 ## MCP Resources
 
-Thirteen read-only resources exposable to any MCP client. Use them for zero-telnet context before calling tools.
+Fourteen read-only resources exposable to any MCP client. Use them for zero-telnet context before calling tools.
 
 | URI | Description |
 |-----|-------------|
+| `ma2://console/activity` | Live: recent console-changing tool calls; subscribe to get an update after every change |
 | `ma2://docs/rights-matrix` | OAuth scope → MA2Right mapping matrix (JSON) |
 | `ma2://docs/vocab-summary` | All 157 keywords with RiskTier and category (JSON) |
 | `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — all tools clustered by category (JSON) |
@@ -915,7 +916,9 @@ In addition to the 3-layer model, every keyword is classified into one of three 
 | `SAFE_WRITE` | Reversible state changes | `Go`, `At`, `Clear`, `Park`, `SelFix` |
 | `DESTRUCTIVE` | Data mutation or loss | `Delete`, `Store`, `Copy`, `Move`, `Shutdown` |
 
-`DESTRUCTIVE` tools require `confirm_destructive=True` in addition to OAuth scope.
+`DESTRUCTIVE` tools require `confirm_destructive=True` in addition to OAuth scope. When the MCP client supports **elicitation**, a destructive call made without it opens a confirm dialog instead of just failing; only an explicit accept runs it (disable with `GMA_ELICIT_CONFIRM=0`). `run_agent_goal` without `auto_confirm` asks the same way per destructive step.
+
+Raw command lines are classified per `;`-separated part, so `ClearAll ; Store Group 5` is `DESTRUCTIVE`, and a bare number (which can answer an open pop-up) is too.
 
 > [!IMPORTANT]
 > **Command injection prevention:** Line breaks (`\r`, `\n`) are rejected before any command reaches the console.

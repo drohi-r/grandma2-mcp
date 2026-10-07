@@ -183,6 +183,17 @@ class ToolTelemetry:
         ]
         return [dict(zip(cols, r, strict=False)) for r in rows]
 
+    def recent_changes(self, limit: int = 25) -> list[dict]:
+        """Most recent console-changing invocations (anything but SAFE_READ)."""
+        rows = self._conn.execute(
+            "SELECT ts,tool_name,inputs_json,error_class,risk_tier,operator "
+            "FROM tool_invocations WHERE risk_tier != 'SAFE_READ' "
+            "ORDER BY ts DESC, id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        cols = ["ts", "tool_name", "inputs_json", "error_class", "risk_tier", "operator"]
+        return [dict(zip(cols, r, strict=False)) for r in rows]
+
     def top_failing_tools(self, days: int = 7, min_failures: int = 3) -> list[dict]:
         """Return tools with >= min_failures errors in the last N days."""
         since = time.time() - days * 86_400
