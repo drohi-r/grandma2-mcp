@@ -7676,6 +7676,9 @@ async def suggest_tool_for_task(
                 scores.append((name, sim))
             scores.sort(key=lambda x: -x[1])
 
+    # Only suggest tools this client can actually call (GMA_TOOL_PROFILE).
+    visible = set(mcp._tool_manager._tools)
+    scores = [(name, score) for name, score in scores if name in visible]
     top = scores[:top_n]
     result: dict = {
         "suggestions": [
@@ -11334,17 +11337,28 @@ def resource_responsibility_map() -> str:
 @mcp.resource("ma2://docs/tool-surface-tiers")
 def resource_tool_surface_tiers() -> str:
     """
-    Tool surface tier classification — which tools are Tier A (always visible),
-    Tier B (retrievable), or Tier C (internal).
-
-    Use this resource to decide whether to add a new tool to the planner-visible
-    surface or keep it as a worker-only primitive.
+    Tool profiles (GMA_TOOL_PROFILE=core|standard|full) — which tools each one
+    exposes, generated from src/tool_profiles.py so it can't drift.
     """
-    tiers_path = Path(__file__).parent.parent / "doc" / "tool-surface-tiers.md"
-    try:
-        return tiers_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return "# Tool surface tiers doc not found."
+    from src.tool_profiles import PROFILES, tier_of
+
+    names = sorted(_ALL_TOOLS)
+    by_tier: dict[str, list[str]] = {p: [] for p in PROFILES}
+    for name in names:
+        by_tier[tier_of(name)].append(name)
+    lines = [
+        "# Tool profiles",
+        "",
+        "Set GMA_TOOL_PROFILE to choose what MCP clients see (default: full).",
+        "Each profile includes the ones above it. Hidden tools stay available to run_agent_goal.",
+        "",
+    ]
+    total = 0
+    for profile in PROFILES:
+        total += len(by_tier[profile])
+        lines += [f"## {profile} — {total} tools ({len(by_tier[profile])} added)", ""]
+        lines += [", ".join(f"`{n}`" for n in by_tier[profile]), ""]
+    return "\n".join(lines)
 
 
 @mcp.resource("ma2://skills/{skill_id}")
@@ -14194,7 +14208,9 @@ def _build_tool_registry() -> dict:
     """
     registry: dict = {}
     try:
-        for tool_name, tool_obj in mcp._tool_manager._tools.items():
+        # All registered tools — a GMA_TOOL_PROFILE only hides them from clients.
+        all_tools = globals().get("_ALL_TOOLS") or mcp._tool_manager._tools
+        for tool_name, tool_obj in all_tools.items():
             fn = getattr(tool_obj, "fn", None)
             if fn is not None:
                 registry[tool_name] = fn
@@ -14960,7 +14976,26 @@ def main():
             "Only use on trusted local networks.", transport,
         )
 
+    apply_tool_profile(os.environ.get("GMA_TOOL_PROFILE"))
     mcp.run(transport=transport)
+
+
+# Every registered tool, kept even when a profile hides some from MCP clients:
+# the agent harness (_build_tool_registry) still needs them.
+_ALL_TOOLS: dict = dict(mcp._tool_manager._tools)
+
+
+def apply_tool_profile(value: str | None) -> str:
+    """Hide tools outside the GMA_TOOL_PROFILE subset from MCP clients."""
+    from src.tool_profiles import resolve_profile, visible_tools
+
+    profile, warning = resolve_profile(value)
+    if warning:
+        logger.warning(warning)
+    keep = visible_tools(profile, set(_ALL_TOOLS))
+    mcp._tool_manager._tools = {name: tool for name, tool in _ALL_TOOLS.items() if name in keep}
+    logger.info("Tool profile %r: %d of %d tools visible", profile, len(keep), len(_ALL_TOOLS))
+    return profile
 
 
 if __name__ == "__main__":

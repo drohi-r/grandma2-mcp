@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
 description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
-version: 1.2.3
+version: 1.2.4
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-07T22:17:13Z
+last_updated: 2026-10-07T22:25:44Z
 ---
 
 <p align="center">
@@ -171,6 +171,9 @@ GMA_USER=administrator     # default: administrator
 GMA_PASSWORD=admin         # default: admin
 GMA_PORT=30000             # default: 30000 (30001 = read-only)
 GMA_SAFETY_LEVEL=standard  # standard (default), admin, or read-only
+GMA_TOOL_PROFILE=full      # core (28 tools), standard (104) or full (237, default)
+GMA_ELICIT_CONFIRM=1       # 0 = never open confirm dialogs for destructive calls
+GMA_MAX_REPLY_CHARS=20000  # cap on raw console text returned per reply
 LOG_LEVEL=INFO             # default: INFO
 
 # RAG Pipeline (optional)
@@ -187,6 +190,8 @@ RAG_EMBED_DIMENSIONS=1536                     # vector dimensions
 | `read-only` | Only `SAFE_READ` commands allowed (`list`, `info`, `cd`) |
 | `standard` | `SAFE_READ` + `SAFE_WRITE` allowed; `DESTRUCTIVE` requires `confirm_destructive=True` |
 | `admin` | All commands allowed without confirmation |
+
+`GMA_TOOL_PROFILE` trims what MCP clients see when they load every tool schema up front (about 40k tokens for all 237). `run_agent_goal` can still use every tool. See [doc/tool-surface-tiers.md](doc/tool-surface-tiers.md).
 
 ## MCP Tools
 
