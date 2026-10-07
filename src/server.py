@@ -13931,6 +13931,7 @@ async def plan_agent_goal(goal: str) -> str:
         "intent": parsed_goal.intent.value,
         "object_type": parsed_goal.object_type,
         "confidence": parsed_goal.confidence,
+        "notes": parsed_goal.notes,
         "step_count": len(plan),
         "plan": [
             {

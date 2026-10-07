@@ -38,7 +38,7 @@ def _build_selection_step(goal: ParsedGoal) -> PlanStep:
     if start is not None:
         return PlanStep(
             tool_name="modify_selection",
-            tool_args={"action": "select", "start": start, "end": end or start},
+            tool_args={"action": "replace", "fixture_ids": [start], "end_id": end or start},
             description=f"Select fixtures {start}-{end or start}",
             risk_tier=RiskTier.SAFE_WRITE,
         )

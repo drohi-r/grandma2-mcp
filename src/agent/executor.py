@@ -165,26 +165,27 @@ class StepExecutor:
                 step.result = result
                 step.completed_at = datetime.now(UTC)
 
-                # Check for error in JSON response
+                # A definitive refusal (needs confirmation, console rejected the
+                # command) gives the same answer on retry — fail immediately.
+                refusal = self._refusal(result)
+                if refusal:
+                    self._fail(step, f"Tool returned error: {refusal}")
+                    return
                 if self._is_error_result(result):
                     raise RuntimeError(f"Tool returned error: {result}")
+
+                # Post-step verification: a failed read-back fails the step.
+                if self._verifier.has_strategy(step.tool_name):
+                    verification = await self._verifier.verify_step(step, context)
+                    step.verification = verification
+                    if not verification.passed:
+                        self._fail(step, f"Verification failed: {verification.details}")
+                        return
 
                 step.status = StepStatus.COMPLETED
                 logger.info(
                     "Step completed: %s (attempt %d)", step.description, attempt + 1
                 )
-
-                # Post-step verification
-                if self._verifier.has_strategy(step.tool_name):
-                    verification = await self._verifier.verify_step(step, context)
-                    step.verification = verification
-                    if not verification.passed:
-                        logger.warning(
-                            "Verification failed for %s: %s",
-                            step.description,
-                            verification.details,
-                        )
-
                 return  # Success
 
             except Exception as e:
@@ -217,13 +218,38 @@ class StepExecutor:
             raise ValueError(f"Unknown tool: {step.tool_name}")
         return await tool_fn(**step.tool_args)
 
-    def _is_error_result(self, result: str) -> bool:
-        """Check if a tool result JSON indicates an error."""
+    @staticmethod
+    def _parse(result: str) -> dict | None:
         try:
             data = json.loads(result)
-            return data.get("blocked", False) or "error" in data
         except (json.JSONDecodeError, TypeError):
+            return None
+        return data if isinstance(data, dict) else None
+
+    def _is_error_result(self, result: str) -> bool:
+        """Check if a tool result JSON indicates an error."""
+        data = self._parse(result)
+        if data is None:
             return False
+        return data.get("ok") is False or data.get("blocked") is True or bool(data.get("error"))
+
+    def _refusal(self, result: str) -> str | None:
+        """Error text when the reply is a refusal that retrying cannot change."""
+        data = self._parse(result)
+        if data is None:
+            return None
+        error = str(data.get("error") or "")
+        if error.startswith("Connection failed"):
+            return None  # transport drop — worth a retry after reconnect
+        if data.get("blocked") is True or data.get("console_errors"):
+            return error or result
+        return None
+
+    def _fail(self, step: PlanStep, error: str) -> None:
+        step.status = StepStatus.FAILED
+        step.error = error
+        step.completed_at = datetime.now(UTC)
+        logger.error("Step failed: %s — %s", step.description, error)
 
     def _skip_dependents(self, failed_step: PlanStep, context: RunContext) -> None:
         """Mark all steps that depend on a failed step as SKIPPED."""

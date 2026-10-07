@@ -20,6 +20,7 @@ from src.agent.workflows.effects import (
 from src.agent.workflows.patch import build_patch_workflow
 from src.agent.workflows.playback import build_playback_workflow
 from src.agent.workflows.preset import build_preset_workflow
+from src.commands.constants import PRESET_TYPES
 from src.vocab import RiskTier
 
 logger = logging.getLogger(__name__)
@@ -144,6 +145,30 @@ _FULL_ADDRESS_PATTERN = re.compile(r"\b(\d+)\.(\d{3})\b")
 # ID extraction: "group 5", "preset 10", "executor 201"
 _ID_PATTERN = re.compile(r"\b(?:group|preset|sequence|executor|fixture)\s+(\d+)", re.IGNORECASE)
 
+# Typed IDs used by the workflows
+_GROUP_ID_PATTERN = re.compile(r"\bgroup\s+(\d+)", re.IGNORECASE)
+_SEQUENCE_ID_PATTERN = re.compile(r"\bsequence\s+(\d+)", re.IGNORECASE)
+_EXECUTOR_PATTERN = re.compile(r"\bexec(?:utor)?\s+(?:(\d+)\.)?(\d+)\b", re.IGNORECASE)
+_CUE_PATTERN = re.compile(r"\bcue\s+(\d+)\b", re.IGNORECASE)
+_DOTTED_PRESET_PATTERN = re.compile(r"\bpreset\s+(\d+)\.(\d+)\b", re.IGNORECASE)
+_TYPED_PRESET_PATTERN = re.compile(
+    r"\b(dimmer|position|gobo|colou?r|beam|focus|control)\s+preset(?:\s+(\d+)(?:\.(\d+))?)?\b",
+    re.IGNORECASE,
+)
+_PRESET_ID_PATTERN = re.compile(r"\bpreset\s+(\d+)\b", re.IGNORECASE)
+_FOOTPRINT_PATTERN = re.compile(r"\b(\d+)[- ]?(?:ch|chan|channels?)\b|\bfootprint\s+(\d+)\b", re.IGNORECASE)
+
+# "label group 3 ..." / "rename executor 1.201 ..." — an explicit labelling verb
+_LABEL_VERB_PATTERN = re.compile(r"^\s*(?:please\s+)?(?:label|rename)\b", re.IGNORECASE)
+
+_PRESET_TYPE_NAMES = {num: name for name, num in PRESET_TYPES.items()}
+
+SUPPORTED_GOALS = (
+    "patch fixtures, store presets, store cues + assign executors, create groups, "
+    "label objects, effects, chasers, MAtricks, presets from patch, color picker "
+    "plugin, fixture ID hygiene, or list/inspect objects"
+)
+
 
 class DomainPlanner:
     """Rule-based planner that decomposes goals into PlanStep sequences."""
@@ -157,6 +182,15 @@ class DomainPlanner:
         names = self._extract_names(goal_text)
         options = self._extract_options(goal_text)
         confidence = self._estimate_confidence(goal_text, intent)
+        notes: list[str] = []
+
+        if intent == GoalIntent.DISCOVER and not _DISCOVER_PATTERNS.search(goal_text) and not object_type:
+            # Nothing matched — say so instead of quietly running discovery at 0.9.
+            confidence = 0.3
+            notes.append(
+                "Goal not recognized — planned read-only discovery only. "
+                f"Supported goals: {SUPPORTED_GOALS}."
+            )
 
         return ParsedGoal(
             raw=goal_text,
@@ -167,6 +201,7 @@ class DomainPlanner:
             names=names,
             options=options,
             confidence=confidence,
+            notes=notes,
         )
 
     def plan(self, goal: ParsedGoal) -> list[PlanStep]:
@@ -225,8 +260,15 @@ class DomainPlanner:
             return GoalIntent.PLUGIN_SETUP
         if _ID_HYGIENE_PATTERNS.search(text):
             return GoalIntent.ID_HYGIENE
-        if _PRESET_FROM_PATCH_PATTERNS.search(text):
+        if _PRESET_FROM_PATCH_PATTERNS.search(text) and not (
+            _FIXTURE_RANGE_PATTERN.search(text) or _DOTTED_PRESET_PATTERN.search(text)
+        ):
             return GoalIntent.PRESET_FROM_PATCH
+
+        # An explicit labelling verb wins over the object it names
+        # ("label group 3 ..." must not create group 3).
+        if _LABEL_VERB_PATTERN.search(text):
+            return GoalIntent.LABEL
 
         # Live-programming intents — before the generic patterns so
         # "color chaser on executor 5" doesn't fall into PLAYBACK and
@@ -290,6 +332,29 @@ class DomainPlanner:
         """Extract address, universe, and other options from goal text."""
         options: dict[str, Any] = {}
 
+        # Typed object IDs
+        m = _GROUP_ID_PATTERN.search(text)
+        if m:
+            options["group_id"] = int(m.group(1))
+        m = _SEQUENCE_ID_PATTERN.search(text)
+        if m:
+            options["sequence_id"] = int(m.group(1))
+        m = _EXECUTOR_PATTERN.search(text)
+        if m:
+            if m.group(1):
+                options["page"] = int(m.group(1))
+            options["executor_id"] = int(m.group(2))
+        m = _CUE_PATTERN.search(text)
+        if m:
+            options["cue_number"] = int(m.group(1))
+        m = _FOOTPRINT_PATTERN.search(text)
+        if m:
+            options["footprint"] = int(m.group(1) or m.group(2))
+        self._extract_preset(text, options)
+
+        # Dotted executor/preset IDs ("executor 2.105", "preset 4.1") are not DMX addresses
+        text = _EXECUTOR_PATTERN.sub(" ", _DOTTED_PRESET_PATTERN.sub(" ", _TYPED_PRESET_PATTERN.sub(" ", text)))
+
         # Full address: 1.001
         m = _FULL_ADDRESS_PATTERN.search(text)
         if m:
@@ -321,6 +386,28 @@ class DomainPlanner:
             options["fixture_end"] = int(m.group(2))
 
         return options
+
+    @staticmethod
+    def _extract_preset(text: str, options: dict[str, Any]) -> None:
+        """Preset type + ID from "color preset 3", "position preset 2.5", "preset 4.1"."""
+        m = _TYPED_PRESET_PATTERN.search(text)
+        if m:
+            options["preset_type"] = m.group(1).lower().replace("colour", "color")
+            if m.group(3):  # "position preset 2.5" — dotted after the type word
+                options["preset_id"] = int(m.group(3))
+            elif m.group(2):
+                options["preset_id"] = int(m.group(2))
+            return
+        m = _DOTTED_PRESET_PATTERN.search(text)
+        if m:
+            type_name = _PRESET_TYPE_NAMES.get(int(m.group(1)))
+            if type_name:
+                options["preset_type"] = type_name
+            options["preset_id"] = int(m.group(2))
+            return
+        m = _PRESET_ID_PATTERN.search(text)
+        if m:
+            options["preset_id"] = int(m.group(1))
 
     def _estimate_confidence(self, text: str, intent: GoalIntent) -> float:
         """Estimate how confident we are in the goal classification."""
@@ -368,9 +455,9 @@ class DomainPlanner:
         """Build a fixture group creation workflow."""
         steps: list[PlanStep] = []
 
-        group_id = goal.options.get("object_id", 1)
-        fixture_start = goal.options.get("fixture_start", 1)
-        fixture_end = goal.options.get("fixture_end", fixture_start + (goal.count or 1) - 1)
+        group_id = goal.options.get("group_id", goal.options.get("object_id", 1))
+        fixture_start = goal.options.get("fixture_start")
+        fixture_end = goal.options.get("fixture_end")
 
         # Discovery
         discover = PlanStep(
@@ -381,14 +468,22 @@ class DomainPlanner:
         )
         steps.append(discover)
 
+        if fixture_start is None:
+            # Never invent a fixture range for a store into a group slot.
+            goal.notes.append(
+                f"Need a fixture range to create group {group_id} "
+                "(e.g. 'create group 5 from fixtures 1-10') — planned discovery only."
+            )
+            return steps
+
         # Create group
         create = PlanStep(
             tool_name="create_fixture_group",
             tool_args={
-                "start": fixture_start,
-                "end": fixture_end,
+                "start_fixture": fixture_start,
+                "end_fixture": fixture_end or fixture_start,
                 "group_id": group_id,
-                "name": goal.names[0] if goal.names else None,
+                "group_name": goal.names[0] if goal.names else None,
                 "confirm_destructive": False,
             },
             description=f"Create group {group_id} (fixtures {fixture_start}-{fixture_end})",
@@ -413,9 +508,13 @@ class DomainPlanner:
         steps: list[PlanStep] = []
 
         object_type = goal.object_type or "fixture"
-        object_id = goal.options.get("object_id", 1)
+        object_id = self._object_ref(goal, object_type)
 
-        if goal.names:
+        if not goal.names:
+            goal.notes.append('Need the new name in quotes (e.g. label group 3 "Back Truss").')
+        elif object_id is None:
+            goal.notes.append(f"Need the {object_type} number to label.")
+        else:
             from src.agent.workflows.common import build_label_step
 
             label = build_label_step(
@@ -432,6 +531,20 @@ class DomainPlanner:
             steps.append(verify)
 
         return steps
+
+    @staticmethod
+    def _object_ref(goal: ParsedGoal, object_type: str) -> int | str | None:
+        """The ID the goal gives for *object_type* ("executor 1.201" → "1.201")."""
+        opts = goal.options
+        if object_type == "executor" and "executor_id" in opts:
+            return f"{opts.get('page', 1)}.{opts['executor_id']}"
+        if object_type == "preset" and "preset_id" in opts:
+            type_num = PRESET_TYPES.get(opts.get("preset_type", ""))
+            return f"{type_num}.{opts['preset_id']}" if type_num else opts["preset_id"]
+        typed = {"group": "group_id", "sequence": "sequence_id", "cue": "cue_number"}.get(object_type)
+        if typed and typed in opts:
+            return opts[typed]
+        return opts.get("object_id")
 
     def _build_discover_workflow(self, goal: ParsedGoal) -> list[PlanStep]:
         """Build a discovery-only workflow."""

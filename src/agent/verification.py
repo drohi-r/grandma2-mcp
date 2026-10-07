@@ -1,7 +1,8 @@
 """Post-mutation verification — checks that tool calls achieved intended state.
 
-Uses existing MCP inspection tools (query_object_list, get_object_info,
-list_console_destination, list_sequence_cues) to verify mutations.
+Each strategy reads back the *specific* object a mutation touched (``list group
+5``, ``list executor 2.105``) through an existing SAFE_READ tool and checks the
+console's answer for that object — not a substring anywhere in a pool listing.
 Also provides preflight snapshots and rollback strategy suggestions.
 """
 
@@ -9,6 +10,9 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -22,59 +26,172 @@ from src.agent.state import (
 
 logger = logging.getLogger(__name__)
 
-# Tool name → verification strategy mapping.
-# Each entry maps a mutating tool to the inspection tool + args pattern
-# that should be used to verify the mutation succeeded.
-VERIFICATION_STRATEGIES: dict[str, dict[str, Any]] = {
-    "create_fixture_group": {
-        "verify_tool": "query_object_list",
-        "args_template": {"object_type": "group"},
-        "check_field": "object_id",
-        "extract_from_args": "group_id",
-    },
-    "store_new_preset": {
-        "verify_tool": "query_object_list",
-        "args_template": {"object_type": "preset"},
-        "check_field": "object_id",
-        "extract_from_args": "preset_id",
-    },
-    "store_current_cue": {
-        "verify_tool": "list_sequence_cues",
-        "args_template": {},
-        "check_field": "cue_id",
-        "extract_from_args": "cue_id",
-    },
-    "assign_object": {
-        "verify_tool": "get_object_info",
-        "args_template": {},
-        "check_field": "assignment",
-        "extract_from_args": "target",
-    },
-    "patch_fixture": {
-        "verify_tool": "query_object_list",
-        "args_template": {"object_type": "fixture"},
-        "check_field": "object_id",
-        "extract_from_args": "fixture_id",
-    },
-    "label_or_appearance": {
-        "verify_tool": "get_object_info",
-        "args_template": {},
-        "check_field": "label",
-        "extract_from_args": "name",
-    },
-    "store_object": {
-        "verify_tool": "query_object_list",
-        "args_template": {},
-        "check_field": "object_id",
-        "extract_from_args": "object_id",
-    },
-    "delete_object": {
-        "verify_tool": "query_object_list",
-        "args_template": {},
-        "check_field": "absent",
-        "extract_from_args": "object_id",
-    },
+_NO_OBJECTS = "NO OBJECTS FOUND"
+
+
+def _console_text(data: Any) -> str:
+    """Raw console text from a read-back reply (tools return it as raw_response)."""
+    if isinstance(data, dict):
+        parts = [data.get(k) for k in ("raw_response", "response")]
+        text = "\n".join(p for p in parts if isinstance(p, str))
+        return text or json.dumps(data, default=str)
+    return str(data)
+
+
+def _object_absent(data: Any) -> bool:
+    if isinstance(data, dict) and _NO_OBJECTS in (data.get("console_warnings") or []):
+        return True
+    return _NO_OBJECTS in _console_text(data).upper()
+
+
+def _exists(step: PlanStep, data: Any, label: str) -> tuple[bool, str]:
+    if _object_absent(data):
+        return False, f"{label} not found on the console after the step"
+    return True, f"{label} present on the console"
+
+
+def _absent(step: PlanStep, data: Any, label: str) -> tuple[bool, str]:
+    if _object_absent(data):
+        return True, f"{label} confirmed deleted"
+    return False, f"{label} still present on the console"
+
+
+def _has_name(step: PlanStep, data: Any, label: str) -> tuple[bool, str]:
+    name = str(step.tool_args.get("name") or "")
+    if _object_absent(data):
+        return False, f"{label} not found on the console"
+    if name.lower() in _console_text(data).lower():
+        return True, f"{label} is labelled {name!r}"
+    return False, f"{label} does not show label {name!r}"
+
+
+def _patched_at(step: PlanStep, data: Any, label: str) -> tuple[bool, str]:
+    address = f"{int(step.tool_args['dmx_universe'])}.{int(step.tool_args['dmx_address']):03d}"
+    if _object_absent(data):
+        return False, f"{label} not found on the console"
+    if address in _console_text(data):
+        return True, f"{label} patched at {address}"
+    return False, f"{label} is not patched at {address}"
+
+
+def _executor_has_sequence(step: PlanStep, data: Any, label: str) -> tuple[bool, str]:
+    seq = step.tool_args.get("source_id")
+    if re.search(rf"Sequence\s*=\s*Seq\s+{re.escape(str(seq))}\b", _console_text(data), re.IGNORECASE):
+        return True, f"{label} plays sequence {seq}"
+    return False, f"{label} does not show sequence {seq}"
+
+
+def _split_executor(target: Any) -> tuple[int, int | None]:
+    text = str(target)
+    if "." in text:
+        page, exec_id = text.split(".", 1)
+        return int(exec_id), int(page)
+    return int(text), None
+
+
+@dataclass(frozen=True)
+class VerificationStrategy:
+    verify_tool: str
+    build_args: Callable[[dict[str, Any]], dict[str, Any] | None]  # None → not verifiable
+    check: Callable[[PlanStep, Any, str], tuple[bool, str]]
+    label: Callable[[dict[str, Any]], str]
+
+
+def _object_args(object_type: str | None = None) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    def build(args: dict[str, Any]) -> dict[str, Any] | None:
+        otype = object_type or args.get("object_type")
+        oid = args.get("object_id")
+        if oid is None:
+            return None
+        out: dict[str, Any] = {"object_id": oid}
+        if otype:
+            out["object_type"] = otype
+        return out
+    return build
+
+
+def _group_args(args: dict[str, Any]) -> dict[str, Any] | None:
+    return {"object_type": "group", "object_id": args["group_id"]} if "group_id" in args else None
+
+
+def _preset_args(args: dict[str, Any]) -> dict[str, Any] | None:
+    if "preset_id" not in args:
+        return None
+    return {"object_type": "preset", "preset_type": args.get("preset_type"), "object_id": args["preset_id"]}
+
+
+def _cue_args(cue_key: str) -> Callable[[dict[str, Any]], dict[str, Any] | None]:
+    def build(args: dict[str, Any]) -> dict[str, Any] | None:
+        if args.get("sequence_id") is None or args.get(cue_key) is None:
+            return None  # cue went to the selected executor's sequence — unknown id
+        return {"sequence_id": args["sequence_id"], "cue_id": args[cue_key]}
+    return build
+
+
+def _assign_args(args: dict[str, Any]) -> dict[str, Any] | None:
+    if (
+        str(args.get("mode", "")).lower() != "assign"
+        or str(args.get("source_type", "")).lower() != "sequence"
+        or str(args.get("target_type", "")).lower() != "executor"
+        or args.get("target_id") is None
+    ):
+        return None  # only sequence → executor assignments have a read-back
+    exec_id, page = _split_executor(args["target_id"])
+    out: dict[str, Any] = {"executor_id": exec_id}
+    if page is not None:
+        out["page"] = page
+    return out
+
+
+def _patch_args(args: dict[str, Any]) -> dict[str, Any] | None:
+    return {"fixture_id": args["fixture_id"]} if "fixture_id" in args else None
+
+
+def _label_args(args: dict[str, Any]) -> dict[str, Any] | None:
+    if str(args.get("action", "label")).lower() != "label" or not args.get("name"):
+        return None
+    return _object_args()(args)
+
+
+def _describe(kind: str, *keys: str) -> Callable[[dict[str, Any]], str]:
+    def label(args: dict[str, Any]) -> str:
+        ids = ".".join(str(args[k]) for k in keys if args.get(k) is not None)
+        return f"{kind} {ids}".strip()
+    return label
+
+
+VERIFICATION_STRATEGIES: dict[str, VerificationStrategy] = {
+    "create_fixture_group": VerificationStrategy(
+        "query_object_list", _group_args, _exists, _describe("Group", "group_id")),
+    "store_new_preset": VerificationStrategy(
+        "query_object_list", _preset_args, _exists, _describe("Preset", "preset_type", "preset_id")),
+    "store_current_cue": VerificationStrategy(
+        "list_sequence_cues", _cue_args("cue_number"), _exists, _describe("Cue", "sequence_id", "cue_number")),
+    "store_cue_with_timing": VerificationStrategy(
+        "list_sequence_cues", _cue_args("cue_id"), _exists, _describe("Cue", "sequence_id", "cue_id")),
+    "assign_object": VerificationStrategy(
+        "get_executor_status", _assign_args, _executor_has_sequence, _describe("Executor", "target_id")),
+    "patch_fixture": VerificationStrategy(
+        "list_fixtures", _patch_args, _patched_at, _describe("Fixture", "fixture_id")),
+    "label_or_appearance": VerificationStrategy(
+        "query_object_list", _label_args, _has_name, _describe("Object", "object_type", "object_id")),
+    "store_object": VerificationStrategy(
+        "query_object_list", _object_args(), _exists, _describe("Object", "object_type", "object_id")),
+    "delete_object": VerificationStrategy(
+        "query_object_list", _object_args(), _absent, _describe("Object", "object_type", "object_id")),
 }
+
+
+def build_verification_call(step: PlanStep) -> tuple[str, dict[str, Any]] | None:
+    """The read-back (tool name, args) for *step*, or None when it can't be verified."""
+    strategy = VERIFICATION_STRATEGIES.get(step.tool_name)
+    if strategy is None:
+        return None
+    args = strategy.build_args(step.tool_args)
+    if args is None:
+        return None
+    return strategy.verify_tool, {k: v for k, v in args.items() if v is not None}
+
 
 # Tools that can potentially be rolled back with oops
 OOPS_ELIGIBLE = {
@@ -133,11 +250,7 @@ class Verifier:
     async def verify_step(
         self, step: PlanStep, context: RunContext
     ) -> VerificationResult:
-        """Check that a mutation achieved the intended state.
-
-        Uses VERIFICATION_STRATEGIES to determine which inspection tool
-        to call and what to check in the response.
-        """
+        """Read the touched object back from the console and check the mutation."""
         strategy = VERIFICATION_STRATEGIES.get(step.tool_name)
         if not strategy:
             # DESTRUCTIVE steps without a verification strategy must NOT
@@ -159,7 +272,18 @@ class Verifier:
                 details=f"No verification strategy for tool '{step.tool_name}' — assumed OK",
             )
 
-        verify_tool_name = strategy["verify_tool"]
+        label = strategy.label(step.tool_args)
+        call = build_verification_call(step)
+        if call is None:
+            return VerificationResult(
+                step_id=step.id,
+                passed=True,
+                expected={},
+                actual={},
+                details=f"{label}: not verifiable from the step arguments — relying on the tool reply",
+            )
+
+        verify_tool_name, verify_args = call
         verify_fn = self._dispatch.get(verify_tool_name)
         if not verify_fn:
             return VerificationResult(
@@ -170,42 +294,29 @@ class Verifier:
                 details=f"Verification tool '{verify_tool_name}' not available — assumed OK",
             )
 
-        # Build verification args from the strategy template + step args
-        verify_args = dict(strategy["args_template"])
-        extract_key = strategy.get("extract_from_args")
-        expected_value = step.tool_args.get(extract_key) if extract_key else None
-
+        expected = {"read_back": verify_tool_name, "args": verify_args}
         try:
             raw_result = await verify_fn(**verify_args)
             result_data = json.loads(raw_result) if isinstance(raw_result, str) else raw_result
-
-            # Check for the expected value in the response
-            check_field = strategy["check_field"]
-            if check_field == "absent":
-                # For delete: verify object is NOT present
-                passed = "NO OBJECTS FOUND" in str(result_data).upper()
-                details = "Object confirmed deleted" if passed else "Object may still exist"
+            if isinstance(result_data, dict) and (
+                result_data.get("ok") is False or result_data.get("blocked") is True
+            ):
+                passed, details = False, f"{label}: read-back failed — {result_data.get('error', 'unknown error')}"
             else:
-                # For create/modify: verify object IS present
-                passed = str(expected_value) in str(result_data)
-                details = f"Verified {check_field}={expected_value}" if passed else (
-                    f"Expected {check_field}={expected_value} not found in response"
-                )
-
+                passed, details = strategy.check(step, result_data, label)
             return VerificationResult(
                 step_id=step.id,
                 passed=passed,
-                expected={check_field: expected_value},
-                actual={"raw_response_snippet": str(result_data)[:200]},
+                expected=expected,
+                actual={"raw_response_snippet": _console_text(result_data)[:200]},
                 details=details,
             )
-
         except Exception as e:
             logger.warning("Verification failed for step %s: %s", step.id, e)
             return VerificationResult(
                 step_id=step.id,
                 passed=False,
-                expected={strategy["check_field"]: expected_value},
+                expected=expected,
                 actual={"error": str(e)},
                 details=f"Verification error: {e}",
             )

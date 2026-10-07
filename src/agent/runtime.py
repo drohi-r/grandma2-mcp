@@ -111,12 +111,13 @@ class AgentRuntime:
 
         # 4. Validate plan via policy engine
         policy_result = self.policy.validate_plan(plan, confidence=parsed_goal.confidence)
-        policy_warnings = policy_result.warnings
+        # Planner notes (missing details, unrecognized goal) travel with the trace
+        policy_warnings = list(parsed_goal.notes) + list(policy_result.warnings)
 
         if not policy_result.approved:
             # Plan rejected by policy
             context = RunContext(goal=goal, plan=plan, status=RunStatus.ABORTED)
-            violation_msgs = [v.message for v in policy_result.violations]
+            violation_msgs = list(parsed_goal.notes) + [v.message for v in policy_result.violations]
             logger.warning("Plan rejected by policy: %s", violation_msgs)
             trace = build_trace(context, started_at, policy_warnings=violation_msgs)
             return trace

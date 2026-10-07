@@ -32,10 +32,13 @@ def build_playback_workflow(goal: ParsedGoal) -> list[PlanStep]:
     steps: list[PlanStep] = []
 
     sequence_id = goal.options.get("sequence_id", 1)
-    executor_id = goal.options.get("executor_id", 1)
+    executor_id = goal.options.get("executor_id")
     page = goal.options.get("page", 1)
+    first_cue = goal.options.get("cue_number", 1)
     cue_count = goal.options.get("cue_count", 1)
     auto_go = goal.options.get("auto_go", False)
+    if "sequence_id" not in goal.options:
+        goal.notes.append("No sequence number given — using sequence 1.")
 
     # Step 1: List existing sequences (discovery)
     discover = PlanStep(
@@ -48,12 +51,12 @@ def build_playback_workflow(goal: ParsedGoal) -> list[PlanStep]:
 
     # Step 2: Store cues into the sequence
     prev_id = discover.id
-    for cue_num in range(1, cue_count + 1):
+    for cue_num in range(first_cue, first_cue + cue_count):
         store_cue = PlanStep(
             tool_name="store_current_cue",
             tool_args={
                 "sequence_id": sequence_id,
-                "cue_id": cue_num,
+                "cue_number": cue_num,
                 "confirm_destructive": False,
             },
             description=f"Store cue {cue_num} in sequence {sequence_id}",
@@ -63,12 +66,20 @@ def build_playback_workflow(goal: ParsedGoal) -> list[PlanStep]:
         steps.append(store_cue)
         prev_id = store_cue.id
 
+    if executor_id is None:
+        # Never pick an executor slot on the operator's behalf — it may be in use.
+        goal.notes.append("No executor given — cues stored but not assigned to a fader.")
+        return steps
+
     # Step 3: Assign sequence to executor
     assign = PlanStep(
         tool_name="assign_object",
         tool_args={
-            "source": f"sequence {sequence_id}",
-            "target": f"executor {page}.{executor_id}",
+            "mode": "assign",
+            "source_type": "Sequence",
+            "source_id": sequence_id,
+            "target_type": "Executor",
+            "target_id": f"{page}.{executor_id}",
             "confirm_destructive": False,
         },
         description=f"Assign sequence {sequence_id} to executor {page}.{executor_id}",

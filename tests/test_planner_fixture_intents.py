@@ -98,8 +98,9 @@ class TestGroupRangeFix:
     def test_group_workflow_uses_fixture_range(self):
         _, steps = planner.plan_from_text('create group 5 from fixtures 20-30 called "Bars"')
         create = next(s for s in steps if s.tool_name == "create_fixture_group")
-        assert create.tool_args["start"] == 20
-        assert create.tool_args["end"] == 30
+        assert create.tool_args["start_fixture"] == 20
+        assert create.tool_args["end_fixture"] == 30
+        assert create.tool_args["group_name"] == "Bars"
 
     def test_group_workflow_thru_syntax(self):
         parsed = planner.classify_goal("group fixtures 101 thru 112")
