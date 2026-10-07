@@ -1,9 +1,9 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 1.3.2
+version: 1.3.3
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-07T22:17:13Z
+last_updated: 2026-10-07T22:30:20Z
 ---
 
 # Project Rules
@@ -128,7 +128,7 @@ make install-hooks
 - Unit tests import command builders or vocab directly and assert on returned strings.
 - No live console required; live tests are in `tests/test_live_integration.py` (skipped by default).
 - Use `@pytest.mark.asyncio` for async tests.
-- Current counts (2026-07-17): **3150 tests** (3000 passing, 150 skipped, 0 failed).
+- Current counts (2026-10-08): **3335 tests** (3171 passing, 164 skipped, 0 failed). Live suites: `--live` (reads), `--live --destructive` (throwaway show).
 
 ---
 
