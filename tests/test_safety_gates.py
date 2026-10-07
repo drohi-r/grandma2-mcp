@@ -139,9 +139,11 @@ def test_server_instructions_do_not_hardcode_a_tool_count():
 
 @pytest.mark.parametrize("relpath", ["README.md", "pyproject.toml", "CLAUDE.md"])
 def test_doc_tool_counts_match_registry(relpath):
-    text = (REPO / relpath).read_text(encoding="utf-8")
+    # The architecture table's server.py row gives that file's own share — skip it.
+    text = "\n".join(
+        line for line in (REPO / relpath).read_text(encoding="utf-8").splitlines()
+        if "src/server.py" not in line
+    )
     claims = {int(n) for n in re.findall(r"\b(\d{3})\s+(?:MCP\s+)?tools\b", text)}
-    # CLAUDE.md lists server.py's own share ("200 tools + ...") in the architecture table.
-    claims.discard(200)
     expected = _registered_tool_count()
     assert claims <= {expected}, f"{relpath} claims {sorted(claims)} tools; registry has {expected}"

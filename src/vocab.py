@@ -430,6 +430,64 @@ def classify_token(tok: str, spec: VocabSpec) -> ResolvedToken:
     )
 
 
+_RISK_RANK = {RiskTier.SAFE_READ: 0, RiskTier.SAFE_WRITE: 1, RiskTier.UNKNOWN: 2, RiskTier.DESTRUCTIVE: 3}
+_BARE_NUMBER_RE = re.compile(r"^\d+$")
+
+
+def split_command_chain(command: str) -> list[str]:
+    """Split an MA2 command line on ``;`` separators outside double quotes."""
+    parts: list[str] = []
+    current: list[str] = []
+    in_quotes = False
+    for ch in command:
+        if ch == '"':
+            in_quotes = not in_quotes
+        if ch == ";" and not in_quotes:
+            parts.append("".join(current).strip())
+            current = []
+        else:
+            current.append(ch)
+    parts.append("".join(current).strip())
+    return [p for p in parts if p]
+
+
+@dataclass(frozen=True)
+class CommandRisk:
+    """Risk of a whole command line: the riskiest of its ``;``-separated parts."""
+    risk: RiskTier
+    part: str                 # the part that set the risk
+    canonical: str | None
+    reason: str
+    parts: tuple[str, ...]
+
+
+def classify_command(command: str, spec: VocabSpec) -> CommandRisk:
+    """Classify every part of a command chain; the highest tier wins.
+
+    ``ClearAll ; Store Group 5`` is DESTRUCTIVE even though it starts safe. A
+    bare number is DESTRUCTIVE: sent while a pop-up is open it picks an answer
+    (e.g. confirms an overwrite) — use the dedicated pop-up tool instead.
+    """
+    parts = split_command_chain(command)
+    best = CommandRisk(RiskTier.SAFE_READ, "", None, "empty command", tuple(parts))
+    for part in parts:
+        token = part.split()[0]
+        if _BARE_NUMBER_RE.match(part):
+            candidate = CommandRisk(
+                RiskTier.DESTRUCTIVE, part, None,
+                "bare number — may answer an open console pop-up", tuple(parts),
+            )
+        else:
+            resolved = classify_token(token, spec)
+            candidate = CommandRisk(
+                resolved.risk, part, resolved.canonical,
+                f"'{token}' is {resolved.risk.value}", tuple(parts),
+            )
+        if _RISK_RANK[candidate.risk] > _RISK_RANK[best.risk] or not best.part:
+            best = candidate
+    return best
+
+
 def _kind_for_normalized(normalized: str) -> KeywordKind:
     """Classify keyword kind using the explicit special-char entry set."""
     if normalized in _SPECIAL_CHAR_ENTRIES:

@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
-description: MCP server for grandMA2 lighting consoles — 234 MCP tools via Telnet
-version: 1.2.1
+description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
+version: 1.2.2
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-07T21:33:30Z
+last_updated: 2026-10-07T22:11:08Z
 ---
 
 <p align="center">
@@ -27,7 +27,7 @@ last_updated: 2026-10-07T21:33:30Z
 Built for live production. Pairs with [Resolume MCP](https://github.com/drohi-r/resolume-mcp), [MADRIX MCP](https://github.com/drohi-r/madrix-mcp), [Companion MCP](https://github.com/drohi-r/companion-mcp), and [Beyond MCP](https://github.com/drohi-r/beyond-mcp) for full AI-driven show control.
 
 <table>
-<tr><td><b>Agent Harness</b></td><td>234 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
+<tr><td><b>Agent Harness</b></td><td>237 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
 <tr><td><b>Embedded Agent Core</b></td><td>Orchestrator, task decomposer, working + long-term memory, and a skill registry with self-improvement suggestions. Inject a real LLM client and it becomes a fully autonomous lighting agent that plans, executes, remembers, and learns.</td></tr>
 <tr><td><b>Layered safety gate</b></td><td>Three risk tiers enforced before any command reaches the console: <code>SAFE_READ</code> (always allowed), <code>SAFE_WRITE</code> (standard mode), <code>DESTRUCTIVE</code> (blocked until <code>confirm_destructive=True</code>). Line-break injection rejected at the transport layer.</td></tr>
 <tr><td><b>A closed learning loop</b></td><td>Every tool call recorded to <code>tool_invocations</code>. SkillImprover surfaces repair suggestions from failure patterns and promotion candidates from high-quality sessions. Skills are versioned playbooks with full lineage tracking.</td></tr>
@@ -190,7 +190,7 @@ RAG_EMBED_DIMENSIONS=1536                     # vector dimensions
 
 ## MCP Tools
 
-The server exposes **234 tools** to MCP clients, grouped into 15 categories plus an agentic orchestration layer:
+The server exposes **237 tools** to MCP clients, grouped into 15 categories plus an agentic orchestration layer:
 
 <details>
 <summary><strong>🧭 Navigation & Inspection</strong> — 4 tools</summary>
@@ -550,11 +550,14 @@ python -m scripts.create_matricks_library --color-only
 </details>
 
 <details>
-<summary><strong>⚙️ Console & Utilities</strong> — 8 tools</summary>
+<summary><strong>⚙️ Console & Utilities</strong> — 11 tools</summary>
 
 | Tool | Description |
 |------|-------------|
-| `send_raw_command` | Send any MA command directly (safety-gated) |
+| `send_raw_command` | Send any MA command directly (safety-gated; every `;`-part is classified) |
+| `run_command_batch` | Run a list or file of commands on one held connection; stops at the first console error or pop-up |
+| `answer_console_popup` | Answer a pop-up a reply reported as `pending_popup` (non-Cancel answers need confirmation) |
+| `disconnect_console` | Close this server's Telnet session to free the console; the next call reconnects |
 | `copy_or_move_object` | Copy or move objects between slots (with merge/overwrite) |
 | `delete_object` | Delete any object by type and ID |
 | `manage_variable` | Set or add to console variables (global or user-scoped) |

@@ -403,9 +403,9 @@ from src.server_orchestration_tools import register_orchestration_tools
 from src.session_manager import SessionManager
 from src.telemetry import ToolTelemetry, infer_risk_tier
 from src.console_feedback import annotate_tool_result
-from src.telnet_client import GMA2TelnetClient, collect_transport_warnings
+from src.telnet_client import GMA2TelnetClient, collect_transport_warnings, hold_connection
 from src.tools import set_gma2_client
-from src.vocab import RiskTier, build_v39_spec, classify_token
+from src.vocab import RiskTier, build_v39_spec, classify_command, classify_token
 
 # Load environment variables
 load_dotenv()
@@ -423,6 +423,12 @@ _GMA_PORT = int(os.getenv("GMA_PORT", "30000"))
 _GMA_USER = os.getenv("GMA_USER", "administrator")
 _GMA_PASSWORD = os.getenv("GMA_PASSWORD", "admin")
 _GMA_SAFETY_LEVEL = os.getenv("GMA_SAFETY_LEVEL", "standard").lower()
+
+# grandMA2 truncates a Telnet command line at 1023 characters (then Error #72).
+_MAX_COMMAND_CHARS = 1023
+
+# Friendly sequence property names → MA2 column names (live: "tracking" is ignored).
+_SEQUENCE_PROPERTY_ALIASES = {"tracking": "Track", "track": "Track"}
 
 # Path to the repo-root .env file (used by reconfigure_connection persist).
 from pathlib import Path as _Path  # noqa: E402
@@ -801,10 +807,21 @@ async def send_raw_command(
             "blocked": True,
         }, indent=2)
 
-    # Safety gate: classify the first token
-    first_token = command.strip().split()[0] if command.strip() else ""
-    resolved = classify_token(first_token, _vocab_spec)
+    if len(command) > _MAX_COMMAND_CHARS:
+        return json.dumps({
+            "command_sent": None,
+            "error": (
+                f"Command is {len(command)} characters; the console truncates at "
+                f"{_MAX_COMMAND_CHARS} and fails with Error #72. Split it, or use "
+                "run_command_batch."
+            ),
+            "blocked": True,
+        }, indent=2)
+
+    # Safety gate: classify every ';'-separated part — "ClearAll ; Store ..." is DESTRUCTIVE
+    resolved = classify_command(command, _vocab_spec)
     risk = resolved.risk
+    first_token = resolved.part.split()[0] if resolved.part else ""
 
     # Log and optionally block destructive commands
     if risk == RiskTier.DESTRUCTIVE:
@@ -824,8 +841,8 @@ async def send_raw_command(
                 "risk_tier": risk.value,
                 "canonical_keyword": resolved.canonical,
                 "error": (
-                    f"Command '{first_token}' is classified as {risk.value}. "
-                    f"Set confirm_destructive=True to proceed, or use "
+                    f"Command part '{resolved.part}' is classified as {risk.value} "
+                    f"({resolved.reason}). Set confirm_destructive=True to proceed, or use "
                     f"GMA_SAFETY_LEVEL=admin to disable safety checks."
                 ),
                 "blocked": True,
@@ -866,6 +883,211 @@ async def send_raw_command(
         "canonical_keyword": resolved.canonical,
         "raw_response": raw_response,
         "blocked": False,
+    }, indent=2)
+
+
+# Command files a batch may read (plain command lists only — not .env, keys, etc.)
+_BATCH_FILE_SUFFIXES = {".txt", ".cmd", ".ma2", ".macro"}
+_BATCH_MAX_FAILURES_REPORTED = 50
+
+
+def _load_batch_lines(commands: list[str] | None, commands_file: str | None) -> tuple[list[str], str | None]:
+    if commands_file:
+        path = Path(commands_file)
+        if path.suffix.lower() not in _BATCH_FILE_SUFFIXES:
+            return [], f"commands_file must be one of {sorted(_BATCH_FILE_SUFFIXES)}"
+        if not path.is_file():
+            return [], f"commands_file not found: {commands_file}"
+        raw_lines = path.read_text(encoding="utf-8").splitlines()
+    else:
+        raw_lines = list(commands or [])
+    lines = [ln.strip() for ln in raw_lines]
+    return [ln for ln in lines if ln and not ln.startswith("#")], None
+
+
+@mcp.tool()
+@require_scope(OAuthScope.CUE_STORE)
+@_handle_errors
+async def run_command_batch(
+    commands: list[str] | None = None,
+    commands_file: str | None = None,
+    confirm_destructive: bool = False,
+    stop_on_error: bool = True,
+    delay: float = 0.0,
+    timeout: float = 5.0,
+) -> str:
+    """
+    Run many raw MA commands in order on one held connection (DESTRUCTIVE if any line is).
+
+    Every line (and every ';'-part of a line) is risk-classified before anything
+    is sent; if any is DESTRUCTIVE the whole batch needs confirm_destructive=True.
+    Each command waits for its own console prompt, so batches run far faster than
+    one send_raw_command call per line. Stops at the first console error or
+    pop-up unless stop_on_error=False (a pop-up always stops the batch).
+
+    Args:
+        commands: Command lines to send, in order.
+        commands_file: Path to a .txt/.cmd/.ma2/.macro file, one command per
+            line; blank lines and lines starting with '#' are skipped.
+        confirm_destructive: Required when any line is DESTRUCTIVE.
+        stop_on_error: Stop at the first rejected command (default True).
+        delay: Seconds to wait after each send before reading (default 0).
+        timeout: Seconds to wait for each command's first output.
+
+    Returns:
+        str: JSON summary — total, executed, failed (line, command, errors),
+            stopped_early, duration_s, last_reply.
+    """
+    from src.console_feedback import find_console_errors, find_pending_popup
+
+    lines, load_error = _load_batch_lines(commands, commands_file)
+    if load_error:
+        return json.dumps({"error": load_error, "blocked": True}, indent=2)
+    if not lines:
+        return json.dumps({"error": "No commands given (commands or commands_file).", "blocked": True}, indent=2)
+
+    too_long = [i for i, ln in enumerate(lines, 1) if len(ln) > _MAX_COMMAND_CHARS]
+    if too_long:
+        return json.dumps({
+            "error": f"Lines exceed {_MAX_COMMAND_CHARS} characters (console truncates them): {too_long[:20]}",
+            "blocked": True,
+        }, indent=2)
+
+    risks = [classify_command(ln, _vocab_spec) for ln in lines]
+    destructive = [i for i, r in enumerate(risks, 1) if r.risk == RiskTier.DESTRUCTIVE]
+    if _GMA_SAFETY_LEVEL == "read-only":
+        not_read = [i for i, r in enumerate(risks, 1) if r.risk != RiskTier.SAFE_READ]
+        if not_read:
+            return json.dumps({
+                "error": "Server is in read-only mode; batch contains non-read lines.",
+                "non_read_lines": not_read[:50],
+                "blocked": True,
+            }, indent=2)
+    if destructive and not confirm_destructive and _GMA_SAFETY_LEVEL != "admin":
+        return json.dumps({
+            "blocked": True,
+            "risk_tier": "DESTRUCTIVE",
+            "destructive_lines": destructive[:50],
+            "destructive_count": len(destructive),
+            "error": (
+                f"{len(destructive)} of {len(lines)} lines are DESTRUCTIVE "
+                f"(first: line {destructive[0]} '{risks[destructive[0] - 1].part}'). "
+                "Set confirm_destructive=True to run the batch."
+            ),
+        }, indent=2)
+
+    client = await get_client()
+    started = time.monotonic()
+    failed: list[dict] = []
+    executed = 0
+    stopped_early = False
+    last_reply = ""
+    async with hold_connection(client):
+        for lineno, cmd in enumerate(lines, 1):
+            raw = await client.send_command_with_response(
+                cmd, delay=delay, timeout=timeout, until_prompt=True,
+            )
+            executed += 1
+            last_reply = raw
+            errors = find_console_errors(raw, cmd)
+            popup = find_pending_popup(raw)
+            if errors or popup:
+                if len(failed) < _BATCH_MAX_FAILURES_REPORTED:
+                    failed.append({
+                        "line": lineno,
+                        "command": cmd,
+                        "errors": [e.describe() for e in errors],
+                        "pending_popup": popup,
+                    })
+                if popup or stop_on_error:
+                    stopped_early = lineno < len(lines)
+                    break
+
+    result: dict = {
+        "total": len(lines),
+        "executed": executed,
+        "failed": failed,
+        "stopped_early": stopped_early,
+        "duration_s": round(time.monotonic() - started, 2),
+        "destructive_count": len(destructive),
+        "last_reply": last_reply[-500:],
+        "ok": not failed,
+    }
+    if failed:
+        first = failed[0]
+        result["error"] = (
+            f"Line {first['line']} ('{first['command']}') failed: "
+            + ("; ".join(first["errors"]) or "console is waiting on a pop-up — use answer_console_popup")
+        )
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.CUE_STORE)
+@_handle_errors
+async def answer_console_popup(
+    choice: int,
+    cancel_option: int | None = None,
+    confirm_destructive: bool = False,
+) -> str:
+    """
+    Answer a console pop-up a previous tool reported as pending_popup.
+
+    Pass the option number from pending_popup.options. Choosing the Cancel
+    option is always allowed (give its number as cancel_option); any other
+    answer can confirm an overwrite or delete and needs confirm_destructive=True.
+
+    Args:
+        choice: Option number to press (e.g. 1 for "Ok").
+        cancel_option: The pop-up's Cancel option number, when known.
+        confirm_destructive: Required for any answer other than Cancel.
+
+    Returns:
+        str: JSON with command_sent and raw_response.
+    """
+    if choice < 0 or choice > 9:
+        return json.dumps({"error": "choice must be a single option number 0-9", "blocked": True}, indent=2)
+    if choice != cancel_option and not confirm_destructive:
+        return json.dumps({
+            "command_sent": None,
+            "blocked": True,
+            "risk_tier": "DESTRUCTIVE",
+            "error": (
+                "Answering a pop-up with anything but its Cancel option can confirm an "
+                "overwrite or delete. Set confirm_destructive=True, or pass cancel_option."
+            ),
+        }, indent=2)
+
+    client = await get_client()
+    cmd = str(choice)
+    raw_response = await client.send_command_with_response(cmd)
+    return json.dumps({
+        "command_sent": cmd,
+        "raw_response": raw_response,
+        "risk_tier": "SAFE_WRITE" if choice == cancel_option else "DESTRUCTIVE",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.SESSION_MANAGE)
+@_handle_errors
+async def disconnect_console() -> str:
+    """
+    Close this server's Telnet session(s) to the console.
+
+    Use it to free the console for another Telnet client or to stop an idle
+    session; the next tool call reconnects automatically with the current
+    settings. Does not change any console state.
+
+    Returns:
+        str: JSON with sessions_closed.
+    """
+    manager = await _get_session_manager()
+    closed = await manager.release_all()
+    return json.dumps({
+        "sessions_closed": closed,
+        "note": "Disconnected. The next tool call reconnects automatically.",
+        "ok": True,
     }, indent=2)
 
 
@@ -3910,21 +4132,40 @@ async def set_sequence_property(
             "risk_tier": "DESTRUCTIVE",
         }, indent=2)
 
+    from src.commands.helpers import quote_name
+    from src.console_feedback import find_console_errors
+    from src.prompt_parser import parse_tabular_list
+
+    # MA2 column names differ from the friendly ones ("tracking" is "Track").
+    prop = _SEQUENCE_PROPERTY_ALIASES.get(property_name.strip().lower(), property_name.strip())
+    assign_cmd = f"Assign Sequence {sequence_id} /{prop}={quote_name(value)}"
+    list_cmd = f"List Sequence {sequence_id}"
+
     client = await get_client()
-    result = await set_property(
-        client,
-        path=f"sequence {sequence_id}",
-        property_name=property_name,
-        value=value,
-    )
+    async with hold_connection(client):
+        assign_response = await client.send_command_with_response(assign_cmd)
+        list_response = await client.send_command_with_response(list_cmd)
+
+    errors = find_console_errors(assign_response, assign_cmd)
+    verified_value = None
+    for row in parse_tabular_list(list_response):
+        for key, cell in row.items():
+            if key.strip().lower() == prop.lower():
+                verified_value = cell.strip()
+    verified = verified_value is not None and verified_value.lower() == str(value).strip().lower()
+
     return json.dumps({
         "sequence_id": sequence_id,
-        "property": property_name,
+        "property": prop,
         "value": value,
-        "commands_sent": result.commands_sent,
-        "success": result.success,
-        "verified_value": result.verified_value,
-        "error": result.error,
+        "commands_sent": [assign_cmd, list_cmd],
+        "raw_responses": [assign_response, list_response],
+        "success": not errors,
+        "verified": verified,
+        "verified_value": verified_value,
+        "note": None if verified else (
+            f"Could not read {prop} back from '{list_cmd}' — check the sequence on the console."
+        ),
         "risk_tier": "DESTRUCTIVE",
     }, indent=2)
 
@@ -3938,26 +4179,31 @@ async def set_sequence_property(
 @require_scope(OAuthScope.PLAYBACK_GO)
 @_handle_errors
 async def save_show(
-    action: str,
+    action: str = "save",
     show_name: str | None = None,
 ) -> str:
     """
     Save the current show file to disk.
 
     Args:
-        action: "save" (overwrite current) or "saveas" (save under a new name)
-        show_name: Show name/path (required for action="saveas")
+        action: "save" (overwrite current) or "saveas" (save under a new name).
+            Giving show_name implies "saveas".
+        show_name: Show name (required for action="saveas")
 
     Returns:
-        str: JSON result with command sent
+        str: JSON result with command sent. Saving over an existing file may
+            open an overwrite pop-up — reported as pending_popup.
     """
+    from src.commands.functions.store import save_show as build_save_show
+
     if action not in ("save", "saveas"):
         return json.dumps({"error": "action must be 'save' or 'saveas'", "blocked": True}, indent=2)
     if action == "saveas" and not show_name:
         return json.dumps({"error": "show_name is required for action='saveas'", "blocked": True}, indent=2)
 
     client = await get_client()
-    cmd = "save" if action == "save" else f'saveas "{show_name}"'
+    # SaveShow is the real keyword; "saveas" is UNKNOWN COMMAND on the console.
+    cmd = build_save_show(show_name or None)
     response = await client.send_command_with_response(cmd)
     return json.dumps({
         "command_sent": cmd,
@@ -4362,14 +4608,16 @@ async def discover_fixture_type_attributes(
     async def send(cmd: str) -> str:
         return await client.send_command_with_response(cmd)
 
-    await send("cd /")
-    await send("cd EditSetup")
-    await send("cd FixtureTypes")
-    await send(f"cd {fixture_type_id}")
-    await send("cd 1")  # first mode
-    await send("cd 1")  # first subfixture
-    raw = await send("list")
-    await send("cd /")  # return to root
+    # One uninterrupted cd sequence — a parallel call must not land mid-path.
+    async with hold_connection(client):
+        await send("cd /")
+        await send("cd EditSetup")
+        await send("cd FixtureTypes")
+        await send(f"cd {fixture_type_id}")
+        await send("cd 1")  # first mode
+        await send("cd 1")  # first subfixture
+        raw = await send("list")
+        await send("cd /")  # return to root
 
     return json.dumps({
         "fixture_type_id": fixture_type_id,
@@ -7966,7 +8214,7 @@ async def reconfigure_connection(
     port: int = 30000,
     user: str = "administrator",
     password: str = "admin",
-    persist: bool = True,
+    persist: bool = False,
     verify: bool = True,
 ) -> str:
     """Swap the active console connection and (optionally) persist to .env.
@@ -7982,8 +8230,11 @@ async def reconfigure_connection(
         port: Telnet port (default 30000).
         user: Console user.
         password: Console password.
-        persist: When True, write GMA_HOST/GMA_PORT/GMA_USER/GMA_PASSWORD to .env.
+        persist: When True, also write GMA_HOST/GMA_PORT/GMA_USER/GMA_PASSWORD to
+            .env so the next server start uses them (default False: this run only).
         verify: When True, run a SAFE_READ probe before committing the swap.
+            With False the reply says ``verified: false``. To just free the
+            console, use disconnect_console instead of pointing at a dummy host.
 
     Returns:
         JSON envelope: ``{success, previous_host, new_host, verified, persisted_to,
@@ -8000,7 +8251,7 @@ async def reconfigure_connection(
             "warning": None, "error": None,
         }, indent=2)
 
-    verified = True
+    verified = False  # only a successful round-trip may claim verified
     if verify:
         verified = await _verify_round_trip(host, port, user, password)
     if verify and not verified:

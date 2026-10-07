@@ -60,6 +60,27 @@ def ends_with_prompt(text: str) -> bool:
     return bool(_PROMPT_TAIL_RE.search(_ANSI_RE.sub("", text)))
 
 
+def hold_connection(client: Any) -> contextlib.AbstractAsyncContextManager:
+    """``client.exclusive()`` for real clients; a no-op for mocks/mock-mode clients."""
+    if callable(getattr(type(client), "exclusive", None)):
+        return client.exclusive()
+    return contextlib.nullcontext()
+
+
+def frame_reply(raw: str, command: str) -> str:
+    """Start the reply at the console's echo of *command*.
+
+    Output that arrived before the echo belongs to something else — another
+    session's commands, or the tail of the previous reply — and is dropped.
+    Without an echo the reply is returned unchanged.
+    """
+    cmd = command.strip()
+    if not cmd or not raw:
+        return raw
+    idx = raw.lower().find(cmd.lower())
+    return raw[idx:] if idx > 0 else raw
+
+
 class GMA2TelnetClient:
     """
     grandMA2 Telnet Connection Client (Async Version)
@@ -120,6 +141,11 @@ class GMA2TelnetClient:
         self._connection: Any | None = None  # Kept for compatibility checks
         # True only when the console explicitly refused the credentials.
         self.login_rejected = False
+        # One exchange at a time per connection: concurrent tool calls would
+        # otherwise interleave writes and read each other's replies.
+        self._lock: asyncio.Lock | None = None
+        self._lock_owner: asyncio.Task | None = None
+        self._lock_depth = 0
 
         logger.debug(
             f"GMA2TelnetClient initialized: host={host}, port={port}, user={user}"
@@ -131,6 +157,53 @@ class GMA2TelnetClient:
         if self._writer is None or self._connection is None:
             return False
         return not self._socket_closed()
+
+    @contextlib.asynccontextmanager
+    async def exclusive(self):
+        """Hold the connection for a multi-command sequence (re-entrant per task).
+
+        Every send already takes this lock; wrap a ``cd …; list; cd /`` style
+        sequence in it so no other tool call lands in the middle.
+        """
+        task = asyncio.current_task()
+        if self._lock_owner is task and task is not None:
+            self._lock_depth += 1
+            try:
+                yield self
+            finally:
+                self._lock_depth -= 1
+            return
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        async with self._lock:
+            self._lock_owner, self._lock_depth = task, 1
+            try:
+                yield self
+            finally:
+                self._lock_owner, self._lock_depth = None, 0
+
+    async def _drain(self, max_reads: int = 50) -> str:
+        """Discard output that arrived since the last exchange (echo of other
+        sessions, a late tail of the previous reply) so it can't leak in."""
+        stale: list[str] = []
+        for _ in range(max_reads):
+            try:
+                chunk = await asyncio.wait_for(self._reader.read(4096), timeout=0.05)
+            except TimeoutError:
+                break
+            if not chunk:
+                break
+            stale.append(chunk)
+        return "".join(stale)
+
+    async def ping(self) -> None:
+        """Keep the socket alive and consume whatever the console printed meanwhile."""
+        async with self.exclusive():
+            if self._writer is None or self._reader is None:
+                return
+            self._writer.write("\r\n")
+            await asyncio.sleep(0.1)
+            await self._drain()
 
     def _socket_closed(self) -> bool:
         # Strict ``is True``: only a real reader/writer answers with a bool.
@@ -263,17 +336,18 @@ class GMA2TelnetClient:
 
         logger.debug(f"Sending command: {command}")
 
-        # Send command (automatically add newline)
-        full_command = f"{command}\r\n"
-        self._writer.write(full_command)
+        async with self.exclusive():
+            # Send command (automatically add newline)
+            full_command = f"{command}\r\n"
+            self._writer.write(full_command)
 
-        # Wait for grandMA2 to process command
-        await asyncio.sleep(delay)
+            # Wait for grandMA2 to process command
+            await asyncio.sleep(delay)
         logger.debug(f"Command sent, waiting {delay} seconds")
 
     async def send_command_with_response(
         self, command: str, timeout: float = 2.0, delay: float = 0.3,
-        subsequent_timeout: float = 0.10,
+        subsequent_timeout: float = 0.10, until_prompt: bool = False,
     ) -> str:
         """
         Send a command to grandMA2 and read the response (async).
@@ -286,9 +360,12 @@ class GMA2TelnetClient:
             timeout: Maximum wait time for response in seconds
             delay: Initial delay after sending command
             subsequent_timeout: Timeout for follow-up reads after the first chunk
+            until_prompt: Return as soon as the reply ends in the console prompt
+                instead of waiting for the output to go quiet (batch speed).
 
         Returns:
-            str: Response from grandMA2
+            str: Response from grandMA2, starting at the echo of *command*
+                when the console echoed it (earlier output is dropped)
 
         Raises:
             RuntimeError: Connection not established
@@ -301,13 +378,22 @@ class GMA2TelnetClient:
 
         logger.debug(f"Sending command with response: {command}")
 
+        async with self.exclusive():
+            return await self._exchange(command, timeout, delay, subsequent_timeout, until_prompt)
+
+    async def _exchange(
+        self, command: str, timeout: float, delay: float,
+        subsequent_timeout: float, until_prompt: bool,
+    ) -> str:
+        """One command → one reply. Caller holds ``exclusive()``."""
         if self._socket_closed():
             self._mark_dropped()
             raise ConnectionError("Console closed the Telnet connection; it will reconnect on the next call")
+        if self._writer is None or self._reader is None:
+            raise ConnectionError("Console connection was dropped; it will reconnect on the next call")
 
         # Clear any pending data
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(self._reader.read(4096), timeout=0.1)
+        await self._drain()
 
         # Send command
         full_command = f"{command}\r\n"
@@ -337,6 +423,8 @@ class GMA2TelnetClient:
                     response_parts.append(chunk)
                     # Shorten timeout for subsequent reads
                     timeout = subsequent_timeout
+                    if until_prompt and ends_with_prompt("".join(response_parts)):
+                        break
                 else:
                     eof = self._socket_closed()
                     break
@@ -356,7 +444,7 @@ class GMA2TelnetClient:
             record_transport_warning("no reply from console within timeout")
         elif not ends_with_prompt(response):
             record_transport_warning("reply ended without a console prompt; it may be cut off")
-        return response
+        return frame_reply(response, command)
 
     async def disconnect(self) -> None:
         """Close the Telnet connection (async)."""

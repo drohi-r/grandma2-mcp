@@ -12,6 +12,7 @@ executor, telemetry) can tell the difference.
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import asdict, dataclass
 
@@ -39,8 +40,41 @@ _WARNING_PHRASES = ("NO OBJECTS FOUND",)
 
 _CODE_KINDS: dict[int, str] = {1: "syntax", 72: "rejected"}
 
-# Keys under which tools return raw console text.
+# Keys under which tools return raw console text (a string, or a list of strings
+# paired with "commands_sent" for multi-command tools).
 CONSOLE_TEXT_KEYS = ("raw_response", "response")
+CONSOLE_TEXT_LIST_KEYS = ("raw_responses", "responses")
+
+# A console pop-up waiting for an answer: "[1]: Ok   2 : Cancel"
+_POPUP_OPTION_RE = re.compile(
+    r"\[?(\d)\]?\s*:\s*(Ok|Cancel|Yes|No|Overwrite|Merge|Abort|Create|Retry|Ignore|Replace|New)\b",
+    re.IGNORECASE,
+)
+
+_DEFAULT_MAX_REPLY_CHARS = 20000
+
+
+def _max_reply_chars() -> int:
+    try:
+        return max(1000, int(os.getenv("GMA_MAX_REPLY_CHARS", _DEFAULT_MAX_REPLY_CHARS)))
+    except ValueError:
+        return _DEFAULT_MAX_REPLY_CHARS
+
+
+def find_pending_popup(raw: str) -> dict | None:
+    """Return the open pop-up's options when the reply ends waiting on one."""
+    if not raw:
+        return None
+    text = strip_ansi(raw)
+    options = {int(m.group(1)): m.group(2).title() for m in _POPUP_OPTION_RE.finditer(text)}
+    if len(options) < 2:
+        return None
+    first = _POPUP_OPTION_RE.search(text)
+    lead = text[: first.start()].strip().splitlines() if first else []
+    return {
+        "text": " ".join(lead[-2:])[:200],
+        "options": [{"choice": n, "label": label} for n, label in sorted(options.items())],
+    }
 
 
 @dataclass(frozen=True)
@@ -111,21 +145,52 @@ def annotate_tool_result(
     command = data.get("command_sent") if isinstance(data.get("command_sent"), str) else None
     errors: list[ConsoleError] = []
     warnings: list[str] = []
+    popup: dict | None = None
+    texts: list[tuple[str, str | None]] = []
     for key in CONSOLE_TEXT_KEYS:
         value = data.get(key)
         if isinstance(value, str):
-            errors.extend(find_console_errors(value, command))
-            warnings.extend(find_console_warnings(value, command))
+            data[key] = value = strip_ansi(value)
+            texts.append((value, command))
+    sent = data.get("commands_sent") if isinstance(data.get("commands_sent"), list) else []
+    for key in CONSOLE_TEXT_LIST_KEYS:
+        values = data.get(key)
+        if isinstance(values, list):
+            data[key] = values = [strip_ansi(v) if isinstance(v, str) else v for v in values]
+            for i, v in enumerate(values):
+                if isinstance(v, str):
+                    texts.append((v, sent[i] if i < len(sent) and isinstance(sent[i], str) else None))
+    for text, cmd in texts:
+        errors.extend(find_console_errors(text, cmd))
+        warnings.extend(w for w in find_console_warnings(text, cmd) if w not in warnings)
+    if texts:
+        popup = find_pending_popup(texts[-1][0])
 
+    if popup:
+        data["ok"] = False
+        data["pending_popup"] = popup
+        if not data.get("error"):
+            choices = ", ".join(f"{o['choice']}={o['label']}" for o in popup["options"])
+            data["error"] = (
+                f"Console is waiting on a pop-up ({choices}); nothing else will run until it "
+                "is answered. Use answer_console_popup(choice=N)."
+            )
     if errors:
         data["ok"] = False
         data["console_errors"] = [asdict(e) for e in errors]
         if not data.get("error"):
             data["error"] = "Console rejected the command: " + "; ".join(e.describe() for e in errors)
-    elif "ok" not in data:
+    elif "ok" not in data and not popup:
         data["ok"] = not (data.get("blocked") is True or bool(data.get("error")))
     if warnings:
         data["console_warnings"] = warnings
+    limit = _max_reply_chars()
+    for key in CONSOLE_TEXT_KEYS:
+        value = data.get(key)
+        if isinstance(value, str) and len(value) > limit:
+            data[key] = value[:limit] + f"\n… [truncated {len(value) - limit} of {len(value)} chars]"
+            data[f"{key}_truncated"] = True
+            data[f"{key}_chars"] = len(value)
     if transport_warnings:
         data["transport_warnings"] = list(transport_warnings)
 
