@@ -438,10 +438,10 @@ _vocab_spec = build_v39_spec()
 # Create MCP server
 mcp = FastMCP(
     name="MA2 Agent",
-    instructions="""grandMA2 MCP server — 218 tools, 13 resources, 10 prompts.
+    instructions="""grandMA2 MCP server — tools, resources, and prompts for console control via Telnet.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
-Use ma2://docs/tool-taxonomy resource to browse all 218 tools by category.
+Use ma2://docs/tool-taxonomy resource to browse all tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
@@ -3576,9 +3576,10 @@ async def cut_paste_object(
     object_id: int | str | None = None,
     target_id: int | str | None = None,
     end: int | str | None = None,
+    confirm_destructive: bool = False,
 ) -> str:
     """
-    Cut an object to clipboard, or paste clipboard content at a target (SAFE_WRITE).
+    Cut an object to clipboard, or paste clipboard content at a target (DESTRUCTIVE).
 
     Cut + Paste is a two-step move: Cut prepares the source, Paste places it.
     Does not work with cue objects — use copy_or_move_object for cues.
@@ -3589,12 +3590,21 @@ async def cut_paste_object(
         object_id: Source object ID (required for cut; ignored for bare paste)
         target_id: Destination ID (for paste)
         end: End ID for range cut (thru syntax)
+        confirm_destructive: Must be True (cut removes the source; paste overwrites)
 
     Returns:
         str: JSON result with command sent
     """
     if action not in ("cut", "paste"):
         return json.dumps({"error": "action must be 'cut' or 'paste'", "blocked": True}, indent=2)
+
+    if not confirm_destructive:
+        return json.dumps({
+            "command_sent": None,
+            "blocked": True,
+            "error": f"{action.title()} is a DESTRUCTIVE operation. Set confirm_destructive=True to proceed.",
+            "risk_tier": "DESTRUCTIVE",
+        }, indent=2)
 
     if action == "cut":
         if object_type is None or object_id is None:
@@ -3608,7 +3618,7 @@ async def cut_paste_object(
     return json.dumps({
         "command_sent": cmd,
         "raw_response": response,
-        "risk_tier": "SAFE_WRITE",
+        "risk_tier": "DESTRUCTIVE",
     }, indent=2)
 
 
@@ -10949,7 +10959,7 @@ def resource_vocab_summary() -> str:
 @mcp.resource("ma2://docs/tool-taxonomy")
 def resource_tool_taxonomy() -> str:
     """
-    ML-generated tool taxonomy — 218 tools clustered into 14 categories.
+    ML-generated tool taxonomy — all registered tools clustered into categories.
 
     Each entry includes tool name, category, and docstring summary.
     Use this resource to understand the tool landscape before calling
@@ -12812,13 +12822,13 @@ async def system_admin(
     Args:
         action: One of:
             SAFE_READ: "logout"
-            SAFE_WRITE: "login", "lock", "unlock", "lua", "chat"
-            DESTRUCTIVE: "reboot", "restart", "shutdown"
+            SAFE_WRITE: "login", "lock", "unlock", "chat"
+            DESTRUCTIVE: "lua", "reboot", "restart", "shutdown"
         user: Username (required for login)
         password: Password (required for login; optional for lock/unlock)
         script: Lua script string (required for lua)
         message: Chat message text (required for chat)
-        confirm_destructive: Must be True for reboot/restart/shutdown
+        confirm_destructive: Must be True for lua/reboot/restart/shutdown
 
     Returns:
         str: JSON with command_sent, raw_response, risk_tier
@@ -12839,7 +12849,8 @@ async def system_admin(
     if action not in valid_actions:
         return json.dumps({"error": f"Invalid action '{action}'. Valid: {sorted(valid_actions)}", "blocked": True}, indent=2)
 
-    destructive_actions = {"reboot", "restart", "shutdown"}
+    # lua is DESTRUCTIVE: gma.cmd() can issue any console command (same gate as run_lua_script)
+    destructive_actions = {"lua", "reboot", "restart", "shutdown"}
     if action in destructive_actions and not confirm_destructive:
         return json.dumps({
             "blocked": True,
@@ -12865,7 +12876,7 @@ async def system_admin(
         if script is None:
             return json.dumps({"error": "script required for lua", "blocked": True}, indent=2)
         cmd = build_lua(script)
-        risk_tier = "SAFE_WRITE"
+        risk_tier = "DESTRUCTIVE"
     elif action == "chat":
         if message is None:
             return json.dumps({"error": "message required for chat", "blocked": True}, indent=2)
