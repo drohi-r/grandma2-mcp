@@ -17,12 +17,47 @@ Uses telnetlib3 (based on asyncio) to replace the deprecated telnetlib module.
 import asyncio
 import contextlib
 import logging
+import re
+from collections.abc import Iterator
+from contextvars import ContextVar
 from typing import Any
 
 import telnetlib3
 
 # Configure logger
 logger = logging.getLogger(__name__)
+
+# A reply is complete once the console reprints its prompt: "[Channel]>" or "Fixture>".
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+_PROMPT_TAIL_RE = re.compile(r"(\[[^\]\r\n]+\]|[A-Za-z][\w .:/-]*)>/?\s*$")
+
+# Extra time to wait for the rest of a reply that has not ended in a prompt yet.
+_SETTLE_TIMEOUT = 0.5
+
+# Per-tool-call sink for transport problems (set by the server's tool wrapper).
+_transport_warnings: ContextVar[list[str] | None] = ContextVar("transport_warnings", default=None)
+
+
+def record_transport_warning(message: str) -> None:
+    """Record a transport problem for the tool call in progress (no-op outside one)."""
+    sink = _transport_warnings.get()
+    if sink is not None and message not in sink:
+        sink.append(message)
+
+
+@contextlib.contextmanager
+def collect_transport_warnings() -> Iterator[list[str]]:
+    """Collect transport warnings raised by Telnet reads inside the block."""
+    sink: list[str] = []
+    token = _transport_warnings.set(sink)
+    try:
+        yield sink
+    finally:
+        _transport_warnings.reset(token)
+
+
+def ends_with_prompt(text: str) -> bool:
+    return bool(_PROMPT_TAIL_RE.search(_ANSI_RE.sub("", text)))
 
 
 class GMA2TelnetClient:
@@ -83,6 +118,8 @@ class GMA2TelnetClient:
         self._reader: Any | None = None
         self._writer: Any | None = None
         self._connection: Any | None = None  # Kept for compatibility checks
+        # True only when the console explicitly refused the credentials.
+        self.login_rejected = False
 
         logger.debug(
             f"GMA2TelnetClient initialized: host={host}, port={port}, user={user}"
@@ -91,7 +128,23 @@ class GMA2TelnetClient:
     @property
     def is_connected(self) -> bool:
         """Check whether the telnet connection appears healthy."""
-        return self._writer is not None and self._connection is not None
+        if self._writer is None or self._connection is None:
+            return False
+        return not self._socket_closed()
+
+    def _socket_closed(self) -> bool:
+        # Strict ``is True``: only a real reader/writer answers with a bool.
+        at_eof = getattr(self._reader, "at_eof", None)
+        is_closing = getattr(self._writer, "is_closing", None)
+        return (callable(at_eof) and at_eof() is True) or (callable(is_closing) and is_closing() is True)
+
+    def _mark_dropped(self) -> None:
+        with contextlib.suppress(Exception):
+            if self._writer is not None:
+                self._writer.close()
+        self._writer = None
+        self._reader = None
+        self._connection = None
 
     def run_sync(self, coro: Any) -> Any:
         """
@@ -156,6 +209,7 @@ class GMA2TelnetClient:
             raise RuntimeError("Connection not established, call connect() first")
 
         logger.info(f"Logging in as {self.user}...")
+        self.login_rejected = False
 
         # Build login command (password is not logged)
         login_cmd = f'login "{self.user}" "{self.password}"\r\n'
@@ -178,6 +232,7 @@ class GMA2TelnetClient:
                 for pattern in _ERROR_PATTERNS:
                     if pattern in text:
                         logger.error("Login rejected — response contains %r: %s", pattern, text.strip())
+                        self.login_rejected = True
                         return False
             logger.info("Login completed (response received)")
             return True
@@ -246,6 +301,10 @@ class GMA2TelnetClient:
 
         logger.debug(f"Sending command with response: {command}")
 
+        if self._socket_closed():
+            self._mark_dropped()
+            raise ConnectionError("Console closed the Telnet connection; it will reconnect on the next call")
+
         # Clear any pending data
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(self._reader.read(4096), timeout=0.1)
@@ -257,28 +316,46 @@ class GMA2TelnetClient:
         # Wait for grandMA2 to process
         await asyncio.sleep(delay)
 
-        # Read response
-        response_parts = []
+        # Read until the output goes quiet. If it went quiet before the console
+        # reprinted its prompt, wait once more (settle) for the rest of the reply.
+        response_parts: list[str] = []
+        settled = False
+        eof = False
         try:
-            # Continue reading until no more data
             while True:
                 try:
                     chunk = await asyncio.wait_for(
                         self._reader.read(4096), timeout=timeout
                     )
-                    if chunk:
-                        response_parts.append(chunk)
-                        # Shorten timeout for subsequent reads
-                        timeout = subsequent_timeout
-                    else:
-                        break
                 except TimeoutError:
+                    if response_parts and not settled and not ends_with_prompt("".join(response_parts)):
+                        settled = True
+                        timeout = _SETTLE_TIMEOUT
+                        continue
+                    break
+                if chunk:
+                    response_parts.append(chunk)
+                    # Shorten timeout for subsequent reads
+                    timeout = subsequent_timeout
+                else:
+                    eof = self._socket_closed()
                     break
         except Exception as e:
             logger.warning(f"Error reading response: {e}")
+            record_transport_warning(f"read error: {e}")
 
         response = "".join(response_parts)
         logger.debug(f"Response received: {len(response)} characters")
+
+        if eof:
+            self._mark_dropped()
+            if not response:
+                raise ConnectionError("Console closed the Telnet connection; it will reconnect on the next call")
+            record_transport_warning("connection closed while reading; reply may be cut off")
+        elif not response:
+            record_transport_warning("no reply from console within timeout")
+        elif not ends_with_prompt(response):
+            record_transport_warning("reply ended without a console prompt; it may be cut off")
         return response
 
     async def disconnect(self) -> None:

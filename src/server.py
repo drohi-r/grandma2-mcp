@@ -402,7 +402,8 @@ from src.orchestrator import Orchestrator
 from src.server_orchestration_tools import register_orchestration_tools
 from src.session_manager import SessionManager
 from src.telemetry import ToolTelemetry, infer_risk_tier
-from src.telnet_client import GMA2TelnetClient
+from src.console_feedback import annotate_tool_result
+from src.telnet_client import GMA2TelnetClient, collect_transport_warnings
 from src.tools import set_gma2_client
 from src.vocab import RiskTier, build_v39_spec, classify_token
 
@@ -529,8 +530,10 @@ def _handle_errors(func):
         t0 = time.monotonic()
         result: str = ""
         error_class: str | None = None
+        transport_warnings: list[str] = []
         try:
-            result = await func(*args, **kwargs)
+            with collect_transport_warnings() as transport_warnings:
+                result = await func(*args, **kwargs)
         except ConnectionError as e:
             logger.error("Connection error in %s: %s", func.__name__, e)
             error_class = "ConnectionError"
@@ -543,23 +546,30 @@ def _handle_errors(func):
             logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
             error_class = type(e).__name__
             result = json.dumps({"error": f"Unexpected error: {e}", "blocked": True}, indent=2)
-        finally:
-            if os.getenv("GMA_TELEMETRY", "1") != "0":
-                try:  # noqa: SIM105
-                    _get_telemetry().record_sync(
-                        tool_name=func.__name__,
-                        inputs_json=json.dumps(
-                            {k: str(v)[:200] for k, v in kwargs.items()}, default=str
-                        ),
-                        output_preview=result[:500] if result else "",
-                        error_class=error_class,
-                        latency_ms=(time.monotonic() - t0) * 1000,
-                        risk_tier=_risk_tier,
-                        operator=os.getenv("GMA_USER", "unknown"),
-                        session_id=_current_session_id.get(),
-                    )
-                except Exception:  # noqa: BLE001, SIM105
-                    pass  # telemetry must never break a tool call
+        # Uniform reply contract: every JSON object reply gets ``ok``; console
+        # rejections hidden in raw_response become structured console_errors.
+        try:
+            result, console_errors = annotate_tool_result(result, transport_warnings)
+            if console_errors and error_class is None:
+                error_class = "ConsoleError"
+        except Exception:  # noqa: BLE001 — annotation must never break a tool call
+            logger.debug("Reply annotation failed for %s", func.__name__, exc_info=True)
+        if os.getenv("GMA_TELEMETRY", "1") != "0":
+            try:  # noqa: SIM105
+                _get_telemetry().record_sync(
+                    tool_name=func.__name__,
+                    inputs_json=json.dumps(
+                        {k: str(v)[:200] for k, v in kwargs.items()}, default=str
+                    ),
+                    output_preview=result[:500] if result else "",
+                    error_class=error_class,
+                    latency_ms=(time.monotonic() - t0) * 1000,
+                    risk_tier=_risk_tier,
+                    operator=os.getenv("GMA_USER", "unknown"),
+                    session_id=_current_session_id.get(),
+                )
+            except Exception:  # noqa: BLE001, SIM105
+                pass  # telemetry must never break a tool call
         return result
 
     return wrapper
