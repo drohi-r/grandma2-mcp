@@ -29,6 +29,12 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent
 
 
+def _server_sources() -> str:
+    """src/server.py plus the tool modules split out of it (src/mcp_tools/)."""
+    files = [REPO_ROOT / "src" / "server.py", *sorted((REPO_ROOT / "src" / "mcp_tools").glob("*.py"))]
+    return "\n".join(f.read_text(encoding="utf-8") for f in files)
+
+
 # ── 1. Command builders have no network I/O imports ──────────────────────────
 
 class TestCommandBuilderPurity:
@@ -307,7 +313,7 @@ class TestResourcePurity:
 
     def test_resource_functions_do_not_import_telnet(self):
         """Parse server.py and check that @mcp.resource functions don't call telnet."""
-        server_src = (REPO_ROOT / "src" / "server.py").read_text(encoding="utf-8")
+        server_src = _server_sources()
         # Find all resource-decorated function bodies using simple regex
         # This is a structural heuristic, not a full AST parse
         resource_blocks = re.findall(
@@ -397,7 +403,7 @@ class TestPathATools:
             )
 
     def test_each_new_tool_registered_in_server(self):
-        server_src = (REPO_ROOT / "src" / "server.py").read_text(encoding="utf-8")
+        server_src = _server_sources()
         for tool in self.NEW_TOOLS:
             assert f"async def {tool}(" in server_src, (
                 f"Tool {tool!r} not registered in src/server.py"
@@ -445,7 +451,7 @@ class TestPathBTools:
             )
 
     def test_each_new_tool_registered_in_server(self):
-        server_src = (REPO_ROOT / "src" / "server.py").read_text(encoding="utf-8")
+        server_src = _server_sources()
         for tool in self.NEW_TOOLS:
             assert f"async def {tool}(" in server_src, (
                 f"Tool {tool!r} not registered in src/server.py"

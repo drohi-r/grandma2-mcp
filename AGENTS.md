@@ -33,7 +33,8 @@ uv run python -m src.ui
 
 ## Key Paths
 
-- `src/server.py`: MCP server surface
+- `src/server.py`: MCP server core (instance, reply contract, safety gate, client)
+- `src/mcp_tools/`: the tools, resources and prompts, by domain
 - `src/ui.py`: local browser UI
 - `src/server_orchestration_tools.py`: agent/orchestration layer
 - `src/telnet_client.py`: Telnet transport
