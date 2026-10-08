@@ -23,8 +23,7 @@ import logging
 import re
 from dataclasses import dataclass
 
-from src.commands import assign_property as _build_assign_property
-from src.commands import changedest, list_objects
+from src.commands import assign_property as _build_assign_property, changedest, list_objects
 from src.prompt_parser import (
     ConsolePrompt,
     ListOutput,
