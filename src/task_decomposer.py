@@ -298,7 +298,7 @@ def _build_color_sequence_workflow(goal: str, params: dict) -> TaskPlan:
     """Decompose a color palette or hue sequence build workflow."""
     sequence_id = params.get("sequence_id", 99)
     executor_id = params.get("executor_id", 201)
-    hue_pair    = params.get("hue_pair", None)
+    hue_pair    = params.get("hue_pair")
 
     return TaskPlan(goal=goal, steps=[
         SubTask(

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from src.layout_templates.types import Template
 
-
 TEMPLATES: dict[str, Template] = {
     "busking-master": Template(
         name="busking-master",

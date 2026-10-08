@@ -15,7 +15,6 @@ from __future__ import annotations
 from src.layout_templates.templates import get_template
 from src.layout_templates.types import ContentSpec, LayoutPlanStep
 
-
 # Default cell content per template — concrete cells that fulfil the required
 # roles. Pure data tables; callers pass these to MA2 unchanged.
 _TEMPLATE_CONTENT: dict[str, list[ContentSpec]] = {
@@ -108,7 +107,7 @@ def build_layout_for(
     options: dict | None = None,
 ) -> tuple[list[LayoutPlanStep], list[ContentSpec]]:
     """Build a layout plan + content list for a named template."""
-    tmpl = get_template(template)
+    get_template(template)  # validates the template name
     content = list(_TEMPLATE_CONTENT.get(template, []))
     order = 0
     plan: list[LayoutPlanStep] = []

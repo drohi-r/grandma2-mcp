@@ -9,7 +9,9 @@ Usage:
 """
 
 import asyncio
+import contextlib
 import functools
+import inspect
 import json
 import logging
 import os
@@ -18,12 +20,32 @@ import sys
 import time
 from datetime import UTC
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
 from src.agent_memory import LongTermMemory
 from src.auth import OAuthScope, has_scope, require_scope
+from src.commands import (
+    SPECIAL_MASTER_NAMES,
+    attribute_at,
+    build_assign_world_to_user_profile,
+    build_delete_user,
+    build_list_users,
+    build_store_user,
+    call,
+    channel_at,
+    fixture_at,
+    go_macro,
+    go_sequence,
+    goto_cue,
+    group_at,
+    label_group,
+    pause_sequence,
+    select_fixture,
+    store_group,
+)
 from src.commands import (
     add_to_selection as build_add_to_selection,
 )
@@ -62,28 +84,31 @@ from src.commands import (
     at_relative as build_at_relative,
 )
 from src.commands import (
-    attribute_at,
-    build_assign_world_to_user_profile,
-    build_delete_user,
-    build_list_users,
-    build_store_user,
-    call,
-    channel_at,
-    fixture_at,
-    go_macro,
-    go_sequence,
-    goto_cue,
-    group_at,
-    label_group,
-    pause_sequence,
-    select_fixture,
-    store_group,
-)
-from src.commands import (
     blackout as build_blackout,
 )
 from src.commands import (
     block as build_block,
+)
+from src.commands import (
+    build_login as build_console_login,
+)
+from src.commands import (
+    build_logout as build_console_logout,
+)
+from src.commands import (
+    call_plugin as build_call_plugin,
+)
+from src.commands import (
+    chaser_rate as build_chaser_rate,
+)
+from src.commands import (
+    chaser_skip as build_chaser_skip,
+)
+from src.commands import (
+    chaser_speed as build_chaser_speed,
+)
+from src.commands import (
+    chaser_xfade as build_chaser_xfade,
 )
 from src.commands import (
     clear as build_clear,
@@ -252,6 +277,9 @@ from src.commands import (
     locate as build_locate,
 )
 from src.commands import (
+    lock_console as build_lock_console,
+)
+from src.commands import (
     move as build_move,
 )
 from src.commands import (
@@ -276,10 +304,31 @@ from src.commands import (
     paste as build_paste,
 )
 from src.commands import (
+    rdm_automatch as build_rdm_automatch,
+)
+from src.commands import (
+    rdm_autopatch as build_rdm_autopatch,
+)
+from src.commands import (
+    rdm_info as build_rdm_info,
+)
+from src.commands import (
+    rdm_list as build_rdm_list,
+)
+from src.commands import (
+    rdm_setpatch as build_rdm_setpatch,
+)
+from src.commands import (
+    rdm_unmatch as build_rdm_unmatch,
+)
+from src.commands import (
     release_effects_on_page as build_release_effects_on_page,
 )
 from src.commands import (
     release_executor as build_release_executor,
+)
+from src.commands import (
+    reload_plugins as build_reload_plugins,
 )
 from src.commands import (
     # remove_content
@@ -301,10 +350,19 @@ from src.commands import (
     remove_selection as build_remove_selection,
 )
 from src.commands import (
+    run_lua as build_run_lua,
+)
+from src.commands import (
+    set_effect_parameter as build_set_effect_parameter,
+)
+from src.commands import (
     set_effect_rate as build_set_effect_rate,
 )
 from src.commands import (
     set_effect_speed as build_set_effect_speed,
+)
+from src.commands import (
+    set_special_master as build_set_special_master,
 )
 from src.commands import (
     set_user_var as build_set_user_var,
@@ -345,6 +403,9 @@ from src.commands import (
     unblock as build_unblock,
 )
 from src.commands import (
+    unlock_console as build_unlock_console,
+)
+from src.commands import (
     unpark as build_unpark,
 )
 from src.commands import (
@@ -353,58 +414,25 @@ from src.commands import (
 from src.commands import (
     zero_page_faders as build_zero_page_faders,
 )
-from src.commands import (
-    build_login as build_console_login,
-)
-from src.commands import (
-    build_logout as build_console_logout,
-)
-from src.commands import (
-    lock_console as build_lock_console,
-)
-from src.commands import (
-    unlock_console as build_unlock_console,
-)
-from src.commands import (
-    call_plugin as build_call_plugin,
-)
-from src.commands import (
-    run_lua as build_run_lua,
-)
-from src.commands import (
-    reload_plugins as build_reload_plugins,
-)
-from src.commands import (
-    set_special_master as build_set_special_master,
-    SPECIAL_MASTER_NAMES,
-)
-from src.commands import (
-    rdm_automatch as build_rdm_automatch,
-    rdm_autopatch as build_rdm_autopatch,
-    rdm_list as build_rdm_list,
-    rdm_info as build_rdm_info,
-    rdm_setpatch as build_rdm_setpatch,
-    rdm_unmatch as build_rdm_unmatch,
-)
-from src.commands import (
-    chaser_rate as build_chaser_rate,
-    chaser_speed as build_chaser_speed,
-    chaser_skip as build_chaser_skip,
-    chaser_xfade as build_chaser_xfade,
-)
-from src.commands import (
-    set_effect_parameter as build_set_effect_parameter,
-)
+from src.console_feedback import annotate_tool_result
 from src.context import _current_session_id
 from src.credentials import get_operator_identity, resolve_console_credentials
+from src.mcp_features import (
+    ACTIVITY_RESOURCE_URI,
+    active_context,
+    ask_destructive_confirmation,
+    needs_destructive_confirmation,
+    notify_resource_updated,
+    report_progress,
+)
 from src.navigation import get_current_location, list_destination, navigate, scan_indexes, set_property
 from src.orchestrator import Orchestrator
 from src.server_orchestration_tools import register_orchestration_tools
 from src.session_manager import SessionManager
 from src.telemetry import ToolTelemetry, infer_risk_tier
-from src.telnet_client import GMA2TelnetClient
+from src.telnet_client import GMA2TelnetClient, collect_transport_warnings, hold_connection
 from src.tools import set_gma2_client
-from src.vocab import RiskTier, build_v39_spec, classify_token
+from src.vocab import RiskTier, build_v39_spec, classify_command, classify_token
 
 # Load environment variables
 load_dotenv()
@@ -423,8 +451,15 @@ _GMA_USER = os.getenv("GMA_USER", "administrator")
 _GMA_PASSWORD = os.getenv("GMA_PASSWORD", "admin")
 _GMA_SAFETY_LEVEL = os.getenv("GMA_SAFETY_LEVEL", "standard").lower()
 
+# grandMA2 truncates a Telnet command line at 1023 characters (then Error #72).
+_MAX_COMMAND_CHARS = 1023
+
+# Friendly sequence property names → MA2 column names (live: "tracking" is ignored).
+_SEQUENCE_PROPERTY_ALIASES = {"tracking": "Track", "track": "Track"}
+
 # Path to the repo-root .env file (used by reconfigure_connection persist).
 from pathlib import Path as _Path  # noqa: E402
+
 _ENV_PATH = _Path(__file__).parent.parent / ".env"
 
 
@@ -438,10 +473,10 @@ _vocab_spec = build_v39_spec()
 # Create MCP server
 mcp = FastMCP(
     name="MA2 Agent",
-    instructions="""grandMA2 MCP server — 218 tools, 13 resources, 10 prompts.
+    instructions="""grandMA2 MCP server — tools, resources, and prompts for console control via Telnet.
 
 Use suggest_tool_for_task(task_description) to find the right tool for any task.
-Use ma2://docs/tool-taxonomy resource to browse all 218 tools by category.
+Use ma2://docs/tool-taxonomy resource to browse all tools by category.
 
 Core workflows:
   Inspect  → navigate_console, list_console_destination, query_object_list, get_object_info
@@ -523,46 +558,92 @@ def _handle_errors(func):
     Risk tier and operator identity are inferred once at decoration time.
     """
     _risk_tier = infer_risk_tier(func)
+    _accepts_confirm = "confirm_destructive" in inspect.signature(func).parameters
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs) -> str:
         t0 = time.monotonic()
-        result: str = ""
-        error_class: str | None = None
+
+        async def _invoke(call_kwargs: dict) -> tuple[str, str | None, list[str]]:
+            warnings: list[str] = []
+            try:
+                with collect_transport_warnings() as warnings:
+                    return await func(*args, **call_kwargs), None, warnings
+            except ConnectionError as e:
+                logger.error("Connection error in %s: %s", func.__name__, e)
+                error = {"error": f"Connection failed: {e}", "blocked": True}
+                return json.dumps(error, indent=2), "ConnectionError", warnings
+            except RuntimeError as e:
+                logger.error("Runtime error in %s: %s", func.__name__, e)
+                error = {"error": f"Runtime error: {e}", "blocked": True}
+                return json.dumps(error, indent=2), "RuntimeError", warnings
+            except Exception as e:
+                logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
+                error = {"error": f"Unexpected error: {e}", "blocked": True}
+                return json.dumps(error, indent=2), type(e).__name__, warnings
+
+        result, error_class, transport_warnings = await _invoke(kwargs)
+        ctx = active_context(mcp)
+
+        # A destructive tool blocked only for want of confirm_destructive: ask the
+        # human in the MCP client (elicitation). Only an explicit accept re-runs it.
+        if (
+            _accepts_confirm
+            and kwargs.get("confirm_destructive") is not True
+            and needs_destructive_confirmation(result)
+        ):
+            reason = str(json.loads(result).get("error", ""))
+            answer = await ask_destructive_confirmation(ctx, func.__name__, kwargs, reason)
+            if answer is True:
+                result, error_class, transport_warnings = await _invoke({**kwargs, "confirm_destructive": True})
+                result = _with_fields(result, confirmed_by="elicitation")
+            elif answer is False:
+                result = _with_fields(result, elicitation="declined")
+
+        # Uniform reply contract: every JSON object reply gets ``ok``; console
+        # rejections hidden in raw_response become structured console_errors.
         try:
-            result = await func(*args, **kwargs)
-        except ConnectionError as e:
-            logger.error("Connection error in %s: %s", func.__name__, e)
-            error_class = "ConnectionError"
-            result = json.dumps({"error": f"Connection failed: {e}", "blocked": True}, indent=2)
-        except RuntimeError as e:
-            logger.error("Runtime error in %s: %s", func.__name__, e)
-            error_class = "RuntimeError"
-            result = json.dumps({"error": f"Runtime error: {e}", "blocked": True}, indent=2)
-        except Exception as e:
-            logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
-            error_class = type(e).__name__
-            result = json.dumps({"error": f"Unexpected error: {e}", "blocked": True}, indent=2)
-        finally:
-            if os.getenv("GMA_TELEMETRY", "1") != "0":
-                try:  # noqa: SIM105
-                    _get_telemetry().record_sync(
-                        tool_name=func.__name__,
-                        inputs_json=json.dumps(
-                            {k: str(v)[:200] for k, v in kwargs.items()}, default=str
-                        ),
-                        output_preview=result[:500] if result else "",
-                        error_class=error_class,
-                        latency_ms=(time.monotonic() - t0) * 1000,
-                        risk_tier=_risk_tier,
-                        operator=os.getenv("GMA_USER", "unknown"),
-                        session_id=_current_session_id.get(),
-                    )
-                except Exception:  # noqa: BLE001, SIM105
-                    pass  # telemetry must never break a tool call
+            result, console_errors = annotate_tool_result(result, transport_warnings)
+            if console_errors and error_class is None:
+                error_class = "ConsoleError"
+        except Exception:  # noqa: BLE001 — annotation must never break a tool call
+            logger.debug("Reply annotation failed for %s", func.__name__, exc_info=True)
+        if os.getenv("GMA_TELEMETRY", "1") != "0":
+            try:  # noqa: SIM105
+                _get_telemetry().record_sync(
+                    tool_name=func.__name__,
+                    inputs_json=json.dumps(
+                        {k: str(v)[:200] for k, v in kwargs.items()}, default=str
+                    ),
+                    output_preview=result[:500] if result else "",
+                    error_class=error_class,
+                    latency_ms=(time.monotonic() - t0) * 1000,
+                    risk_tier=_risk_tier,
+                    operator=os.getenv("GMA_USER", "unknown"),
+                    session_id=_current_session_id.get(),
+                )
+            except Exception:  # noqa: BLE001, SIM105
+                pass  # telemetry must never break a tool call
+
+        # Console changed → tell subscribers of the activity resource (after the
+        # telemetry row exists, so a re-read sees this call).
+        if _risk_tier != "SAFE_READ" and error_class is None and '"ok": true' in result:
+            await notify_resource_updated(ctx, ACTIVITY_RESOURCE_URI)
         return result
 
     return wrapper
+
+
+def _with_fields(result: str, **fields) -> str:
+    """Add fields to a JSON object reply (non-object replies are returned unchanged)."""
+    try:
+        data = json.loads(result)
+    except (TypeError, ValueError):
+        return result
+    if not isinstance(data, dict):
+        return result
+    data.update(fields)
+    return json.dumps(data, indent=2, default=str)
 
 
 # ============================================================
@@ -791,9 +872,19 @@ async def send_raw_command(
             "blocked": True,
         }, indent=2)
 
-    # Safety gate: classify the first token
-    first_token = command.strip().split()[0] if command.strip() else ""
-    resolved = classify_token(first_token, _vocab_spec)
+    if len(command) > _MAX_COMMAND_CHARS:
+        return json.dumps({
+            "command_sent": None,
+            "error": (
+                f"Command is {len(command)} characters; the console truncates at "
+                f"{_MAX_COMMAND_CHARS} and fails with Error #72. Split it, or use "
+                "run_command_batch."
+            ),
+            "blocked": True,
+        }, indent=2)
+
+    # Safety gate: classify every ';'-separated part — "ClearAll ; Store ..." is DESTRUCTIVE
+    resolved = classify_command(command, _vocab_spec)
     risk = resolved.risk
 
     # Log and optionally block destructive commands
@@ -814,8 +905,8 @@ async def send_raw_command(
                 "risk_tier": risk.value,
                 "canonical_keyword": resolved.canonical,
                 "error": (
-                    f"Command '{first_token}' is classified as {risk.value}. "
-                    f"Set confirm_destructive=True to proceed, or use "
+                    f"Command part '{resolved.part}' is classified as {risk.value} "
+                    f"({resolved.reason}). Set confirm_destructive=True to proceed, or use "
                     f"GMA_SAFETY_LEVEL=admin to disable safety checks."
                 ),
                 "blocked": True,
@@ -856,6 +947,215 @@ async def send_raw_command(
         "canonical_keyword": resolved.canonical,
         "raw_response": raw_response,
         "blocked": False,
+    }, indent=2)
+
+
+# Command files a batch may read (plain command lists only — not .env, keys, etc.)
+_BATCH_FILE_SUFFIXES = {".txt", ".cmd", ".ma2", ".macro"}
+_BATCH_MAX_FAILURES_REPORTED = 50
+
+
+def _load_batch_lines(commands: list[str] | None, commands_file: str | None) -> tuple[list[str], str | None]:
+    if commands_file:
+        path = Path(commands_file)
+        if path.suffix.lower() not in _BATCH_FILE_SUFFIXES:
+            return [], f"commands_file must be one of {sorted(_BATCH_FILE_SUFFIXES)}"
+        if not path.is_file():
+            return [], f"commands_file not found: {commands_file}"
+        raw_lines = path.read_text(encoding="utf-8").splitlines()
+    else:
+        raw_lines = list(commands or [])
+    lines = [ln.strip() for ln in raw_lines]
+    return [ln for ln in lines if ln and not ln.startswith("#")], None
+
+
+@mcp.tool()
+@require_scope(OAuthScope.CUE_STORE)
+@_handle_errors
+async def run_command_batch(
+    commands: list[str] | None = None,
+    commands_file: str | None = None,
+    confirm_destructive: bool = False,
+    stop_on_error: bool = True,
+    delay: float = 0.0,
+    timeout: float = 5.0,
+) -> str:
+    """
+    Run many raw MA commands in order on one held connection (DESTRUCTIVE if any line is).
+
+    Every line (and every ';'-part of a line) is risk-classified before anything
+    is sent; if any is DESTRUCTIVE the whole batch needs confirm_destructive=True.
+    Each command waits for its own console prompt, so batches run far faster than
+    one send_raw_command call per line. Stops at the first console error or
+    pop-up unless stop_on_error=False (a pop-up always stops the batch).
+
+    Args:
+        commands: Command lines to send, in order.
+        commands_file: Path to a .txt/.cmd/.ma2/.macro file, one command per
+            line; blank lines and lines starting with '#' are skipped.
+        confirm_destructive: Required when any line is DESTRUCTIVE.
+        stop_on_error: Stop at the first rejected command (default True).
+        delay: Seconds to wait after each send before reading (default 0).
+        timeout: Seconds to wait for each command's first output.
+
+    Returns:
+        str: JSON summary — total, executed, failed (line, command, errors),
+            stopped_early, duration_s, last_reply.
+    """
+    from src.console_feedback import find_console_errors, find_pending_popup
+
+    lines, load_error = _load_batch_lines(commands, commands_file)
+    if load_error:
+        return json.dumps({"error": load_error, "blocked": True}, indent=2)
+    if not lines:
+        return json.dumps({"error": "No commands given (commands or commands_file).", "blocked": True}, indent=2)
+
+    too_long = [i for i, ln in enumerate(lines, 1) if len(ln) > _MAX_COMMAND_CHARS]
+    if too_long:
+        return json.dumps({
+            "error": f"Lines exceed {_MAX_COMMAND_CHARS} characters (console truncates them): {too_long[:20]}",
+            "blocked": True,
+        }, indent=2)
+
+    risks = [classify_command(ln, _vocab_spec) for ln in lines]
+    destructive = [i for i, r in enumerate(risks, 1) if r.risk == RiskTier.DESTRUCTIVE]
+    if _GMA_SAFETY_LEVEL == "read-only":
+        not_read = [i for i, r in enumerate(risks, 1) if r.risk != RiskTier.SAFE_READ]
+        if not_read:
+            return json.dumps({
+                "error": "Server is in read-only mode; batch contains non-read lines.",
+                "non_read_lines": not_read[:50],
+                "blocked": True,
+            }, indent=2)
+    if destructive and not confirm_destructive and _GMA_SAFETY_LEVEL != "admin":
+        return json.dumps({
+            "blocked": True,
+            "risk_tier": "DESTRUCTIVE",
+            "destructive_lines": destructive[:50],
+            "destructive_count": len(destructive),
+            "error": (
+                f"{len(destructive)} of {len(lines)} lines are DESTRUCTIVE "
+                f"(first: line {destructive[0]} '{risks[destructive[0] - 1].part}'). "
+                "Set confirm_destructive=True to run the batch."
+            ),
+        }, indent=2)
+
+    client = await get_client()
+    ctx = active_context(mcp)
+    progress_every = max(1, len(lines) // 50)
+    started = time.monotonic()
+    failed: list[dict] = []
+    executed = 0
+    stopped_early = False
+    last_reply = ""
+    async with hold_connection(client):
+        for lineno, cmd in enumerate(lines, 1):
+            raw = await client.send_command_with_response(
+                cmd, delay=delay, timeout=timeout, until_prompt=True,
+            )
+            executed += 1
+            last_reply = raw
+            if lineno % progress_every == 0 or lineno == len(lines):
+                await report_progress(ctx, lineno, len(lines), f"line {lineno}/{len(lines)}")
+            errors = find_console_errors(raw, cmd)
+            popup = find_pending_popup(raw)
+            if errors or popup:
+                if len(failed) < _BATCH_MAX_FAILURES_REPORTED:
+                    failed.append({
+                        "line": lineno,
+                        "command": cmd,
+                        "errors": [e.describe() for e in errors],
+                        "pending_popup": popup,
+                    })
+                if popup or stop_on_error:
+                    stopped_early = lineno < len(lines)
+                    break
+
+    result: dict = {
+        "total": len(lines),
+        "executed": executed,
+        "failed": failed,
+        "stopped_early": stopped_early,
+        "duration_s": round(time.monotonic() - started, 2),
+        "destructive_count": len(destructive),
+        "last_reply": last_reply[-500:],
+        "ok": not failed,
+    }
+    if failed:
+        first = failed[0]
+        result["error"] = (
+            f"Line {first['line']} ('{first['command']}') failed: "
+            + ("; ".join(first["errors"]) or "console is waiting on a pop-up — use answer_console_popup")
+        )
+    return json.dumps(result, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.CUE_STORE)
+@_handle_errors
+async def answer_console_popup(
+    choice: int,
+    cancel_option: int | None = None,
+    confirm_destructive: bool = False,
+) -> str:
+    """
+    Answer a console pop-up a previous tool reported as pending_popup.
+
+    Pass the option number from pending_popup.options. Choosing the Cancel
+    option is always allowed (give its number as cancel_option); any other
+    answer can confirm an overwrite or delete and needs confirm_destructive=True.
+
+    Args:
+        choice: Option number to press (e.g. 1 for "Ok").
+        cancel_option: The pop-up's Cancel option number, when known.
+        confirm_destructive: Required for any answer other than Cancel.
+
+    Returns:
+        str: JSON with command_sent and raw_response.
+    """
+    if choice < 0 or choice > 9:
+        return json.dumps({"error": "choice must be a single option number 0-9", "blocked": True}, indent=2)
+    if choice != cancel_option and not confirm_destructive:
+        return json.dumps({
+            "command_sent": None,
+            "blocked": True,
+            "risk_tier": "DESTRUCTIVE",
+            "error": (
+                "Answering a pop-up with anything but its Cancel option can confirm an "
+                "overwrite or delete. Set confirm_destructive=True, or pass cancel_option."
+            ),
+        }, indent=2)
+
+    client = await get_client()
+    cmd = str(choice)
+    raw_response = await client.send_command_with_response(cmd)
+    return json.dumps({
+        "command_sent": cmd,
+        "raw_response": raw_response,
+        "risk_tier": "SAFE_WRITE" if choice == cancel_option else "DESTRUCTIVE",
+    }, indent=2)
+
+
+@mcp.tool()
+@require_scope(OAuthScope.SESSION_MANAGE)
+@_handle_errors
+async def disconnect_console() -> str:
+    """
+    Close this server's Telnet session(s) to the console.
+
+    Use it to free the console for another Telnet client or to stop an idle
+    session; the next tool call reconnects automatically with the current
+    settings. Does not change any console state.
+
+    Returns:
+        str: JSON with sessions_closed.
+    """
+    manager = await _get_session_manager()
+    closed = await manager.release_all()
+    return json.dumps({
+        "sessions_closed": closed,
+        "note": "Disconnected. The next tool call reconnects automatically.",
+        "ok": True,
     }, indent=2)
 
 
@@ -3576,9 +3876,10 @@ async def cut_paste_object(
     object_id: int | str | None = None,
     target_id: int | str | None = None,
     end: int | str | None = None,
+    confirm_destructive: bool = False,
 ) -> str:
     """
-    Cut an object to clipboard, or paste clipboard content at a target (SAFE_WRITE).
+    Cut an object to clipboard, or paste clipboard content at a target (DESTRUCTIVE).
 
     Cut + Paste is a two-step move: Cut prepares the source, Paste places it.
     Does not work with cue objects — use copy_or_move_object for cues.
@@ -3589,12 +3890,21 @@ async def cut_paste_object(
         object_id: Source object ID (required for cut; ignored for bare paste)
         target_id: Destination ID (for paste)
         end: End ID for range cut (thru syntax)
+        confirm_destructive: Must be True (cut removes the source; paste overwrites)
 
     Returns:
         str: JSON result with command sent
     """
     if action not in ("cut", "paste"):
         return json.dumps({"error": "action must be 'cut' or 'paste'", "blocked": True}, indent=2)
+
+    if not confirm_destructive:
+        return json.dumps({
+            "command_sent": None,
+            "blocked": True,
+            "error": f"{action.title()} is a DESTRUCTIVE operation. Set confirm_destructive=True to proceed.",
+            "risk_tier": "DESTRUCTIVE",
+        }, indent=2)
 
     if action == "cut":
         if object_type is None or object_id is None:
@@ -3608,7 +3918,7 @@ async def cut_paste_object(
     return json.dumps({
         "command_sent": cmd,
         "raw_response": response,
-        "risk_tier": "SAFE_WRITE",
+        "risk_tier": "DESTRUCTIVE",
     }, indent=2)
 
 
@@ -3890,21 +4200,40 @@ async def set_sequence_property(
             "risk_tier": "DESTRUCTIVE",
         }, indent=2)
 
+    from src.commands.helpers import quote_name
+    from src.console_feedback import find_console_errors
+    from src.prompt_parser import parse_tabular_list
+
+    # MA2 column names differ from the friendly ones ("tracking" is "Track").
+    prop = _SEQUENCE_PROPERTY_ALIASES.get(property_name.strip().lower(), property_name.strip())
+    assign_cmd = f"Assign Sequence {sequence_id} /{prop}={quote_name(value)}"
+    list_cmd = f"List Sequence {sequence_id}"
+
     client = await get_client()
-    result = await set_property(
-        client,
-        path=f"sequence {sequence_id}",
-        property_name=property_name,
-        value=value,
-    )
+    async with hold_connection(client):
+        assign_response = await client.send_command_with_response(assign_cmd)
+        list_response = await client.send_command_with_response(list_cmd)
+
+    errors = find_console_errors(assign_response, assign_cmd)
+    verified_value = None
+    for row in parse_tabular_list(list_response):
+        for key, cell in row.items():
+            if key.strip().lower() == prop.lower():
+                verified_value = cell.strip()
+    verified = verified_value is not None and verified_value.lower() == str(value).strip().lower()
+
     return json.dumps({
         "sequence_id": sequence_id,
-        "property": property_name,
+        "property": prop,
         "value": value,
-        "commands_sent": result.commands_sent,
-        "success": result.success,
-        "verified_value": result.verified_value,
-        "error": result.error,
+        "commands_sent": [assign_cmd, list_cmd],
+        "raw_responses": [assign_response, list_response],
+        "success": not errors,
+        "verified": verified,
+        "verified_value": verified_value,
+        "note": None if verified else (
+            f"Could not read {prop} back from '{list_cmd}' — check the sequence on the console."
+        ),
         "risk_tier": "DESTRUCTIVE",
     }, indent=2)
 
@@ -3918,26 +4247,31 @@ async def set_sequence_property(
 @require_scope(OAuthScope.PLAYBACK_GO)
 @_handle_errors
 async def save_show(
-    action: str,
+    action: str = "save",
     show_name: str | None = None,
 ) -> str:
     """
     Save the current show file to disk.
 
     Args:
-        action: "save" (overwrite current) or "saveas" (save under a new name)
-        show_name: Show name/path (required for action="saveas")
+        action: "save" (overwrite current) or "saveas" (save under a new name).
+            Giving show_name implies "saveas".
+        show_name: Show name (required for action="saveas")
 
     Returns:
-        str: JSON result with command sent
+        str: JSON result with command sent. Saving over an existing file may
+            open an overwrite pop-up — reported as pending_popup.
     """
+    from src.commands.functions.store import save_show as build_save_show
+
     if action not in ("save", "saveas"):
         return json.dumps({"error": "action must be 'save' or 'saveas'", "blocked": True}, indent=2)
     if action == "saveas" and not show_name:
         return json.dumps({"error": "show_name is required for action='saveas'", "blocked": True}, indent=2)
 
     client = await get_client()
-    cmd = "save" if action == "save" else f'saveas "{show_name}"'
+    # SaveShow is the real keyword; "saveas" is UNKNOWN COMMAND on the console.
+    cmd = build_save_show(show_name or None)
     response = await client.send_command_with_response(cmd)
     return json.dumps({
         "command_sent": cmd,
@@ -4342,14 +4676,16 @@ async def discover_fixture_type_attributes(
     async def send(cmd: str) -> str:
         return await client.send_command_with_response(cmd)
 
-    await send("cd /")
-    await send("cd EditSetup")
-    await send("cd FixtureTypes")
-    await send(f"cd {fixture_type_id}")
-    await send("cd 1")  # first mode
-    await send("cd 1")  # first subfixture
-    raw = await send("list")
-    await send("cd /")  # return to root
+    # One uninterrupted cd sequence — a parallel call must not land mid-path.
+    async with hold_connection(client):
+        await send("cd /")
+        await send("cd EditSetup")
+        await send("cd FixtureTypes")
+        await send(f"cd {fixture_type_id}")
+        await send("cd 1")  # first mode
+        await send("cd 1")  # first subfixture
+        raw = await send("list")
+        await send("cd /")  # return to root
 
     return json.dumps({
         "fixture_type_id": fixture_type_id,
@@ -4390,6 +4726,7 @@ async def scan_page_executor_layout(
           - free_slots: slot IDs in range with no assignment
     """
     import asyncio
+
     from src.prompt_parser import parse_executor_list
 
     client = await get_client()
@@ -7339,6 +7676,9 @@ async def suggest_tool_for_task(
                 scores.append((name, sim))
             scores.sort(key=lambda x: -x[1])
 
+    # Only suggest tools this client can actually call (GMA_TOOL_PROFILE).
+    visible = set(mcp._tool_manager._tools)
+    scores = [(name, score) for name, score in scores if name in visible]
     top = scores[:top_n]
     result: dict = {
         "suggestions": [
@@ -7634,7 +7974,7 @@ async def architect_preset_library(
     from src.show_strategies.patch_reader import summarize_patch
 
     try:
-        strat = get_preset_strategy(strategy)
+        get_preset_strategy(strategy)  # validates the strategy name
     except ValueError as e:
         return json.dumps({
             "strategy": strategy, "blocked": True, "error": str(e),
@@ -7946,7 +8286,7 @@ async def reconfigure_connection(
     port: int = 30000,
     user: str = "administrator",
     password: str = "admin",
-    persist: bool = True,
+    persist: bool = False,
     verify: bool = True,
 ) -> str:
     """Swap the active console connection and (optionally) persist to .env.
@@ -7962,8 +8302,11 @@ async def reconfigure_connection(
         port: Telnet port (default 30000).
         user: Console user.
         password: Console password.
-        persist: When True, write GMA_HOST/GMA_PORT/GMA_USER/GMA_PASSWORD to .env.
+        persist: When True, also write GMA_HOST/GMA_PORT/GMA_USER/GMA_PASSWORD to
+            .env so the next server start uses them (default False: this run only).
         verify: When True, run a SAFE_READ probe before committing the swap.
+            With False the reply says ``verified: false``. To just free the
+            console, use disconnect_console instead of pointing at a dummy host.
 
     Returns:
         JSON envelope: ``{success, previous_host, new_host, verified, persisted_to,
@@ -7980,7 +8323,7 @@ async def reconfigure_connection(
             "warning": None, "error": None,
         }, indent=2)
 
-    verified = True
+    verified = False  # only a successful round-trip may claim verified
     if verify:
         verified = await _verify_round_trip(host, port, user, password)
     if verify and not verified:
@@ -8000,10 +8343,9 @@ async def reconfigure_connection(
         _session_manager = None  # next get_client() will rebuild
 
     if old_mgr is not None:
-        try:
+        # close best-effort; new manager already in place
+        with contextlib.suppress(Exception):
             await old_mgr.close_all()
-        except Exception:  # noqa: BLE001, SIM105
-            pass  # close best-effort; new manager already in place
 
     persisted_to: str | None = None
     if persist:
@@ -9016,7 +9358,7 @@ async def generate_companion_config(
         - Export page 1: generate_companion_config()
         - Export page 2 for Stream Deck: generate_companion_config(page=2, grid_columns=5)
     """
-    client = await get_client()
+    await get_client()  # fail fast when the console is unreachable
 
     # Read the executor page layout
     scan_result = await scan_page_executor_layout(page=page)
@@ -9136,8 +9478,8 @@ async def companion_button_press(
         - Press button 0 on page 1: companion_button_press(page=1, button=0)
         - Remote Companion: companion_button_press(page=1, button=3, host="192.168.1.50")
     """
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     url = f"http://{host}:{port}/press/bank/{page}/{button}"
 
@@ -9447,7 +9789,7 @@ async def get_page_map(
             continue
 
         # Parse KEY=VALUE or inline fields
-        def _extract(key: str) -> str | None:
+        def _extract(key: str, raw: str = raw) -> str | None:
             m = re.search(rf"{key}\s*[=:]\s*(\S+)", raw, re.IGNORECASE)
             return m.group(1) if m else None
 
@@ -10911,6 +11253,18 @@ async def send_osc(
 # ============================================================
 
 
+@mcp.resource(ACTIVITY_RESOURCE_URI)
+def resource_console_activity() -> str:
+    """
+    Recent console-changing tool calls made through this server (live).
+
+    Read from the local telemetry log — no console I/O. Subscribe to get a
+    notifications/resources/updated message after every change.
+    """
+    rows = _get_telemetry().recent_changes(limit=25)
+    return json.dumps({"changes": rows, "count": len(rows)}, indent=2, default=str)
+
+
 @mcp.resource("ma2://docs/rights-matrix")
 def resource_rights_matrix() -> str:
     """
@@ -10936,7 +11290,7 @@ def resource_vocab_summary() -> str:
     including it in a command string.  Tier determines whether confirm_destructive
     is required and which OAuthScope must be active.
     """
-    from src.vocab import classify_token, load_vocab
+    from src.vocab import load_vocab
     spec = load_vocab()
     summary = {}
     all_keywords = list(spec.function_keywords.keys()) + list(spec.object_keywords.keys())
@@ -10949,7 +11303,7 @@ def resource_vocab_summary() -> str:
 @mcp.resource("ma2://docs/tool-taxonomy")
 def resource_tool_taxonomy() -> str:
     """
-    ML-generated tool taxonomy — 218 tools clustered into 14 categories.
+    ML-generated tool taxonomy — all registered tools clustered into categories.
 
     Each entry includes tool name, category, and docstring summary.
     Use this resource to understand the tool landscape before calling
@@ -10983,17 +11337,28 @@ def resource_responsibility_map() -> str:
 @mcp.resource("ma2://docs/tool-surface-tiers")
 def resource_tool_surface_tiers() -> str:
     """
-    Tool surface tier classification — which tools are Tier A (always visible),
-    Tier B (retrievable), or Tier C (internal).
-
-    Use this resource to decide whether to add a new tool to the planner-visible
-    surface or keep it as a worker-only primitive.
+    Tool profiles (GMA_TOOL_PROFILE=core|standard|full) — which tools each one
+    exposes, generated from src/tool_profiles.py so it can't drift.
     """
-    tiers_path = Path(__file__).parent.parent / "doc" / "tool-surface-tiers.md"
-    try:
-        return tiers_path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return "# Tool surface tiers doc not found."
+    from src.tool_profiles import PROFILES, tier_of
+
+    names = sorted(_ALL_TOOLS)
+    by_tier: dict[str, list[str]] = {p: [] for p in PROFILES}
+    for name in names:
+        by_tier[tier_of(name)].append(name)
+    lines = [
+        "# Tool profiles",
+        "",
+        "Set GMA_TOOL_PROFILE to choose what MCP clients see (default: full).",
+        "Each profile includes the ones above it. Hidden tools stay available to run_agent_goal.",
+        "",
+    ]
+    total = 0
+    for profile in PROFILES:
+        total += len(by_tier[profile])
+        lines += [f"## {profile} — {total} tools ({len(by_tier[profile])} added)", ""]
+        lines += [", ".join(f"`{n}`" for n in by_tier[profile]), ""]
+    return "\n".join(lines)
 
 
 @mcp.resource("ma2://skills/{skill_id}")
@@ -12523,7 +12888,6 @@ async def detect_dmx_address_conflicts(universe_id: int | None = None) -> str:
     client = await get_client()
     # Get all fixture data
     raw_fixtures = await client.send_command_with_response("List Fixture")
-    raw_universes = await client.send_command_with_response("List Universe")
 
     # Build occupancy map: universe -> {channel: fixture_id}
     occupancy: dict[int, dict[int, dict]] = {}
@@ -12608,7 +12972,8 @@ async def update_object(
             "risk_tier": "DESTRUCTIVE",
         }, indent=2)
 
-    from src.commands import update as build_update, update_cue as build_update_cue
+    from src.commands import update as build_update
+    from src.commands import update_cue as build_update_cue
     if object_type.lower() == "cue":
         cmd = build_update_cue(
             object_id, sequence_id=sequence_id,
@@ -12673,13 +13038,29 @@ async def programming_action(
     """
     from src.commands import (
         align as build_align,
+    )
+    from src.commands import (
         block_cue as build_block_cue,
+    )
+    from src.commands import (
         extract as build_extract,
+    )
+    from src.commands import (
         flip as build_flip,
+    )
+    from src.commands import (
         learn_executor as build_learn_executor,
+    )
+    from src.commands import (
         locate as build_locate,
+    )
+    from src.commands import (
         record_macro as build_record_macro,
+    )
+    from src.commands import (
         store_look as build_store_look,
+    )
+    from src.commands import (
         unblock_cue as build_unblock_cue,
     )
 
@@ -12762,9 +13143,13 @@ async def master_control(
         str: JSON with command_sent, raw_response, risk_tier
     """
     from src.commands import (
-        master_at as build_master_at,
-        special_master_at as build_special_master_at,
         list_masters as build_list_masters,
+    )
+    from src.commands import (
+        master_at as build_master_at,
+    )
+    from src.commands import (
+        special_master_at as build_special_master_at,
     )
 
     valid_actions = ("set", "set_special", "list")
@@ -12812,13 +13197,13 @@ async def system_admin(
     Args:
         action: One of:
             SAFE_READ: "logout"
-            SAFE_WRITE: "login", "lock", "unlock", "lua", "chat"
-            DESTRUCTIVE: "reboot", "restart", "shutdown"
+            SAFE_WRITE: "login", "lock", "unlock", "chat"
+            DESTRUCTIVE: "lua", "reboot", "restart", "shutdown"
         user: Username (required for login)
         password: Password (required for login; optional for lock/unlock)
         script: Lua script string (required for lua)
         message: Chat message text (required for chat)
-        confirm_destructive: Must be True for reboot/restart/shutdown
+        confirm_destructive: Must be True for lua/reboot/restart/shutdown
 
     Returns:
         str: JSON with command_sent, raw_response, risk_tier
@@ -12826,20 +13211,35 @@ async def system_admin(
     from src.commands import (
         build_login,
         build_logout,
+    )
+    from src.commands import (
         lock_console as build_lock,
-        unlock_console as build_unlock,
+    )
+    from src.commands import (
         lua_execute as build_lua,
+    )
+    from src.commands import (
         reboot_console as build_reboot,
+    )
+    from src.commands import (
         restart_console as build_restart,
+    )
+    from src.commands import (
         send_chat as build_chat,
+    )
+    from src.commands import (
         shutdown_console as build_shutdown,
+    )
+    from src.commands import (
+        unlock_console as build_unlock,
     )
 
     valid_actions = {"login", "logout", "lock", "unlock", "lua", "chat", "reboot", "restart", "shutdown"}
     if action not in valid_actions:
         return json.dumps({"error": f"Invalid action '{action}'. Valid: {sorted(valid_actions)}", "blocked": True}, indent=2)
 
-    destructive_actions = {"reboot", "restart", "shutdown"}
+    # lua is DESTRUCTIVE: gma.cmd() can issue any console command (same gate as run_lua_script)
+    destructive_actions = {"lua", "reboot", "restart", "shutdown"}
     if action in destructive_actions and not confirm_destructive:
         return json.dumps({
             "blocked": True,
@@ -12865,7 +13265,7 @@ async def system_admin(
         if script is None:
             return json.dumps({"error": "script required for lua", "blocked": True}, indent=2)
         cmd = build_lua(script)
-        risk_tier = "SAFE_WRITE"
+        risk_tier = "DESTRUCTIVE"
     elif action == "chat":
         if message is None:
             return json.dumps({"error": "message required for chat", "blocked": True}, indent=2)
@@ -12905,6 +13305,8 @@ async def plugin_management(action: str) -> str:
     """
     from src.commands import (
         list_plugin_library as build_list_plugins,
+    )
+    from src.commands import (
         reload_plugins as build_reload_plugins,
     )
 
@@ -12957,9 +13359,9 @@ async def get_telemetry_report(
     - error_log: any operations that returned errors
     - timeline: ordered list of all operations
     """
-    import time as _time
     import datetime
     import sqlite3
+    import time as _time
 
     cutoff_ts = _time.time() - (days * 86400)
 
@@ -13003,7 +13405,7 @@ async def get_telemetry_report(
 
         entry = {
             "ts": inv.get("ts"),
-            "ts_human": datetime.datetime.fromtimestamp(inv.get("ts", 0), tz=datetime.timezone.utc).isoformat(),
+            "ts_human": datetime.datetime.fromtimestamp(inv.get("ts", 0), tz=datetime.UTC).isoformat(),
             "tool": inv.get("tool_name"),
             "tier": tier,
             "latency_ms": inv.get("latency_ms"),
@@ -13025,7 +13427,7 @@ async def get_telemetry_report(
 
     report = {
         "report_type": "MA2 Agent Telemetry Audit Report",
-        "generated_at": datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+        "generated_at": datetime.datetime.now(tz=datetime.UTC).isoformat(),
         "filter": {
             "session_id": session_id,
             "days": days,
@@ -13101,9 +13503,9 @@ async def generate_compliance_report(
 
     Returns a markdown compliance report ready for inclusion in safety documentation.
     """
-    import time as _time
     import datetime
     import sqlite3
+    import time as _time
 
     cutoff_ts = _time.time() - (days * 86400)
 
@@ -13139,7 +13541,7 @@ async def generate_compliance_report(
         tier = inv.get("risk_tier", "SAFE_READ")
         risk_counts[tier] = risk_counts.get(tier, 0) + 1
         ts_human = datetime.datetime.fromtimestamp(
-            inv.get("ts", 0), tz=datetime.timezone.utc
+            inv.get("ts", 0), tz=datetime.UTC
         ).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         if tier == "DESTRUCTIVE":
@@ -13151,7 +13553,7 @@ async def generate_compliance_report(
                 f"  - `{ts_human}` — **{inv.get('tool_name')}** — Error: {inv.get('error_class')}"
             )
 
-    now = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
+    now = datetime.datetime.now(tz=datetime.UTC).isoformat()
     safe_read = risk_counts.get("SAFE_READ", 0)
     safe_write = risk_counts.get("SAFE_WRITE", 0)
     destructive = risk_counts.get("DESTRUCTIVE", 0)
@@ -13806,7 +14208,9 @@ def _build_tool_registry() -> dict:
     """
     registry: dict = {}
     try:
-        for tool_name, tool_obj in mcp._tool_manager._tools.items():
+        # All registered tools — a GMA_TOOL_PROFILE only hides them from clients.
+        all_tools = globals().get("_ALL_TOOLS") or mcp._tool_manager._tools
+        for tool_name, tool_obj in all_tools.items():
             fn = getattr(tool_obj, "fn", None)
             if fn is not None:
                 registry[tool_name] = fn
@@ -13815,9 +14219,7 @@ def _build_tool_registry() -> dict:
         import inspect
 
         for name, obj in globals().items():
-            if callable(obj) and hasattr(obj, "__wrapped__"):
-                registry[name] = obj
-            elif inspect.iscoroutinefunction(obj) and not name.startswith("_"):
+            if callable(obj) and hasattr(obj, "__wrapped__") or inspect.iscoroutinefunction(obj) and not name.startswith("_"):
                 registry[name] = obj
     return registry
 
@@ -13869,6 +14271,7 @@ async def run_agent_goal(
             "goal": goal,
             "intent": parsed_goal.intent.value,
             "confidence": parsed_goal.confidence,
+            "notes": getattr(parsed_goal, "notes", []),
             "plan": [s.to_dict() for s in plan],
             "policy_warnings": warnings,
         }, indent=2)
@@ -13877,10 +14280,24 @@ async def run_agent_goal(
     async def _auto_confirm(step) -> bool:
         return True
 
-    trace = await runtime.run(
-        goal,
-        on_confirm=_auto_confirm if auto_confirm else None,
-    )
+    # Without auto_confirm, ask the human per destructive step when the client
+    # supports elicitation; otherwise the run stops at the first destructive step.
+    ctx = active_context(mcp)
+
+    async def _elicit_confirm(step) -> bool:
+        answer = await ask_destructive_confirmation(
+            ctx, step.tool_name, dict(step.tool_args), f"Agent step: {step.description}",
+        )
+        return answer is True
+
+    on_confirm = _auto_confirm if auto_confirm else None
+    if on_confirm is None and ctx is not None:
+        from src.mcp_features import client_supports_elicitation, elicitation_enabled
+
+        if elicitation_enabled() and client_supports_elicitation(ctx):
+            on_confirm = _elicit_confirm
+
+    trace = await runtime.run(goal, on_confirm=on_confirm)
     return trace.to_json()
 
 
@@ -13910,6 +14327,7 @@ async def plan_agent_goal(goal: str) -> str:
         "intent": parsed_goal.intent.value,
         "object_type": parsed_goal.object_type,
         "confidence": parsed_goal.confidence,
+        "notes": parsed_goal.notes,
         "step_count": len(plan),
         "plan": [
             {
@@ -14558,7 +14976,26 @@ def main():
             "Only use on trusted local networks.", transport,
         )
 
+    apply_tool_profile(os.environ.get("GMA_TOOL_PROFILE"))
     mcp.run(transport=transport)
+
+
+# Every registered tool, kept even when a profile hides some from MCP clients:
+# the agent harness (_build_tool_registry) still needs them.
+_ALL_TOOLS: dict = dict(mcp._tool_manager._tools)
+
+
+def apply_tool_profile(value: str | None) -> str:
+    """Hide tools outside the GMA_TOOL_PROFILE subset from MCP clients."""
+    from src.tool_profiles import resolve_profile, visible_tools
+
+    profile, warning = resolve_profile(value)
+    if warning:
+        logger.warning(warning)
+    keep = visible_tools(profile, set(_ALL_TOOLS))
+    mcp._tool_manager._tools = {name: tool for name, tool in _ALL_TOOLS.items() if name in keep}
+    logger.info("Tool profile %r: %d of %d tools visible", profile, len(keep), len(_ALL_TOOLS))
+    return profile
 
 
 if __name__ == "__main__":

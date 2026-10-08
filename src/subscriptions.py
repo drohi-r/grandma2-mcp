@@ -80,19 +80,16 @@ def get_subscription_count(uri: str) -> int:
 
 
 async def notify_subscribers(mcp: FastMCP, uri: str) -> int:
-    """Notify all subscribers that a resource has changed.
+    """Notify subscribers that a resource has changed.
 
-    Returns the number of subscribers notified.
+    Notifications go out on the session of the request in progress (the
+    low-level server has no session of its own), so call this from inside a
+    tool call. Returns the number of subscriptions notified (0 outside a request).
     """
+    from src.mcp_features import active_context, notify_resource_updated
+
     if not has_subscribers(uri):
         return 0
-    count = get_subscription_count(uri)
-    try:
-        await mcp._mcp_server.notification(
-            "notifications/resources/updated",
-            {"uri": uri},
-        )
-    except Exception:
-        logger.warning("Failed to send resource update notification for %s", uri)
+    if not await notify_resource_updated(active_context(mcp), uri):
         return 0
-    return count
+    return get_subscription_count(uri)

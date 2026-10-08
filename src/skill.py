@@ -19,13 +19,13 @@ from __future__ import annotations
 
 import logging
 import re
-
-logger = logging.getLogger(__name__)
 import sqlite3
 import time
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_DB = Path(__file__).parent.parent / "rag" / "store" / "agent_memory.db"
 

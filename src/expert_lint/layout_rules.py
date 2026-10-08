@@ -21,7 +21,6 @@ from __future__ import annotations
 
 from src.expert_lint.types import Violation
 
-
 _TEMPLATE_REQUIREMENTS: dict[str, set[str]] = {
     "busking-master": {"intensity", "color", "fx", "specials"},
     "preset-access": {"color-preset-bank", "position-preset-bank"},

@@ -3348,54 +3348,61 @@ class TestSetSequencePropertyTool:
         assert data["blocked"] is True
         assert data["risk_tier"] == "DESTRUCTIVE"
 
+    @staticmethod
+    def _client(*replies):
+        client = MagicMock()
+        client.send_command_with_response = AsyncMock(side_effect=list(replies))
+        return client
+
     @pytest.mark.asyncio
-    @patch("src.server.set_property", new_callable=AsyncMock)
     @patch("src.server.get_client")
-    async def test_set_loop_property(self, mock_get_client, mock_set_property):
-        """Test setting the loop property on a sequence."""
-        from src.navigation import SetPropertyResult
+    async def test_set_loop_property(self, mock_get_client):
+        """Assigns directly on the sequence and reads it back with List Sequence."""
         from src.server import set_sequence_property
 
-        mock_set_property.return_value = SetPropertyResult(
-            path="sequence 1", commands_sent=["cd sequence 1", 'assign "loop" "on"', "cd /"],
-            raw_responses=["", "", ""], success=True, verified_value=None, error=None,
+        client = self._client(
+            "[Channel]>",
+            "No.  Name   Loop\r\nSeq 1  Main   On\r\n[Channel]>",
         )
+        mock_get_client.return_value = client
 
-        result = await set_sequence_property(
-            sequence_id=1, property_name="loop", value="on",
-            confirm_destructive=True
-        )
-        data = json.loads(result)
+        data = json.loads(await set_sequence_property(
+            sequence_id=1, property_name="loop", value="on", confirm_destructive=True,
+        ))
 
-        assert data["sequence_id"] == 1
-        assert data["property"] == "loop"
-        assert data["value"] == "on"
+        assert data["commands_sent"][0] == "Assign Sequence 1 /loop=on"
+        assert data["commands_sent"][1] == "List Sequence 1"
         assert data["risk_tier"] == "DESTRUCTIVE"
         assert data["success"] is True
-        mock_set_property.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("src.server.set_property", new_callable=AsyncMock)
     @patch("src.server.get_client")
-    async def test_set_tracking_property(self, mock_get_client, mock_set_property):
-        """Test setting the tracking property on a sequence."""
-        from src.navigation import SetPropertyResult
+    async def test_set_tracking_property_uses_track_column(self, mock_get_client):
+        """'tracking' is silently ignored by MA2 — the property is 'Track'."""
         from src.server import set_sequence_property
 
-        mock_set_property.return_value = SetPropertyResult(
-            path="sequence 3", commands_sent=["cd sequence 3", 'assign "tracking" "off"', "cd /"],
-            raw_responses=["", "", ""], success=True, verified_value=None, error=None,
-        )
+        mock_get_client.return_value = self._client("[Channel]>", "[Channel]>")
+        data = json.loads(await set_sequence_property(
+            sequence_id=3, property_name="tracking", value="off", confirm_destructive=True,
+        ))
 
-        result = await set_sequence_property(
-            sequence_id=3, property_name="tracking", value="off",
-            confirm_destructive=True
-        )
-        data = json.loads(result)
+        assert data["property"] == "Track"
+        assert data["commands_sent"][0] == "Assign Sequence 3 /Track=off"
+        assert data["verified"] is False  # nothing to read back → not claimed
 
-        assert data["sequence_id"] == 3
-        assert data["success"] is True
-        mock_set_property.assert_called_once()
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_rejected_assign_is_not_success(self, mock_get_client):
+        from src.server import set_sequence_property
+
+        mock_get_client.return_value = self._client(
+            "Error #72: COMMAND NOT EXECUTED\r\n[Channel]>", "[Channel]>",
+        )
+        data = json.loads(await set_sequence_property(
+            sequence_id=3, property_name="Track", value="off", confirm_destructive=True,
+        ))
+        assert data["success"] is False
+        assert data["ok"] is False
 
 
 # ============================================================
@@ -3413,7 +3420,7 @@ class TestSaveShowTool:
         mock_get_client.return_value = mock_client
         result = await save_show(action="save")
         data = json.loads(result)
-        assert data["command_sent"] == "save"
+        assert data["command_sent"] == "saveshow"
         assert data["risk_tier"] == "SAFE_WRITE"
 
     @pytest.mark.asyncio
@@ -3425,7 +3432,7 @@ class TestSaveShowTool:
         mock_get_client.return_value = mock_client
         result = await save_show(action="saveas", show_name="my_show")
         data = json.loads(result)
-        assert data["command_sent"] == 'saveas "my_show"'
+        assert data["command_sent"] == 'saveshow "my_show"'  # "saveas" is UNKNOWN COMMAND
 
     @pytest.mark.asyncio
     async def test_save_show_saveas_missing_name(self):

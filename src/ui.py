@@ -44,6 +44,47 @@ def _ui_port() -> int:
     return port
 
 
+_LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+_WILDCARD_BINDS = {"0.0.0.0", "::", ""}
+
+
+def _allowed_hostnames() -> set[str]:
+    allowed = set(_LOOPBACK_HOSTS)
+    bind = _ui_host().strip().lower()
+    if bind not in _WILDCARD_BINDS:
+        allowed.add(bind)
+    extra = os.environ.get("GMA_UI_ALLOWED_HOSTS", "")
+    allowed.update(h.strip().lower() for h in extra.split(",") if h.strip())
+    return allowed
+
+
+def _hostname(netloc: str) -> str:
+    """Hostname part of a Host header / netloc, without port or IPv6 brackets."""
+    parsed = urlparse(f"//{netloc.strip()}")
+    return (parsed.hostname or "").lower()
+
+
+def _request_guard(method: str, headers: Any) -> str | None:
+    """Reject requests that a foreign web page could forge. Returns an error or None.
+
+    - Host must be a known name for this UI (blocks DNS rebinding).
+    - POST must be application/json (forces a CORS preflight, which we never answer).
+    - A browser Origin, when sent, must match the Host (blocks cross-site POSTs).
+    """
+    host = headers.get("Host") or ""
+    if not host or _hostname(host) not in _allowed_hostnames():
+        return f"Host {host!r} is not allowed. Add it to GMA_UI_ALLOWED_HOSTS to permit it."
+    if method != "POST":
+        return None
+    content_type = (headers.get("Content-Type") or "").split(";")[0].strip().lower()
+    if content_type != "application/json":
+        return "POST requests must use Content-Type: application/json."
+    origin = headers.get("Origin")
+    if origin is not None and urlparse(origin).netloc.lower() != host.strip().lower():
+        return f"Cross-origin request from {origin!r} rejected."
+    return None
+
+
 def _json_bytes(payload: Any) -> bytes:
     return json.dumps(payload, indent=2, default=str).encode("utf-8")
 
@@ -677,7 +718,16 @@ class _Handler(BaseHTTPRequestHandler):
             return HTTPStatus.OK, _load_static("styles.css"), "text/css; charset=utf-8"
         return HTTPStatus.NOT_FOUND, b"Not found", "text/plain; charset=utf-8"
 
+    def _reject_forged(self, method: str) -> bool:
+        error = _request_guard(method, self.headers)
+        if error is None:
+            return False
+        self._write(HTTPStatus.FORBIDDEN, _json_bytes({"ok": False, "error": error}), "application/json; charset=utf-8")
+        return True
+
     def do_GET(self) -> None:
+        if self._reject_forged("GET"):
+            return
         parsed = urlparse(self.path)
         if parsed.path.startswith("/api/"):
             try:
@@ -691,6 +741,8 @@ class _Handler(BaseHTTPRequestHandler):
         self._write(status, body, content_type)
 
     def do_POST(self) -> None:
+        if self._reject_forged("POST"):
+            return
         parsed = urlparse(self.path)
         content_length = int(self.headers.get("Content-Length", "0"))
         raw_body = self.rfile.read(content_length) if content_length else b"{}"

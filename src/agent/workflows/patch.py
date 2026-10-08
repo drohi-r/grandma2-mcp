@@ -2,10 +2,9 @@
 
 Canonical ordering:
 1. List existing fixture types (discovery)
-2. Import fixture type if needed
-3. Patch fixtures at addresses
-4. Label fixtures
-5. Verify patch
+2. Patch fixtures at addresses
+3. Label fixtures
+4. Verify patch
 """
 
 from __future__ import annotations
@@ -20,18 +19,32 @@ def build_patch_workflow(goal: ParsedGoal) -> list[PlanStep]:
 
     Args:
         goal: Parsed goal with fixture_type, count, names, and options
-              (universe, start_address, start_id).
+              (universe, start_address, start_id, footprint).
 
     Returns:
         Ordered list of PlanSteps with dependency edges.
     """
     steps: list[PlanStep] = []
 
-    fixture_type = goal.fixture_type or "Generic Dimmer"
     count = goal.count or 1
     universe = goal.options.get("universe", 1)
     start_address = goal.options.get("start_address", 1)
     start_id = goal.options.get("start_id", 1)
+    footprint = goal.options.get("footprint")
+
+    if goal.fixture_type:
+        # import_fixture_type needs manufacturer/fixture/mode, which a free-text
+        # goal can't supply — the type must already be in the show.
+        goal.notes.append(
+            f"Fixture type '{goal.fixture_type}' must already exist in the show; "
+            "import it first with import_fixture_type(manufacturer, fixture, mode) if not."
+        )
+    if footprint is None and count > 1:
+        goal.notes.append(
+            "Addresses assume 1 DMX channel per fixture — say the footprint "
+            "(e.g. '16 channels') for multi-channel fixtures."
+        )
+    stride = footprint or 1
 
     # Step 1: Discover existing fixture types
     discover = PlanStep(
@@ -42,39 +55,25 @@ def build_patch_workflow(goal: ParsedGoal) -> list[PlanStep]:
     )
     steps.append(discover)
 
-    # Step 2: Import fixture type if specified
-    import_step = PlanStep(
-        tool_name="import_fixture_type",
-        tool_args={
-            "fixture_type": fixture_type,
-            "confirm_destructive": False,
-        },
-        description=f"Import fixture type '{fixture_type}'",
-        risk_tier=RiskTier.DESTRUCTIVE,
-        depends_on=[discover.id],
-    )
-    steps.append(import_step)
-
-    # Step 3: Patch fixtures
+    # Step 2: Patch fixtures
     for i in range(count):
         fixture_id = start_id + i
-        address = start_address + i  # simplified; real addressing depends on channel count
+        address = start_address + i * stride
         patch = PlanStep(
             tool_name="patch_fixture",
             tool_args={
                 "fixture_id": fixture_id,
-                "fixture_type": fixture_type,
-                "universe": universe,
-                "address": address,
+                "dmx_universe": universe,
+                "dmx_address": address,
                 "confirm_destructive": False,
             },
             description=f"Patch fixture {fixture_id} at {universe}.{address:03d}",
             risk_tier=RiskTier.DESTRUCTIVE,
-            depends_on=[import_step.id],
+            depends_on=[discover.id],
         )
         steps.append(patch)
 
-    # Step 4: Label fixtures (if names provided)
+    # Step 3: Label fixtures (if names provided)
     patch_step_ids = [s.id for s in steps if s.tool_name == "patch_fixture"]
     for i, name in enumerate(goal.names[:count]):
         fixture_id = start_id + i
@@ -83,7 +82,7 @@ def build_patch_workflow(goal: ParsedGoal) -> list[PlanStep]:
         )
         steps.append(label)
 
-    # Step 5: Verify patch
+    # Step 4: Verify patch
     last_mutation_id = steps[-1].id if steps else ""
     verify = build_verify_step(
         "query_object_list",

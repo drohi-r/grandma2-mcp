@@ -1,9 +1,9 @@
 ---
 title: MA2 Command Conventions
 description: Live-verified MA2 command rules, quoting, navigation, and data directory layout
-version: 1.1.0
+version: 1.2.0
 created: 2026-03-29T21:44:45Z
-last_updated: 2026-07-17T19:35:00Z
+last_updated: 2026-10-08T00:33:26Z
 ---
 
 # MA2 Command Conventions
@@ -141,6 +141,19 @@ importexport/
 **Rule:** When adding features to a working macro, insert new lines around existing logic — do not modify lines that perform critical Store operations.
 
 **Jump target convention:** `Go Macro 1."name".N` targets Line N (1-based) = XML index N-1. When inserting lines, use an index shift table to remap all jump targets.
+
+---
+
+## Telnet reply format (live-verified 2026-10-08, v3.9.60.50)
+
+| Part | What the console sends |
+|------|------------------------|
+| Echo | `Executing : <canonical keyword> <args>` — normalized, not as typed (`cd /` → `ChangeDest /`), with ANSI colour codes between words |
+| Prompt | `\r [Fixture]>` followed by `ESC[K` — reply is complete once this arrives |
+| Rejection | `Error #N: TEXT` (e.g. `UNKNOWN COMMAND` for an unknown keyword) |
+| Empty list | `WARNING, NO OBJECTS FOUND FOR LIST` |
+
+`telnet_client.frame_reply` starts each reply at the `Executing :` line whose keyword matches the sent command; `console_feedback` strips ANSI and classifies errors. Match on the canonical keyword, never on the typed command text.
 
 ---
 

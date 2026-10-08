@@ -21,7 +21,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class ElicitationAction(str, Enum):
+class ElicitationAction(str, Enum):  # noqa: UP042 — str() must stay "ElicitationAction.X"
     """Possible user responses to an elicitation request."""
 
     ACCEPT = "accept"

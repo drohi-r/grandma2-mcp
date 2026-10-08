@@ -159,6 +159,17 @@ class SessionManager:
             logger.info("Expired %d idle Telnet session(s)", len(removed))
         return len(removed)
 
+    async def release_all(self) -> int:
+        """Disconnect every session but keep the manager usable — the next tool
+        call reconnects. Frees the console for another Telnet client."""
+        async with self._lock:
+            sessions = list(self._sessions.values())
+            self._sessions.clear()
+        for session in sessions:
+            await _safe_disconnect(session.client)
+        logger.info("Released %d Telnet session(s)", len(sessions))
+        return len(sessions)
+
     async def close_all(self) -> None:
         """Disconnect all sessions. Called on server shutdown."""
         if self._keepalive_task is not None:
@@ -210,6 +221,9 @@ class SessionManager:
         )
         await client.connect()
         await client.login()
+        if getattr(client, "login_rejected", False) is True:
+            await _safe_disconnect(client)
+            raise ConnectionError(f"Console rejected login for user {username!r}")
         return client
 
     async def _reconnect(
@@ -248,9 +262,10 @@ class SessionManager:
                 for session in sessions:
                     if session.client.is_connected:
                         with contextlib.suppress(Exception):
-                            # Empty-string send keeps the socket alive without
-                            # any console side-effects; will reconnect on next get()
-                            await session.client.send_command("")
+                            # Empty line keeps the socket alive; ping() also reads
+                            # what the console printed meanwhile, so unread output
+                            # can't pile up and leak into the next tool reply.
+                            await session.client.ping()
             except asyncio.CancelledError:
                 break
             except Exception as exc:

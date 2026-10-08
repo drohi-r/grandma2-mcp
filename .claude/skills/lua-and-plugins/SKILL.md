@@ -1,9 +1,9 @@
 ---
 title: Lua Scripting and Plugins
 description: Instruction module for grandMA2 Lua scripting (v5.2 gma.* namespace) and plugin invocation via MCP — plugin browsing, Lua execution, and the plugin lifecycle
-version: 1.0.0
+version: 1.0.1
 created: 2026-04-01T00:00:00Z
-last_updated: 2026-04-01T00:00:00Z
+last_updated: 2026-10-07T21:33:30Z
 ---
 
 # Lua Scripting and Plugins
@@ -77,7 +77,7 @@ gma.echo("Console version: " .. ver)
 ```
 browse_plugin_library   — SAFE_READ: list available plugins by name and description
 call_plugin_tool        — SAFE_WRITE: invoke a named plugin with optional arguments
-run_lua_script          — SAFE_WRITE / DESTRUCTIVE: execute inline Lua; risk depends on script body
+run_lua_script          — DESTRUCTIVE: execute inline Lua (gma.cmd can issue any command; confirm_destructive=True required — same for system_admin action="lua")
 reload_all_plugins      — SAFE_WRITE: reload plugin system after uploading a new .lua file
 list_system_variables   — SAFE_READ: list all 26 MA2 system variable names and values
 manage_variable         — SAFE_WRITE: read or write a show variable (SetVar / SetUserVar)

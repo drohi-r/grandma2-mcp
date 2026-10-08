@@ -50,13 +50,14 @@ class TestPatchWorkflow:
             fixture_type="Generic Dimmer",
         )
         steps = build_patch_workflow(goal)
-        # discover + import + 2 patch + verify = 5
-        assert len(steps) == 5
+        # discover + 2 patch + verify = 4 (import needs manufacturer/fixture/mode,
+        # which a free-text goal can't supply — surfaced as a note instead)
+        assert len(steps) == 4
         assert steps[0].tool_name == "list_fixture_types"
-        assert steps[1].tool_name == "import_fixture_type"
+        assert steps[1].tool_name == "patch_fixture"
         assert steps[2].tool_name == "patch_fixture"
-        assert steps[3].tool_name == "patch_fixture"
-        assert "Verify" in steps[4].description
+        assert "Verify" in steps[3].description
+        assert any("Generic Dimmer" in n for n in goal.notes)
 
     def test_patch_with_names(self):
         goal = ParsedGoal(
@@ -76,13 +77,9 @@ class TestPatchWorkflow:
             count=1,
         )
         steps = build_patch_workflow(goal)
-        discover = steps[0]
-        import_step = steps[1]
-        patch = steps[2]
-        # Import depends on discover
-        assert discover.id in import_step.depends_on
-        # Patch depends on import
-        assert import_step.id in patch.depends_on
+        discover, patch, verify = steps
+        assert discover.id in patch.depends_on
+        assert patch.id in verify.depends_on
 
     def test_patch_custom_address(self):
         goal = ParsedGoal(
@@ -93,8 +90,19 @@ class TestPatchWorkflow:
         )
         steps = build_patch_workflow(goal)
         patch = [s for s in steps if s.tool_name == "patch_fixture"][0]
-        assert patch.tool_args["universe"] == 2
-        assert patch.tool_args["address"] == 100
+        assert patch.tool_args["dmx_universe"] == 2
+        assert patch.tool_args["dmx_address"] == 100
+
+    def test_patch_footprint_strides_addresses(self):
+        goal = ParsedGoal(
+            raw="Patch 3 fixtures 16 channels",
+            intent=GoalIntent.PATCH,
+            count=3,
+            options={"universe": 1, "start_address": 1, "footprint": 16},
+        )
+        addresses = [s.tool_args["dmx_address"] for s in build_patch_workflow(goal)
+                     if s.tool_name == "patch_fixture"]
+        assert addresses == [1, 17, 33]
 
 
 class TestPresetWorkflow:

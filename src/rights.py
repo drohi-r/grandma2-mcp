@@ -49,6 +49,7 @@ def _right_tier(right: MA2Right) -> int:
 _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     # none (0)
     "navigate_console":           MA2Right.NONE,
+    "disconnect_console":         MA2Right.NONE,  # closes this server's own session only
     "get_console_location":       MA2Right.NONE,
     "list_console_destination":   MA2Right.NONE,
     "scan_console_indexes":       MA2Right.NONE,
@@ -129,6 +130,8 @@ _OPERATION_MIN_RIGHT: dict[str, MA2Right] = {
     # program (3)
     "create_fixture_group":       MA2Right.PROGRAM,
     "send_raw_command":           MA2Right.PROGRAM,
+    "run_command_batch":          MA2Right.PROGRAM,
+    "answer_console_popup":       MA2Right.PROGRAM,
     "store_current_cue":          MA2Right.PROGRAM,
     "delete_object":              MA2Right.PROGRAM,
     "copy_or_move_object":        MA2Right.PROGRAM,

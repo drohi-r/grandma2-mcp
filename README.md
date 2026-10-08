@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
-description: MCP server for grandMA2 lighting consoles — 218 MCP tools via Telnet
-version: 1.2.0
+description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
+version: 1.2.4
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-07-17T21:20:00Z
+last_updated: 2026-10-07T22:25:44Z
 ---
 
 <p align="center">
@@ -27,7 +27,7 @@ last_updated: 2026-07-17T21:20:00Z
 Built for live production. Pairs with [Resolume MCP](https://github.com/drohi-r/resolume-mcp), [MADRIX MCP](https://github.com/drohi-r/madrix-mcp), [Companion MCP](https://github.com/drohi-r/companion-mcp), and [Beyond MCP](https://github.com/drohi-r/beyond-mcp) for full AI-driven show control.
 
 <table>
-<tr><td><b>Agent Harness</b></td><td>218 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
+<tr><td><b>Agent Harness</b></td><td>237 MCP tools covering every grandMA2 operation — playback, programming, user management, show files, busking, and more. Connect any MCP-compatible AI assistant and start controlling the console immediately.</td></tr>
 <tr><td><b>Embedded Agent Core</b></td><td>Orchestrator, task decomposer, working + long-term memory, and a skill registry with self-improvement suggestions. Inject a real LLM client and it becomes a fully autonomous lighting agent that plans, executes, remembers, and learns.</td></tr>
 <tr><td><b>Layered safety gate</b></td><td>Three risk tiers enforced before any command reaches the console: <code>SAFE_READ</code> (always allowed), <code>SAFE_WRITE</code> (standard mode), <code>DESTRUCTIVE</code> (blocked until <code>confirm_destructive=True</code>). Line-break injection rejected at the transport layer.</td></tr>
 <tr><td><b>A closed learning loop</b></td><td>Every tool call recorded to <code>tool_invocations</code>. SkillImprover surfaces repair suggestions from failure patterns and promotion candidates from high-quality sessions. Skills are versioned playbooks with full lineage tracking.</td></tr>
@@ -171,6 +171,9 @@ GMA_USER=administrator     # default: administrator
 GMA_PASSWORD=admin         # default: admin
 GMA_PORT=30000             # default: 30000 (30001 = read-only)
 GMA_SAFETY_LEVEL=standard  # standard (default), admin, or read-only
+GMA_TOOL_PROFILE=full      # core (28 tools), standard (104) or full (237, default)
+GMA_ELICIT_CONFIRM=1       # 0 = never open confirm dialogs for destructive calls
+GMA_MAX_REPLY_CHARS=20000  # cap on raw console text returned per reply
 LOG_LEVEL=INFO             # default: INFO
 
 # RAG Pipeline (optional)
@@ -188,9 +191,11 @@ RAG_EMBED_DIMENSIONS=1536                     # vector dimensions
 | `standard` | `SAFE_READ` + `SAFE_WRITE` allowed; `DESTRUCTIVE` requires `confirm_destructive=True` |
 | `admin` | All commands allowed without confirmation |
 
+`GMA_TOOL_PROFILE` trims what MCP clients see when they load every tool schema up front (about 40k tokens for all 237). `run_agent_goal` can still use every tool. See [doc/tool-surface-tiers.md](doc/tool-surface-tiers.md).
+
 ## MCP Tools
 
-The server exposes **218 tools** to MCP clients, grouped into 15 categories plus an agentic orchestration layer:
+The server exposes **237 tools** to MCP clients, grouped into 15 categories plus an agentic orchestration layer:
 
 <details>
 <summary><strong>🧭 Navigation & Inspection</strong> — 4 tools</summary>
@@ -550,11 +555,14 @@ python -m scripts.create_matricks_library --color-only
 </details>
 
 <details>
-<summary><strong>⚙️ Console & Utilities</strong> — 8 tools</summary>
+<summary><strong>⚙️ Console & Utilities</strong> — 11 tools</summary>
 
 | Tool | Description |
 |------|-------------|
-| `send_raw_command` | Send any MA command directly (safety-gated) |
+| `send_raw_command` | Send any MA command directly (safety-gated; every `;`-part is classified) |
+| `run_command_batch` | Run a list or file of commands on one held connection; stops at the first console error or pop-up |
+| `answer_console_popup` | Answer a pop-up a reply reported as `pending_popup` (non-Cancel answers need confirmation) |
+| `disconnect_console` | Close this server's Telnet session to free the console; the next call reconnects |
 | `copy_or_move_object` | Copy or move objects between slots (with merge/overwrite) |
 | `delete_object` | Delete any object by type and ID |
 | `manage_variable` | Set or add to console variables (global or user-scoped) |
@@ -705,13 +713,14 @@ Read from the cached snapshot — **no telnet round-trips required**.
 
 ## MCP Resources
 
-Thirteen read-only resources exposable to any MCP client. Use them for zero-telnet context before calling tools.
+Fourteen read-only resources exposable to any MCP client. Use them for zero-telnet context before calling tools.
 
 | URI | Description |
 |-----|-------------|
+| `ma2://console/activity` | Live: recent console-changing tool calls; subscribe to get an update after every change |
 | `ma2://docs/rights-matrix` | OAuth scope → MA2Right mapping matrix (JSON) |
 | `ma2://docs/vocab-summary` | All 157 keywords with RiskTier and category (JSON) |
-| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — 218 tools clustered into 14 categories (JSON) |
+| `ma2://docs/tool-taxonomy` | ML-clustered tool taxonomy — all tools clustered by category (JSON) |
 | `ma2://docs/responsibility-map` | Module responsibility map for architectural decisions (Markdown) |
 | `ma2://docs/tool-surface-tiers` | Tier A/B/C classification for every tool (Markdown) |
 | `ma2://docs/volunteer-guide` | Plain-language volunteer operator guide: three-tier access model + Sunday preflight |
@@ -894,7 +903,7 @@ if not result.allowed:
     return result.as_block_response()
 ```
 
-All 218 tools are mapped in `doc/ma2-rights-matrix.json`.
+Rights are enforced in code via `@require_ma2_right`; `doc/ma2-rights-matrix.json` documents the rights model.
 
 ### Layer 3 — MA2 Native Rights (console enforcement)
 
@@ -912,7 +921,9 @@ In addition to the 3-layer model, every keyword is classified into one of three 
 | `SAFE_WRITE` | Reversible state changes | `Go`, `At`, `Clear`, `Park`, `SelFix` |
 | `DESTRUCTIVE` | Data mutation or loss | `Delete`, `Store`, `Copy`, `Move`, `Shutdown` |
 
-`DESTRUCTIVE` tools require `confirm_destructive=True` in addition to OAuth scope.
+`DESTRUCTIVE` tools require `confirm_destructive=True` in addition to OAuth scope. When the MCP client supports **elicitation**, a destructive call made without it opens a confirm dialog instead of just failing; only an explicit accept runs it (disable with `GMA_ELICIT_CONFIRM=0`). `run_agent_goal` without `auto_confirm` asks the same way per destructive step.
+
+Raw command lines are classified per `;`-separated part, so `ClearAll ; Store Group 5` is `DESTRUCTIVE`, and a bare number (which can answer an open pop-up) is too.
 
 > [!IMPORTANT]
 > **Command injection prevention:** Line breaks (`\r`, `\n`) are rejected before any command reaches the console.

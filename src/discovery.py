@@ -143,7 +143,7 @@ async def discover_grandma2_broadcast(
                     loop.sock_recvfrom(sock, 1500),
                     timeout=max(0.05, deadline - loop.time()),
                 )
-            except (TimeoutError, asyncio.TimeoutError):
+            except TimeoutError:
                 break
             except (OSError, NotImplementedError, AttributeError) as e:
                 logger.debug("sock_recvfrom failed: %s", e)

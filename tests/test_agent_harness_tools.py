@@ -38,7 +38,7 @@ class _FakeRuntime:
     async def plan_only(self, goal: str):
         type(self).last_plan_goal = goal
         return (
-            type("ParsedGoal", (), {"intent": type("Intent", (), {"value": "discover"})(), "confidence": 0.9, "object_type": None})(),
+            type("ParsedGoal", (), {"intent": type("Intent", (), {"value": "discover"})(), "confidence": 0.9, "object_type": None, "notes": []})(),
             [],
             [],
         )

@@ -55,3 +55,4 @@ agent_traces/
 
 # Claude Code session-local worktrees
 .claude/worktrees/
+verify_captures/

@@ -133,11 +133,13 @@ class TestCutPasteObjectTool:
         mock_client.send_command_with_response = AsyncMock(return_value="[channel]>")
         mock_get_client.return_value = mock_client
 
-        result = await cut_paste_object(action="cut", object_type="group", object_id=1)
+        result = await cut_paste_object(
+            action="cut", object_type="group", object_id=1, confirm_destructive=True
+        )
         data = json.loads(result)
 
         assert data["command_sent"] == "cut group 1"
-        assert data["risk_tier"] == "SAFE_WRITE"
+        assert data["risk_tier"] == "DESTRUCTIVE"
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
@@ -148,7 +150,9 @@ class TestCutPasteObjectTool:
         mock_client.send_command_with_response = AsyncMock(return_value="[channel]>")
         mock_get_client.return_value = mock_client
 
-        result = await cut_paste_object(action="paste", object_type="group", target_id=5)
+        result = await cut_paste_object(
+            action="paste", object_type="group", target_id=5, confirm_destructive=True
+        )
         data = json.loads(result)
 
         assert data["command_sent"] == "paste group 5"
@@ -162,7 +166,7 @@ class TestCutPasteObjectTool:
         mock_client.send_command_with_response = AsyncMock(return_value="[channel]>")
         mock_get_client.return_value = mock_client
 
-        result = await cut_paste_object(action="paste")
+        result = await cut_paste_object(action="paste", confirm_destructive=True)
         data = json.loads(result)
 
         assert data["command_sent"] == "paste"
@@ -171,9 +175,26 @@ class TestCutPasteObjectTool:
     async def test_cut_missing_object_type(self):
         from src.server import cut_paste_object
 
-        result = await cut_paste_object(action="cut")
+        result = await cut_paste_object(action="cut", confirm_destructive=True)
         data = json.loads(result)
         assert "error" in data
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("kwargs", [
+        {"action": "cut", "object_type": "group", "object_id": 1},
+        {"action": "paste", "object_type": "group", "target_id": 5},
+    ])
+    @patch("src.server.get_client")
+    async def test_cut_and_paste_blocked_without_confirm(self, mock_get_client, kwargs):
+        """Cut/paste must be gated exactly like edit_object's cut/paste."""
+        from src.server import cut_paste_object
+
+        result = await cut_paste_object(**kwargs)
+        data = json.loads(result)
+
+        assert data["blocked"] is True
+        assert data["command_sent"] is None
+        mock_get_client.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_invalid_action(self):

@@ -1241,6 +1241,7 @@ def register_orchestration_tools(
     # exact same DB connection that @_handle_errors writes to. Creating a second
     # ToolTelemetry() instance would produce a split view with zero shared rows.
     import json as _json
+
     from .server import _get_telemetry as _get_server_telemetry
     _tel = _get_server_telemetry()
     _reg = SkillRegistry()

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from src.preset_strategies.types import PresetStrategy
 
-
 PRESET_STRATEGIES: dict[str, PresetStrategy] = {
     "full-coverage": PresetStrategy(
         name="full-coverage",

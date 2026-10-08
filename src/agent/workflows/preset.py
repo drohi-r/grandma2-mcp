@@ -51,22 +51,22 @@ def build_preset_workflow(goal: ParsedGoal) -> list[PlanStep]:
         select = PlanStep(
             tool_name="modify_selection",
             tool_args={
-                "action": "select",
-                "start": fixture_start,
-                "end": fixture_end or fixture_start,
+                "action": "replace",
+                "fixture_ids": [fixture_start],
+                "end_id": fixture_end or fixture_start,
             },
             description=f"Select fixtures {fixture_start}-{fixture_end or fixture_start}",
             risk_tier=RiskTier.SAFE_WRITE,
         )
     else:
-        # Default: select all
-        select = PlanStep(
-            tool_name="clear_programmer",
-            tool_args={"scope": "selection"},
-            description="Clear selection before preset workflow",
-            risk_tier=RiskTier.SAFE_WRITE,
+        # No selection given: store what is in the programmer now. Clearing it
+        # first (the old default) made the store empty.
+        select = None
+        goal.notes.append(
+            "No group or fixture range given — the preset stores the current programmer content."
         )
-    steps.append(select)
+    if select is not None:
+        steps.append(select)
 
     # Step 2: Set attribute values
     for attr_name, attr_value in values.items():
@@ -78,12 +78,12 @@ def build_preset_workflow(goal: ParsedGoal) -> list[PlanStep]:
             },
             description=f"Set {attr_name} to {attr_value}",
             risk_tier=RiskTier.SAFE_WRITE,
-            depends_on=[select.id],
+            depends_on=[select.id] if select is not None else [],
         )
         steps.append(set_val)
 
     # Step 3: Store preset
-    last_value_id = steps[-1].id
+    last_value_id = steps[-1].id if steps else None
     store = PlanStep(
         tool_name="store_new_preset",
         tool_args={
@@ -93,7 +93,7 @@ def build_preset_workflow(goal: ParsedGoal) -> list[PlanStep]:
         },
         description=f"Store {preset_type} preset {preset_id}",
         risk_tier=RiskTier.DESTRUCTIVE,
-        depends_on=[last_value_id],
+        depends_on=[last_value_id] if last_value_id else [],
     )
     steps.append(store)
 

@@ -31,7 +31,7 @@ from src.prompt_parser import (
     parse_list_output,
     parse_prompt,
 )
-from src.telnet_client import GMA2TelnetClient
+from src.telnet_client import GMA2TelnetClient, hold_connection
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +225,13 @@ class SetPropertyResult:
     error: str | None = None
 
 
-async def set_property(
+async def set_property(client: GMA2TelnetClient, *args, **kwargs) -> SetPropertyResult:
+    """cd → assign → list → cd / as one uninterrupted sequence (see _set_property)."""
+    async with hold_connection(client):
+        return await _set_property(client, *args, **kwargs)
+
+
+async def _set_property(
     client: GMA2TelnetClient,
     path: str,
     property_name: str,
@@ -315,12 +321,16 @@ async def set_property(
     commands_sent.append(nav.command_sent)
     raw_responses.append(nav.raw_response)
 
+    from src.console_feedback import find_console_errors
+
+    errors = find_console_errors(assign_response, assign_cmd)
     return SetPropertyResult(
         path=path,
         commands_sent=commands_sent,
         raw_responses=raw_responses,
-        success=True,
+        success=not errors,
         verified_value=verified_value,
+        error="; ".join(e.describe() for e in errors) or None,
     )
 
 
@@ -341,7 +351,14 @@ class IndexScanEntry:
     entries: tuple
 
 
-async def scan_indexes(
+async def scan_indexes(client: GMA2TelnetClient, **kwargs) -> list[IndexScanEntry]:
+    """cd N → list → cd back for each index, holding the connection throughout
+    (see _scan_indexes) so concurrent tool calls can't land mid-scan."""
+    async with hold_connection(client):
+        return await _scan_indexes(client, **kwargs)
+
+
+async def _scan_indexes(
     client: GMA2TelnetClient,
     *,
     reset_to: str = "/",

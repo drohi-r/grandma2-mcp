@@ -143,6 +143,8 @@ class ParsedGoal:
     names: list[str] = field(default_factory=list)
     options: dict[str, Any] = field(default_factory=dict)
     confidence: float = 1.0
+    # Planner caveats for the operator: missing details, unrecognized goal.
+    notes: list[str] = field(default_factory=list)
 
 
 @dataclass
