@@ -16,6 +16,7 @@ Uses telnetlib3 (based on asyncio) to replace the deprecated telnetlib module.
 
 import asyncio
 import contextlib
+import functools
 import logging
 import re
 from collections.abc import Iterator
@@ -67,18 +68,50 @@ def hold_connection(client: Any) -> contextlib.AbstractAsyncContextManager:
     return contextlib.nullcontext()
 
 
+# The console echoes each command as "Executing : <canonical keyword> ...", with
+# ANSI colour codes between the words (live, onPC 3.9.60.50).
+_ECHO_MARKER_RE = re.compile(r"Executing")
+_ECHO_KEYWORD_RE = re.compile(r"^\s*:\s*(\S+)")
+
+
+@functools.lru_cache(maxsize=256)
+def _keyword_names(token: str) -> frozenset[str]:
+    """The typed first token plus its canonical MA2 keyword ("cd" → "changedest")."""
+    names = {token.lower()}
+    with contextlib.suppress(Exception):
+        from src.vocab import classify_token
+
+        canonical = classify_token(token, _vocab_spec()).canonical
+        if canonical:
+            names.add(canonical.lower())
+    return frozenset(names)
+
+
+@functools.lru_cache(maxsize=1)
+def _vocab_spec():
+    from src.vocab import build_v39_spec
+
+    return build_v39_spec()
+
+
 def frame_reply(raw: str, command: str) -> str:
     """Start the reply at the console's echo of *command*.
 
-    Output that arrived before the echo belongs to something else — another
-    session's commands, or the tail of the previous reply — and is dropped.
-    Without an echo the reply is returned unchanged.
+    Output before that echo belongs to something else — another session's
+    commands, or the tail of the previous reply — and is dropped. When no echo
+    names the command's keyword, the reply is returned unchanged.
     """
-    cmd = command.strip()
-    if not cmd or not raw:
+    tokens = command.split()
+    if not tokens or not raw:
         return raw
-    idx = raw.lower().find(cmd.lower())
-    return raw[idx:] if idx > 0 else raw
+    wanted = _keyword_names(tokens[0])
+    for marker in _ECHO_MARKER_RE.finditer(raw):
+        line_end = raw.find("\n", marker.end())
+        echoed = _ANSI_RE.sub("", raw[marker.end(): line_end if line_end != -1 else None])
+        m = _ECHO_KEYWORD_RE.match(echoed)
+        if m and m.group(1).lower() in wanted:
+            return raw[marker.start():]
+    return raw
 
 
 class GMA2TelnetClient:

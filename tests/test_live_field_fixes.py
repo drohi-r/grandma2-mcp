@@ -72,10 +72,11 @@ class TestRepliesTellTheTruth:
         for kind, reply in zip(kinds, replies, strict=True):
             data = json.loads(reply)
             assert data["ok"] is True, data
-            assert kind in data["command_sent"].lower()
-            assert data["raw_response"].lower().startswith(data["command_sent"].lower()[:8]), (
-                f"{kind}: reply does not start at its own command echo"
-            )
+            # The console echoes "Executing : List <Kind>" — each reply must open
+            # with its own echo, not another call's.
+            first_line = data["raw_response"].splitlines()[0].lower()
+            assert first_line.startswith("executing : list"), first_line
+            assert kind in first_line, f"{kind}: reply opens with someone else's echo: {first_line!r}"
 
     async def test_read_only_batch(self, live_client):
         data = _show(json.loads(await run_command_batch(commands=["List Group", "List Sequence", "ListVar"])))

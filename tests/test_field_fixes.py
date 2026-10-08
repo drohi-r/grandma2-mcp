@@ -158,16 +158,32 @@ class TestConnectionLock:
 
 
 class TestReplyFraming:
-    def test_frame_reply_starts_at_echo_of_sent_command(self):
+    # Real onPC 3.9.60.50 echo: "Executing : <canonical keyword> ..." with ANSI
+    # colour codes between the words (captured live 2026-10-08).
+    STALE = "Executing : \x1b[32mStore\x1b[37m \x1b[32mSequence\x1b[37m 136 Cue 124\n\r\r [Fixture]>\x1b[K"
+    OURS = "Executing : \x1b[32mList\x1b[37m \x1b[32mTimecode\x1b[37m\n\rTC 1 Show\n\r\r [Fixture]>\x1b[K"
+
+    def test_frame_reply_drops_output_before_our_echo(self):
         from src.telnet_client import frame_reply
 
-        raw = "Store Sequence 136 Cue 124\r\n[Channel]>List Timecode\r\nTC 1 Show\r\n[Channel]>"
-        assert frame_reply(raw, "List Timecode") == "List Timecode\r\nTC 1 Show\r\n[Channel]>"
+        assert frame_reply(self.STALE + self.OURS, "list timecode") == self.OURS
 
-    def test_frame_reply_without_echo_is_unchanged(self):
+    def test_frame_reply_matches_abbreviated_keyword(self):
+        from src.telnet_client import frame_reply
+
+        ours = "Executing : \x1b[32mChangeDest\x1b[37m /\n\r\r [Fixture]>\x1b[K"
+        assert frame_reply(self.STALE + ours, "cd /") == ours
+
+    def test_frame_reply_keeps_reply_that_starts_with_our_echo(self):
+        from src.telnet_client import frame_reply
+
+        assert frame_reply(self.OURS, "List Timecode") == self.OURS
+
+    def test_frame_reply_without_matching_echo_is_unchanged(self):
         from src.telnet_client import frame_reply
 
         assert frame_reply("TC 1 Show\r\n[Channel]>", "List Timecode") == "TC 1 Show\r\n[Channel]>"
+        assert frame_reply(self.STALE, "List Timecode") == self.STALE
 
 
 # --- batch execution ---

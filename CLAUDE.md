@@ -128,7 +128,7 @@ make install-hooks
 - Unit tests import command builders or vocab directly and assert on returned strings.
 - No live console required; live tests are in `tests/test_live_integration.py` (skipped by default).
 - Use `@pytest.mark.asyncio` for async tests.
-- Current counts (2026-10-08): **3335 tests** (3171 passing, 164 skipped, 0 failed). Live suites: `--live` (reads), `--live --destructive` (throwaway show).
+- Current counts (2026-10-08): **3337 tests** (3173 passing, 164 skipped, 0 failed). Live suites: `--live` (reads), `--live --destructive` (throwaway show).
 
 ---
 
