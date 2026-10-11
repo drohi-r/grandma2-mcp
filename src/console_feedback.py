@@ -18,6 +18,9 @@ from dataclasses import asdict, dataclass
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
+# The console's echo of the command it ran: "Executing : <canonical command>".
+_ECHO_LINE_RE = re.compile(r"^[ \t\r]*Executing[ \t]*:[^\r\n]*", re.MULTILINE)
+
 # "Error #66 CANNOT ASSIGN", "Error #1: UNKNOWN COMMAND", "ERROR #72 : COMMAND NOT EXECUTED"
 _NUMBERED_ERROR_RE = re.compile(
     r"\berror\s*#\s*(\d+)\s*:?\s*([A-Z][A-Z0-9 ./'_-]*[A-Z0-9])?",
@@ -61,6 +64,13 @@ def _max_reply_chars() -> int:
         return _DEFAULT_MAX_REPLY_CHARS
 
 
+def _truncate(value: str, limit: int) -> str:
+    """Cap *value* at *limit* chars, saying how much was cut (unchanged when short)."""
+    if len(value) <= limit:
+        return value
+    return value[:limit] + f"\n… [truncated {len(value) - limit} of {len(value)} chars]"
+
+
 def find_pending_popup(raw: str) -> dict | None:
     """Return the open pop-up's options when the reply ends waiting on one."""
     if not raw:
@@ -94,8 +104,12 @@ def strip_ansi(text: str) -> str:
 
 def _without_echo(text: str, command: str | None) -> str:
     # The console echoes the command; a label like "CANNOT ASSIGN" must not count.
+    # The echo is canonical ("Executing : Label Group 3 ...", keywords re-cased),
+    # so drop each echo line up to its end; errors arrive on their own line.
+    text = _ECHO_LINE_RE.sub(" ", text)
     if command:
         text = text.replace(command, " ")
+        text = re.sub(re.escape(command), " ", text, flags=re.IGNORECASE)
     return text
 
 
@@ -188,9 +202,15 @@ def annotate_tool_result(
     for key in CONSOLE_TEXT_KEYS:
         value = data.get(key)
         if isinstance(value, str) and len(value) > limit:
-            data[key] = value[:limit] + f"\n… [truncated {len(value) - limit} of {len(value)} chars]"
+            data[key] = _truncate(value, limit)
             data[f"{key}_truncated"] = True
             data[f"{key}_chars"] = len(value)
+    for key in CONSOLE_TEXT_LIST_KEYS:
+        values = data.get(key)
+        if isinstance(values, list) and any(isinstance(v, str) and len(v) > limit for v in values):
+            data[key] = [_truncate(v, limit) if isinstance(v, str) else v for v in values]
+            data[f"{key}_truncated"] = True
+            data[f"{key}_chars"] = [len(v) if isinstance(v, str) else None for v in values]
     if transport_warnings:
         data["transport_warnings"] = list(transport_warnings)
 

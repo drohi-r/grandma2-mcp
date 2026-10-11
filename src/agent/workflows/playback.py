@@ -49,6 +49,14 @@ def build_playback_workflow(goal: ParsedGoal) -> list[PlanStep]:
     )
     steps.append(discover)
 
+    unsupported_cue = goal.options.get("cue_number_unsupported")
+    if unsupported_cue is not None:
+        goal.notes.append(
+            f"Cue {unsupported_cue} has a decimal part — the planner only stores "
+            "whole-numbered cues; use store_current_cue directly."
+        )
+        return steps
+
     # Step 2: Store cues into the sequence
     prev_id = discover.id
     for cue_num in range(first_cue, first_cue + cue_count):

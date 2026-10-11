@@ -234,15 +234,26 @@ class StepExecutor:
         return data.get("ok") is False or data.get("blocked") is True or bool(data.get("error"))
 
     def _refusal(self, result: str) -> str | None:
-        """Error text when the reply is a refusal that retrying cannot change."""
+        """Error text when the reply is a refusal that retrying cannot change.
+
+        - ``console_errors`` present: the console rejected the command → refusal.
+        - ``blocked`` with no ``error_class``: a tool-level gate (missing
+          confirmation, validation, read-only mode) → refusal.
+        - ``blocked`` with ``error_class == "ConsoleLoginRejected"``: the
+          console refused the credentials → refusal.
+        - any other ``blocked`` reply with an ``error_class`` (a transport or
+          runtime exception) → ``None``, so the step is retried.
+        """
         data = self._parse(result)
         if data is None:
             return None
         error = str(data.get("error") or "")
-        if error.startswith("Connection failed"):
-            return None  # transport drop — worth a retry after reconnect
-        if data.get("blocked") is True or data.get("console_errors"):
+        if data.get("console_errors"):
             return error or result
+        if data.get("blocked") is True:
+            error_class = data.get("error_class")
+            if not error_class or error_class == "ConsoleLoginRejected":
+                return error or result
         return None
 
     def _fail(self, step: PlanStep, error: str) -> None:

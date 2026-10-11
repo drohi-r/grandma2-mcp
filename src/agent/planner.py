@@ -149,7 +149,7 @@ _ID_PATTERN = re.compile(r"\b(?:group|preset|sequence|executor|fixture)\s+(\d+)"
 _GROUP_ID_PATTERN = re.compile(r"\bgroup\s+(\d+)", re.IGNORECASE)
 _SEQUENCE_ID_PATTERN = re.compile(r"\bsequence\s+(\d+)", re.IGNORECASE)
 _EXECUTOR_PATTERN = re.compile(r"\bexec(?:utor)?\s+(?:(\d+)\.)?(\d+)\b", re.IGNORECASE)
-_CUE_PATTERN = re.compile(r"\bcue\s+(\d+)\b", re.IGNORECASE)
+_CUE_PATTERN = re.compile(r"\bcue\s+(\d+(?:\.\d+)?)\b", re.IGNORECASE)
 _DOTTED_PRESET_PATTERN = re.compile(r"\bpreset\s+(\d+)\.(\d+)\b", re.IGNORECASE)
 _TYPED_PRESET_PATTERN = re.compile(
     r"\b(dimmer|position|gobo|colou?r|beam|focus|control)\s+preset(?:\s+(\d+)(?:\.(\d+))?)?\b",
@@ -346,7 +346,11 @@ class DomainPlanner:
             options["executor_id"] = int(m.group(2))
         m = _CUE_PATTERN.search(text)
         if m:
-            options["cue_number"] = int(m.group(1))
+            if "." in m.group(1):
+                # "cue 2.5" — never truncate to cue 2 (that would store over it).
+                options["cue_number_unsupported"] = m.group(1)
+            else:
+                options["cue_number"] = int(m.group(1))
         m = _FOOTPRINT_PATTERN.search(text)
         if m:
             options["footprint"] = int(m.group(1) or m.group(2))

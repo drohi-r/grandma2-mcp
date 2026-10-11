@@ -84,6 +84,17 @@ class TestReplyHygiene:
         assert data["raw_response_truncated"] is True
         assert data["raw_response_chars"] == 20000
 
+    def test_oversized_raw_responses_list_is_capped(self, monkeypatch):
+        from src.console_feedback import annotate_tool_result
+
+        monkeypatch.setenv("GMA_MAX_REPLY_CHARS", "1000")
+        out, _ = annotate_tool_result(json.dumps({"raw_responses": ["row\n" * 5000, "ok"]}))
+        data = json.loads(out)
+        assert len(data["raw_responses"][0]) <= 1100
+        assert data["raw_responses"][1] == "ok"
+        assert data["raw_responses_truncated"] is True
+        assert data["raw_responses_chars"] == [20000, 2]
+
     def test_popup_is_reported_as_pending(self):
         from src.console_feedback import annotate_tool_result
 
@@ -240,6 +251,30 @@ class TestRunCommandBatch:
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
+    async def test_batch_stopped_by_popup_reports_it_at_top_level(self, mock_get_client):
+        import src.server as server
+        from src.server import run_command_batch
+
+        replies = {
+            "List Cue": "[Channel]>",
+            "List Group": "Overwrite?\r\n[1]: Ok   2 : Cancel",
+            "List Macro": "[Channel]>",
+        }
+        client = MagicMock()
+        client.exclusive = MagicMock(return_value=_NullAsyncCtx())
+        client.send_command_with_response = AsyncMock(side_effect=lambda cmd, **kw: replies[cmd])
+        mock_get_client.return_value = client
+
+        try:
+            data = json.loads(await run_command_batch(commands=["List Cue", "List Group", "List Macro"]))
+            assert data["stopped_early"] is True
+            assert len(data["pending_popup"]["options"]) == 2
+            assert server._last_pending_popup == data["pending_popup"]
+        finally:
+            server._last_pending_popup = None
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
     async def test_batch_file_outside_batch_dir_is_rejected(self, mock_get_client, tmp_path, monkeypatch):
         from src.server import run_command_batch
 
@@ -290,17 +325,51 @@ class TestAnswerConsolePopup:
         assert data["blocked"] is True
         mock_get_client.assert_not_called()
 
+    POPUP = {"text": "Overwrite?", "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}]}
+
     @pytest.mark.asyncio
     @patch("src.server.get_client")
     async def test_cancel_is_allowed(self, mock_get_client):
+        import src.server as server
         from src.server import answer_console_popup
 
         client = MagicMock()
         client.send_command_with_response = AsyncMock(return_value="[Channel]>")
         mock_get_client.return_value = client
-        data = json.loads(await answer_console_popup(choice=2, cancel_option=2))
-        assert data["command_sent"] == "2"
-        assert data["ok"] is True
+        server._last_pending_popup = self.POPUP
+        try:
+            data = json.loads(await answer_console_popup(choice=2))
+            assert data["command_sent"] == "2"
+            assert data["ok"] is True
+            assert data["risk_tier"] == "SAFE_WRITE"
+            assert server._last_pending_popup is None
+        finally:
+            server._last_pending_popup = None
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_non_cancel_option_of_remembered_popup_is_blocked(self, mock_get_client):
+        import src.server as server
+        from src.server import answer_console_popup
+
+        server._last_pending_popup = self.POPUP
+        try:
+            data = json.loads(await answer_console_popup(choice=1))
+            assert data["blocked"] is True
+            mock_get_client.assert_not_called()
+        finally:
+            server._last_pending_popup = None
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_without_a_remembered_popup_every_answer_is_blocked(self, mock_get_client):
+        import src.server as server
+        from src.server import answer_console_popup
+
+        server._last_pending_popup = None
+        data = json.loads(await answer_console_popup(choice=2))
+        assert data["blocked"] is True
+        mock_get_client.assert_not_called()
 
 
 # --- disconnect / park ---

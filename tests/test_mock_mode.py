@@ -52,6 +52,17 @@ async def test_mock_session_manager_implements_close_and_count():
 
 
 @pytest.mark.asyncio
+async def test_mock_session_manager_release_all():
+    """disconnect_console calls release_all — the mock must implement it."""
+    from src.mock.session_manager import MockSessionManager
+    mgr = MockSessionManager()
+    await mgr.get("op", "u", "p")
+    assert await mgr.release_all() == 1
+    assert mgr.session_count() == 0
+    assert await mgr.release_all() == 0
+
+
+@pytest.mark.asyncio
 async def test_server_uses_mock_when_env_set(monkeypatch):
     """_get_session_manager returns MockSessionManager when GMA_MOCK is set."""
     monkeypatch.setenv("GMA_MOCK", "1")

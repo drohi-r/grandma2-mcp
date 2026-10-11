@@ -28,6 +28,10 @@ from .telnet_client import GMA2TelnetClient
 logger = logging.getLogger(__name__)
 
 
+class ConsoleLoginRejected(ConnectionError):
+    """The console refused the credentials — retrying with the same ones cannot help."""
+
+
 # ── Data model ────────────────────────────────────────────────────────────────
 
 
@@ -223,7 +227,7 @@ class SessionManager:
         await client.login()
         if getattr(client, "login_rejected", False) is True:
             await _safe_disconnect(client)
-            raise ConnectionError(f"Console rejected login for user {username!r}")
+            raise ConsoleLoginRejected(f"Console rejected login for user {username!r}")
         return client
 
     async def _reconnect(

@@ -131,7 +131,7 @@ class TestRejectedLogin:
 
     @pytest.mark.asyncio
     async def test_session_manager_raises_on_rejected_login(self):
-        from src.session_manager import SessionManager
+        from src.session_manager import ConsoleLoginRejected, SessionManager
 
         fake = MagicMock()
         fake.connect = AsyncMock()
@@ -144,7 +144,7 @@ class TestRejectedLogin:
         fake.login = AsyncMock(side_effect=_login)
         with patch("src.session_manager.GMA2TelnetClient", return_value=fake):
             manager = SessionManager(host="127.0.0.1", port=30000)
-            with pytest.raises(ConnectionError, match="rejected login"):
+            with pytest.raises(ConsoleLoginRejected, match="rejected login"):
                 await manager.get("op", "baduser", "badpass")
         fake.disconnect.assert_awaited()
 

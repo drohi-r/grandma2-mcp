@@ -131,6 +131,10 @@ _session_manager_lock = asyncio.Lock()
 # Telemetry singleton — created lazily, shared by all tool wrappers
 _telemetry_singleton: ToolTelemetry | None = None
 
+# The pop-up the last tool reply reported as pending (set by _handle_errors);
+# answer_console_popup reads it to know which option is really Cancel.
+_last_pending_popup: dict | None = None
+
 
 def _get_telemetry() -> ToolTelemetry:
     """Return the module-level ToolTelemetry singleton (lazy init)."""
@@ -205,17 +209,19 @@ def _handle_errors(func):
             try:
                 with collect_transport_warnings() as warnings:
                     return await func(*args, **call_kwargs), None, warnings
+            # error_class tells callers (the agent executor) an exception blocked
+            # the call, as opposed to a tool-level gate such as a missing confirm.
             except ConnectionError as e:
                 logger.error("Connection error in %s: %s", func.__name__, e)
-                error = {"error": f"Connection failed: {e}", "blocked": True}
-                return json.dumps(error, indent=2), "ConnectionError", warnings
+                error = {"error": f"Connection failed: {e}", "blocked": True, "error_class": type(e).__name__}
+                return json.dumps(error, indent=2), type(e).__name__, warnings
             except RuntimeError as e:
                 logger.error("Runtime error in %s: %s", func.__name__, e)
-                error = {"error": f"Runtime error: {e}", "blocked": True}
-                return json.dumps(error, indent=2), "RuntimeError", warnings
+                error = {"error": f"Runtime error: {e}", "blocked": True, "error_class": type(e).__name__}
+                return json.dumps(error, indent=2), type(e).__name__, warnings
             except Exception as e:
                 logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
-                error = {"error": f"Unexpected error: {e}", "blocked": True}
+                error = {"error": f"Unexpected error: {e}", "blocked": True, "error_class": type(e).__name__}
                 return json.dumps(error, indent=2), type(e).__name__, warnings
 
         result, error_class, transport_warnings = await _invoke(kwargs)
@@ -244,6 +250,8 @@ def _handle_errors(func):
                 error_class = "ConsoleError"
         except Exception:  # noqa: BLE001 — annotation must never break a tool call
             logger.debug("Reply annotation failed for %s", func.__name__, exc_info=True)
+        if isinstance(result, str) and '"pending_popup"' in result:
+            _remember_pending_popup(result)
         if os.getenv("GMA_TELEMETRY", "1") != "0":
             try:  # noqa: SIM105
                 _get_telemetry().record_sync(
@@ -268,6 +276,17 @@ def _handle_errors(func):
         return result
 
     return wrapper
+
+
+def _remember_pending_popup(result: str) -> None:
+    """Record the reply's top-level ``pending_popup`` (None when it has none)."""
+    global _last_pending_popup
+    try:
+        data = json.loads(result)
+    except (TypeError, ValueError):
+        return
+    if isinstance(data, dict):
+        _last_pending_popup = data.get("pending_popup")
 
 
 def _with_fields(result: str, **fields) -> str:

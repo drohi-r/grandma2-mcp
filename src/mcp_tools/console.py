@@ -343,7 +343,8 @@ async def run_command_batch(
 
     Returns:
         str: JSON summary — total, executed, failed (line, command, errors),
-            stopped_early, duration_s, last_reply.
+            stopped_early, duration_s, last_reply, and pending_popup when a
+            pop-up stopped the batch.
     """
     from src.console_feedback import find_console_errors, find_pending_popup
 
@@ -391,6 +392,7 @@ async def run_command_batch(
     executed = 0
     stopped_early = False
     last_reply = ""
+    pending_popup: dict | None = None
     async with hold_connection(client):
         for lineno, cmd in enumerate(lines, 1):
             raw = await client.send_command_with_response(
@@ -412,6 +414,7 @@ async def run_command_batch(
                     })
                 if popup or stop_on_error:
                     stopped_early = lineno < len(lines)
+                    pending_popup = popup
                     break
 
     result: dict = {
@@ -424,6 +427,9 @@ async def run_command_batch(
         "last_reply": last_reply[-500:],
         "ok": not failed,
     }
+    if pending_popup:
+        # Top level, so _handle_errors remembers it for answer_console_popup.
+        result["pending_popup"] = pending_popup
     if failed:
         first = failed[0]
         result["error"] = (
@@ -438,19 +444,18 @@ async def run_command_batch(
 @_handle_errors
 async def answer_console_popup(
     choice: int,
-    cancel_option: int | None = None,
     confirm_destructive: bool = False,
 ) -> str:
     """
     Answer a console pop-up a previous tool reported as pending_popup.
 
     Pass the option number from pending_popup.options. Choosing the Cancel
-    option is always allowed (give its number as cancel_option); any other
-    answer can confirm an overwrite or delete and needs confirm_destructive=True.
+    option of the pop-up the server last reported is always allowed; any other
+    answer (or any answer when no pop-up was reported) can confirm an
+    overwrite or delete and needs confirm_destructive=True.
 
     Args:
         choice: Option number to press (e.g. 1 for "Ok").
-        cancel_option: The pop-up's Cancel option number, when known.
         confirm_destructive: Required for any answer other than Cancel.
 
     Returns:
@@ -458,24 +463,32 @@ async def answer_console_popup(
     """
     if choice < 0 or choice > 9:
         return json.dumps({"error": "choice must be a single option number 0-9", "blocked": True}, indent=2)
-    if choice != cancel_option and not confirm_destructive:
+    popup = _srv._last_pending_popup
+    options = popup.get("options") if isinstance(popup, dict) else None
+    is_cancel = any(
+        isinstance(o, dict) and o.get("choice") == choice and str(o.get("label", "")).lower() == "cancel"
+        for o in options or []
+    )
+    if not is_cancel and not confirm_destructive:
         return json.dumps({
             "command_sent": None,
             "blocked": True,
             "risk_tier": "DESTRUCTIVE",
             "error": (
                 "Answering a pop-up with anything but its Cancel option can confirm an "
-                "overwrite or delete. Set confirm_destructive=True, or pass cancel_option."
+                "overwrite or delete. Set confirm_destructive=True; only the pop-up's "
+                "Cancel option is allowed without it."
             ),
         }, indent=2)
 
     client = await _srv.get_client()
     cmd = str(choice)
     raw_response = await client.send_command_with_response(cmd)
+    _srv._last_pending_popup = None
     return json.dumps({
         "command_sent": cmd,
         "raw_response": raw_response,
-        "risk_tier": "SAFE_WRITE" if choice == cancel_option else "DESTRUCTIVE",
+        "risk_tier": "SAFE_WRITE" if is_cancel else "DESTRUCTIVE",
     }, indent=2)
 
 
