@@ -23,8 +23,7 @@ Examples: Store, Delete, Copy, Goto, Clear, Label, SelFix, Go, Pause
 # Backward Compatibility Aliases
 # select_group -> group (from objects.py)
 # call_preset -> preset (from objects.py)
-from ..objects import group as select_group
-from ..objects import preset as call_preset
+from ..objects import group as select_group, preset as call_preset
 
 # Assignment Function Keywords
 from .assignment import (

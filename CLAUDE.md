@@ -1,9 +1,9 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 1.3.3
+version: 1.4.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-07T22:30:20Z
+last_updated: 2026-10-08T05:40:38Z
 ---
 
 # Project Rules
@@ -24,10 +24,11 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server — 203 tools + 14 MCP resources + 10 MCP prompts, safety gate |
+| `src/server.py` | FastMCP instance, `_handle_errors` reply contract + safety gate, `get_client`, connection globals; imports + re-exports `src/mcp_tools/` |
+| `src/mcp_tools/` | 26 domain modules: 203 tools + 14 resources + 10 prompts; reach patchable server names as `_srv.X` |
 | `src/server_orchestration_tools.py` | Registers 34 agentic tools (IDs 110-144, excluding 130) onto FastMCP |
 | `src/telnet_client.py` | Async Telnet (telnetlib3), auth, send/receive, injection prevention |
-| `src/session_manager.py` | Per-operator Telnet session pool (LRU, keepalive, auto-reconnect) |
+| `src/session_manager.py` + `src/tools.py` | Per-operator Telnet session pool (LRU, keepalive, auto-reconnect); global client accessor |
 | `src/credentials.py` | OAuth tier → console user credential resolver |
 | `src/auth.py` | OAuth 2.1 scope enforcement (`@require_scope`, `@require_ma2_right`) |
 | `src/navigation.py` | cd + list + prompt parsing orchestration |
@@ -46,7 +47,6 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 | `src/skill.py` | `Skill` dataclass + `SkillRegistry`: versioned playbooks with lineage + filesystem skill fallback (`_load_filesystem_skill`, `_list_filesystem_skills`) |
 | `src/skill_improver.py` | `SkillImprover`: repair suggestions + promotion candidates (read-only) |
 | `src/ui.py` + `src/ui_static/` | Local browser operator console (stdlib HTTP, port 8092): dashboard, divergence watch, executor grid, patch browser, agent cockpit |
-| `src/tools.py` | Global GMA2 telnet client accessor — `get_client()` used by all tools |
 | `src/categorization/` | ML-based tool categorization: K-Means clustering + auto-labeling |
 | `rag/` | crawl → chunk → embed → store → retrieve pipeline |
 | `.claude/rules/` | Scoped rule files (loaded on demand, not at startup) |
@@ -104,8 +104,8 @@ make install-hooks
 ### Adding a new MCP tool
 1. Add command builder in `src/commands/` — pure, returns `str`, no I/O.
 2. Export from `src/commands/__init__.py`.
-3. Register in `src/server.py` with `@mcp.tool()` and `@_handle_errors`.
-4. Apply `@require_ma2_right(MA2Right.X)` — see `doc/ma2-rights-matrix.json`.
+3. Add it to the matching `src/mcp_tools/<domain>.py` with `@mcp.tool()`, `@require_scope`, `@_handle_errors`; call `_srv.get_client()` (never import patchable names), and add `name as name` to that module's re-export block at the end of `src/server.py`.
+4. Add its minimum right to `_OPERATION_MIN_RIGHT` in `src/rights.py` (`tests/test_rights.py` enforces).
 5. If DESTRUCTIVE, accept `confirm_destructive: bool = False` and gate on it.
 6. Add tests in `tests/test_<feature>.py`.
 
@@ -128,7 +128,7 @@ make install-hooks
 - Unit tests import command builders or vocab directly and assert on returned strings.
 - No live console required; live tests are in `tests/test_live_integration.py` (skipped by default).
 - Use `@pytest.mark.asyncio` for async tests.
-- Current counts (2026-10-08): **3337 tests** (3173 passing, 164 skipped, 0 failed). Live suites: `--live` (reads), `--live --destructive` (throwaway show).
+- Current counts (2026-10-08): **3366 tests** (3202 passing, 164 skipped, 0 failed). Live suites: `--live` (reads), `--live --destructive` (throwaway show).
 
 ---
 

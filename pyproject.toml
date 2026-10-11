@@ -47,8 +47,13 @@ line-length = 120
 select = ["E", "W", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501", "SIM108"]
 
+[tool.ruff.lint.per-file-ignores]
+# Tool modules are imported at the end of server.py so they register on its mcp.
+"src/server.py" = ["E402"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["src", "rag"]
+combine-as-imports = true
 
 [tool.mypy]
 python_version = "3.12"

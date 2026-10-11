@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
 description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
-version: 1.2.4
+version: 1.3.0
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-07T22:25:44Z
+last_updated: 2026-10-08T05:40:38Z
 ---
 
 <p align="center">
@@ -98,7 +98,7 @@ Important behavior notes:
 ```mermaid
 graph TD
     H["🤖 Agent Core Layer<br/><code>src/server_orchestration_tools.py</code><br/>34 tools (IDs 110–144, excluding 130) · orchestrator · skills"] --> A
-    A["🎭 MCP Server Layer<br/><code>src/server.py</code><br/>184 server tools · safety gate"] --> B
+    A["🎭 MCP Server Layer<br/><code>src/server.py</code> + <code>src/mcp_tools/</code><br/>203 server tools · safety gate"] --> B
     B["🧭 Navigation Layer<br/><code>src/navigation.py</code><br/>cd · list · scan · set_property"] --> C
     C["🔧 Command Builders<br/><code>src/commands/</code><br/>198 pure functions → strings"] --> D
     D["📡 Telnet Client<br/><code>src/telnet_client.py</code><br/>async · auth · injection prevention"]
@@ -129,7 +129,7 @@ grandMA2 MCP is a **layered hybrid** — the boundary is explicit in the code:
 
 | Layer | What it is | Key files |
 |-------|-----------|-----------|
-| **Bottom 184 server tools** | **Agent Harness** — exposes the core MCP tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py` |
+| **Bottom 203 server tools** | **Agent Harness** — exposes the core MCP tool surface to an external AI; the reasoning loop lives in Claude Desktop, VS Code, etc. | `src/server.py`, `src/mcp_tools/` |
 | **Top 34 orchestration tools** | **Embedded Agent Core** — orchestrator, task decomposer, long-term memory, skill registry | `src/server_orchestration_tools.py`, `src/orchestrator.py` |
 
 The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool calls run in-process. Wire in a Claude API client and grandMA2 MCP becomes a fully autonomous agent that plans, executes, remembers, and improves itself.
@@ -138,7 +138,8 @@ The orchestrator accepts a `sub_agent_fn` injection point. Without it, tool call
 
 | Module | Role |
 |--------|------|
-| `src/server.py` | FastMCP server, 184 interactive tools, safety gate, env config |
+| `src/server.py` | FastMCP instance, reply contract, safety gate, env config |
+| `src/mcp_tools/` | 26 domain modules holding the 203 server tools, resources and prompts |
 | `src/server_orchestration_tools.py` | 34 agentic tools (IDs 110–144, excluding 130) registered onto FastMCP |
 | `src/orchestrator.py` | Multi-agent task runner: hydration, risk-tier isolation, LTM; `_showfile_guard()`, `check_showfile()` for dynamic show change detection |
 | `src/task_decomposer.py` | Natural-language goal → ordered SubTask plan (rule-based) |

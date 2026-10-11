@@ -139,10 +139,10 @@ def test_server_instructions_do_not_hardcode_a_tool_count():
 
 @pytest.mark.parametrize("relpath", ["README.md", "pyproject.toml", "CLAUDE.md"])
 def test_doc_tool_counts_match_registry(relpath):
-    # The architecture table's server.py row gives that file's own share — skip it.
+    # Architecture-table rows give one component's share (server.py, mcp_tools/) — skip them.
     text = "\n".join(
         line for line in (REPO / relpath).read_text(encoding="utf-8").splitlines()
-        if "src/server.py" not in line
+        if "src/server.py" not in line and "src/mcp_tools/" not in line
     )
     claims = {int(n) for n in re.findall(r"\b(\d{3})\s+(?:MCP\s+)?tools\b", text)}
     expected = _registered_tool_count()

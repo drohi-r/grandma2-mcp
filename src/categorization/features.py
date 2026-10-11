@@ -1,6 +1,6 @@
 """AST-based feature extraction from MCP tool definitions.
 
-Parses ``src/server.py`` without importing it (avoids Telnet side-effects)
+Parses ``src/server.py`` and ``src/mcp_tools/*.py`` without importing them (avoids Telnet side-effects)
 and builds a feature vector per ``@mcp.tool()``-decorated function.
 """
 
@@ -281,9 +281,25 @@ def _detect_returns_list(docstring: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _tool_source_files(server_path: Path) -> list[Path]:
+    """server.py plus the tool modules split out of it (src/mcp_tools/*.py)."""
+    files = [server_path]
+    pkg = server_path.parent / "mcp_tools"
+    if server_path.name == "server.py" and pkg.is_dir():
+        files += sorted(p for p in pkg.glob("*.py") if p.name != "__init__.py")
+    return files
+
+
 def extract_tool_features(server_path: str | Path) -> list[ToolFeatures]:
-    """Parse *server_path* and return a :class:`ToolFeatures` per ``@mcp.tool()`` function."""
-    source = Path(server_path).read_text()
+    """Parse *server_path* (and the tool modules split out of it) and return a
+    :class:`ToolFeatures` per ``@mcp.tool()`` function."""
+    tools: list[ToolFeatures] = []
+    for path in _tool_source_files(Path(server_path)):
+        tools += _extract_from_source(path.read_text(encoding="utf-8"))
+    return tools
+
+
+def _extract_from_source(source: str) -> list[ToolFeatures]:
     tree = ast.parse(source)
     import_map = _build_import_map(tree)
 

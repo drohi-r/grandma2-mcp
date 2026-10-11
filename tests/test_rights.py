@@ -163,7 +163,9 @@ class TestRightsMappingDrift:
         orch_py = pathlib.Path(__file__).parent.parent / "src" / "server_orchestration_tools.py"
 
         tool_names: set[str] = set()
-        for source_path in (server_py, orch_py):
+        tool_modules = sorted((server_py.parent / "mcp_tools").glob("*.py"))
+        assert tool_modules, "src/mcp_tools/ missing — tool scan would be incomplete"
+        for source_path in (server_py, orch_py, *tool_modules):
             tree = ast.parse(source_path.read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 if isinstance(node, ast.AsyncFunctionDef | ast.FunctionDef):
