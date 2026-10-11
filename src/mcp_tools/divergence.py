@@ -27,8 +27,6 @@ _DIVERGENCE_VARS = (
 )
 _DIVERGENCE_POOLS = ("group", "sequence", "macro", "world", "filter")
 
-_console_baseline: dict | None = None
-
 
 async def _read_divergence_state() -> dict:
     """Cheap console fingerprint: key system vars + pool ID sets."""

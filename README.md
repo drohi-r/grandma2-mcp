@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
 description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
-version: 1.3.1
+version: 1.3.2
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-11T20:40:46Z
+last_updated: 2026-10-11T22:23:26Z
 ---
 
 <p align="center">
@@ -175,6 +175,7 @@ GMA_SAFETY_LEVEL=standard  # standard (default), admin, or read-only
 GMA_TOOL_PROFILE=full      # core (28 tools), standard (104) or full (237, default)
 GMA_ELICIT_CONFIRM=1       # 0 = never open confirm dialogs for destructive calls
 GMA_MAX_REPLY_CHARS=20000  # cap on raw console text returned per reply
+GMA_BATCH_DIR=             # only folder run_command_batch reads commands_file from (default: MA2 data dir)
 LOG_LEVEL=INFO             # default: INFO
 
 # RAG Pipeline (optional)

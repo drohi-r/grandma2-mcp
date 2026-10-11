@@ -1,7 +1,7 @@
 """MockSessionManager — implements SessionManager's public surface.
 
-Methods: ``get``, ``release``, ``close_all``, ``start_keepalive``, ``session_count``,
-``session_info``. Mirrors :class:`src.session_manager.SessionManager` so the
+Methods: ``get``, ``release``, ``release_all``, ``close_all``, ``start_keepalive``,
+``session_count``, ``session_info``. Mirrors :class:`src.session_manager.SessionManager` so the
 server's ``_get_session_manager()`` injection point can swap it in transparently.
 """
 
@@ -49,6 +49,14 @@ class MockSessionManager:
         client = self._clients.pop(identity, None)
         if client is not None:
             await client.disconnect()
+
+    async def release_all(self) -> int:
+        """Disconnect every client but stay usable; returns how many were released."""
+        clients = list(self._clients.values())
+        self._clients.clear()
+        for c in clients:
+            await c.disconnect()
+        return len(clients)
 
     async def close_all(self) -> None:
         for c in list(self._clients.values()):

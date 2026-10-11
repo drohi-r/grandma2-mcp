@@ -106,6 +106,14 @@ def test_playback_uses_ids_from_goal():
     assert assign.tool_args["target_id"] == "2.105"
 
 
+def test_decimal_cue_is_not_truncated_into_a_store():
+    parsed, steps = _plan("store cue 2.5 in sequence 7")
+    tools = [s.tool_name for s in steps]
+    assert "store_current_cue" not in tools
+    assert "assign_object" not in tools
+    assert any("2.5" in n for n in parsed.notes)
+
+
 def test_preset_uses_type_and_id_from_goal():
     _, steps = _plan("create color preset 4.1 red for group 1")
     store = _step(steps, "store_new_preset")
@@ -275,6 +283,35 @@ async def test_refusals_are_not_retried(reply):
     step = PlanStep(tool_name="go_tool", tool_args={}, description="go", risk_tier=RiskTier.SAFE_WRITE)
     ctx = RunContext(goal="g", plan=[step])
     await _executor({"go_tool": tool}).execute_plan(ctx)
+    assert step.status == StepStatus.FAILED
+    tool.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_retryable_exception_block_is_retried(monkeypatch):
+    monkeypatch.setattr("src.agent.executor.RETRY_DELAYS", [0.0, 0.0, 0.0])
+    reply = {"blocked": True, "error": "Runtime error: Reconnect timed out",
+             "error_class": "RuntimeError", "retryable": True}
+    tool = AsyncMock(return_value=json.dumps(reply))
+    step = PlanStep(tool_name="go_tool", tool_args={}, description="go", risk_tier=RiskTier.SAFE_WRITE)
+    ctx = RunContext(goal="g", plan=[step])
+    await _executor({"go_tool": tool}, max_retries=2).execute_plan(ctx)
+    assert step.status == StepStatus.FAILED
+    assert tool.await_count == 3
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reply", [
+    {"blocked": True, "error": "Connection failed: Console rejected login for user 'x'",
+     "error_class": "ConsoleLoginRejected", "retryable": False},
+    {"blocked": True, "error": "Unexpected error: bad id", "error_class": "ValueError", "retryable": False},
+], ids=["login_rejected", "value_error"])
+async def test_non_retryable_exception_block_is_not_retried(monkeypatch, reply):
+    monkeypatch.setattr("src.agent.executor.RETRY_DELAYS", [0.0, 0.0, 0.0])
+    tool = AsyncMock(return_value=json.dumps(reply))
+    step = PlanStep(tool_name="go_tool", tool_args={}, description="go", risk_tier=RiskTier.SAFE_WRITE)
+    ctx = RunContext(goal="g", plan=[step])
+    await _executor({"go_tool": tool}, max_retries=2).execute_plan(ctx)
     assert step.status == StepStatus.FAILED
     tool.assert_awaited_once()
 

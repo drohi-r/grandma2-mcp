@@ -18,6 +18,7 @@ Risk-tier inference heuristic (applied once at decoration time, not per call):
 from __future__ import annotations
 
 import inspect
+import json
 import sqlite3
 import threading
 import time
@@ -38,6 +39,40 @@ _SAFE_READ_PREFIXES: tuple[str, ...] = (
     "recall_",
     "check_",  # T6 helper `check_plugin_available` lands in Path B; staged here.
 )
+
+# Input names whose values never reach the telemetry log (credentials).
+_SECRET_KEY_PARTS: tuple[str, ...] = ("password", "passwd", "secret", "token", "api_key")
+_REDACTED = "***"
+
+
+def _is_secret_key(key: object) -> bool:
+    return any(part in str(key).lower() for part in _SECRET_KEY_PARTS)
+
+
+def redact_inputs(kwargs: dict) -> dict:
+    """Copy of *kwargs* with credential-like values replaced by ``"***"``.
+
+    A key is redacted when its lower-case name contains any of
+    ``password``, ``passwd``, ``secret``, ``token`` or ``api_key``.
+    """
+    return {k: _REDACTED if _is_secret_key(k) else v for k, v in kwargs.items()}
+
+
+def redact_text(text: str, kwargs: dict) -> str:
+    """*text* with every credential value from *kwargs* replaced by ``"***"``.
+
+    Uses the same key rule as :func:`redact_inputs`; only non-empty string
+    values count. Each value is also replaced in its JSON-escaped form, since
+    tool replies are JSON. Longer values go first so one secret that contains
+    another is still fully hidden.
+    """
+    secrets: set[str] = set()
+    for k, v in kwargs.items():
+        if _is_secret_key(k) and isinstance(v, str) and v:
+            secrets.update({v, json.dumps(v)[1:-1]})
+    for secret in sorted(secrets, key=len, reverse=True):
+        text = text.replace(secret, _REDACTED)
+    return text
 
 
 def infer_risk_tier(func: Callable) -> str:

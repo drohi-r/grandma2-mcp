@@ -7,6 +7,7 @@ that live in other tool modules are looked up as ``_srv.<name>`` at call time.
 # ruff: noqa: E501
 
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -296,9 +297,14 @@ def _load_batch_lines(commands: list[str] | None, commands_file: str | None) -> 
         path = Path(commands_file)
         if path.suffix.lower() not in _srv._BATCH_FILE_SUFFIXES:
             return [], f"commands_file must be one of {sorted(_srv._BATCH_FILE_SUFFIXES)}"
-        if not path.is_file():
+        # Only files under the batch root: GMA_BATCH_DIR, else the MA2 data root.
+        root = Path(os.environ.get("GMA_BATCH_DIR") or _srv._GMA2_DATA_ROOT).resolve()
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
+            return [], f"commands_file must be inside {root} (set GMA_BATCH_DIR to allow another directory)"
+        if not resolved.is_file():
             return [], f"commands_file not found: {commands_file}"
-        raw_lines = path.read_text(encoding="utf-8").splitlines()
+        raw_lines = resolved.read_text(encoding="utf-8").splitlines()
     else:
         raw_lines = list(commands or [])
     lines = [ln.strip() for ln in raw_lines]
@@ -328,7 +334,9 @@ async def run_command_batch(
     Args:
         commands: Command lines to send, in order.
         commands_file: Path to a .txt/.cmd/.ma2/.macro file, one command per
-            line; blank lines and lines starting with '#' are skipped.
+            line; blank lines and lines starting with '#' are skipped. The
+            file must be inside GMA_BATCH_DIR, or the grandMA2 data directory
+            when GMA_BATCH_DIR is unset.
         confirm_destructive: Required when any line is DESTRUCTIVE.
         stop_on_error: Stop at the first rejected command (default True).
         delay: Seconds to wait after each send before reading (default 0).
@@ -336,7 +344,8 @@ async def run_command_batch(
 
     Returns:
         str: JSON summary — total, executed, failed (line, command, errors),
-            stopped_early, duration_s, last_reply.
+            stopped_early, duration_s, last_reply, and pending_popup (the
+            pop-up that stopped the batch, else null).
     """
     from src.console_feedback import find_console_errors, find_pending_popup
 
@@ -384,6 +393,7 @@ async def run_command_batch(
     executed = 0
     stopped_early = False
     last_reply = ""
+    pending_popup: dict | None = None
     async with hold_connection(client):
         for lineno, cmd in enumerate(lines, 1):
             raw = await client.send_command_with_response(
@@ -405,6 +415,7 @@ async def run_command_batch(
                     })
                 if popup or stop_on_error:
                     stopped_early = lineno < len(lines)
+                    pending_popup = popup
                     break
 
     result: dict = {
@@ -415,6 +426,9 @@ async def run_command_batch(
         "duration_s": round(time.monotonic() - started, 2),
         "destructive_count": len(destructive),
         "last_reply": last_reply[-500:],
+        # Always present, so _handle_errors remembers (dict) or forgets (None)
+        # this operator's pop-up for answer_console_popup.
+        "pending_popup": pending_popup,
         "ok": not failed,
     }
     if failed:
@@ -431,19 +445,18 @@ async def run_command_batch(
 @_handle_errors
 async def answer_console_popup(
     choice: int,
-    cancel_option: int | None = None,
     confirm_destructive: bool = False,
 ) -> str:
     """
     Answer a console pop-up a previous tool reported as pending_popup.
 
     Pass the option number from pending_popup.options. Choosing the Cancel
-    option is always allowed (give its number as cancel_option); any other
-    answer can confirm an overwrite or delete and needs confirm_destructive=True.
+    option of the pop-up the server last reported to this operator is always
+    allowed; any other answer (or any answer when no pop-up was reported) can
+    confirm an overwrite or delete and needs confirm_destructive=True.
 
     Args:
         choice: Option number to press (e.g. 1 for "Ok").
-        cancel_option: The pop-up's Cancel option number, when known.
         confirm_destructive: Required for any answer other than Cancel.
 
     Returns:
@@ -451,24 +464,33 @@ async def answer_console_popup(
     """
     if choice < 0 or choice > 9:
         return json.dumps({"error": "choice must be a single option number 0-9", "blocked": True}, indent=2)
-    if choice != cancel_option and not confirm_destructive:
+    identity = _srv._operator_identity()
+    popup = _srv._last_pending_popup.get(identity)
+    options = popup.get("options") if isinstance(popup, dict) else None
+    is_cancel = any(
+        isinstance(o, dict) and o.get("choice") == choice and str(o.get("label", "")).lower() == "cancel"
+        for o in options or []
+    )
+    if not is_cancel and not confirm_destructive:
         return json.dumps({
             "command_sent": None,
             "blocked": True,
             "risk_tier": "DESTRUCTIVE",
             "error": (
                 "Answering a pop-up with anything but its Cancel option can confirm an "
-                "overwrite or delete. Set confirm_destructive=True, or pass cancel_option."
+                "overwrite or delete. Set confirm_destructive=True; only the pop-up's "
+                "Cancel option is allowed without it."
             ),
         }, indent=2)
 
     client = await _srv.get_client()
     cmd = str(choice)
     raw_response = await client.send_command_with_response(cmd)
+    _srv._last_pending_popup.pop(identity, None)
     return json.dumps({
         "command_sent": cmd,
         "raw_response": raw_response,
-        "risk_tier": "SAFE_WRITE" if choice == cancel_option else "DESTRUCTIVE",
+        "risk_tier": "SAFE_WRITE" if is_cancel else "DESTRUCTIVE",
     }, indent=2)
 
 

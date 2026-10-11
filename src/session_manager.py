@@ -28,6 +28,10 @@ from .telnet_client import GMA2TelnetClient
 logger = logging.getLogger(__name__)
 
 
+class ConsoleLoginRejected(ConnectionError):
+    """The console refused the credentials — retrying with the same ones cannot help."""
+
+
 # ── Data model ────────────────────────────────────────────────────────────────
 
 
@@ -223,7 +227,7 @@ class SessionManager:
         await client.login()
         if getattr(client, "login_rejected", False) is True:
             await _safe_disconnect(client)
-            raise ConnectionError(f"Console rejected login for user {username!r}")
+            raise ConsoleLoginRejected(f"Console rejected login for user {username!r}")
         return client
 
     async def _reconnect(
@@ -251,21 +255,32 @@ class SessionManager:
         await _safe_disconnect(session.client)
         logger.warning("Session pool full — evicted LRU session for %r", oldest_key)
 
+    async def _ping_idle_sessions(self) -> int:
+        """Ping every connected session not in use; returns how many were pinged.
+
+        A busy connection (another task holds it) is in active use and needs
+        no keepalive — waiting for it would stall the pings of every other session.
+        """
+        async with self._lock:
+            sessions = list(self._sessions.values())
+        pinged = 0
+        for session in sessions:
+            client = session.client
+            if client.is_connected and not getattr(client, "is_busy", False):
+                with contextlib.suppress(Exception):
+                    # Empty line keeps the socket alive; ping() also reads
+                    # what the console printed meanwhile, so unread output
+                    # can't pile up and leak into the next tool reply.
+                    await client.ping()
+                pinged += 1
+        return pinged
+
     async def _keepalive_loop(self) -> None:
         while True:
             try:
                 await asyncio.sleep(self._keepalive_interval)
                 await self.cleanup_expired()
-                # Send a no-op to each connected session to keep TCP alive
-                async with self._lock:
-                    sessions = list(self._sessions.values())
-                for session in sessions:
-                    if session.client.is_connected:
-                        with contextlib.suppress(Exception):
-                            # Empty line keeps the socket alive; ping() also reads
-                            # what the console printed meanwhile, so unread output
-                            # can't pile up and leak into the next tool reply.
-                            await session.client.ping()
+                await self._ping_idle_sessions()
             except asyncio.CancelledError:
                 break
             except Exception as exc:

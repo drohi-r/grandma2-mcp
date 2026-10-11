@@ -18,7 +18,8 @@ PKG = REPO / "src" / "mcp_tools"
 
 # Names tests patch on src.server — tool modules must reach them as _srv.<name>.
 CALL_TIME_NAMES = {"get_client", "navigate", "list_destination", "set_property", "get_current_location",
-                   "active_context", "_orchestrator", "_session_manager", "_get_session_manager"}
+                   "active_context", "_orchestrator", "_session_manager", "_get_session_manager",
+                   "_operator_identity", "_last_pending_popup"}
 
 
 def _tool_modules() -> list[Path]:
@@ -57,6 +58,18 @@ def test_tool_modules_look_up_patchable_names_at_call_time(path):
             imported |= {a.asname or a.name for a in node.names}
     bad = sorted(imported & (CALL_TIME_NAMES - {"mcp"}))
     assert not bad, f"{path.name} imports {bad} directly; use _srv.<name> inside functions"
+
+
+def test_server_owned_state_lives_only_on_src_server():
+    """The live copies are src.server's (reached as _srv.<name>); no dead module duplicates."""
+    import src.mcp_tools.categorization as categorization
+    import src.mcp_tools.divergence as divergence
+    import src.server as server
+
+    assert not hasattr(divergence, "_console_baseline")
+    assert not hasattr(categorization, "_taxonomy_cache")
+    assert hasattr(server, "_console_baseline")
+    assert hasattr(server, "_taxonomy_cache")
 
 
 def test_python_dash_m_runs_with_all_tools_on_one_instance():

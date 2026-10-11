@@ -206,6 +206,10 @@ _HINT_MAP: dict[str, str] = {
         "Repeated ConnectionError — verify GMA_HOST/GMA_PORT are reachable "
         "and the console's Telnet login is enabled (Setup → Console → Global Settings)."
     ),
+    "ConsoleLoginRejected": (
+        "Repeated ConsoleLoginRejected — the console refused the credentials; verify "
+        "GMA_USER/GMA_PASSWORD match a user account that exists on the console."
+    ),
     "RuntimeError": (
         "Repeated RuntimeError — check that the grandMA2 safety level (GMA_SAFETY_LEVEL) "
         "allows the operations being requested, and review recent server logs."

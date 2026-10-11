@@ -178,7 +178,6 @@ class GMA2TelnetClient:
         # otherwise interleave writes and read each other's replies.
         self._lock: asyncio.Lock | None = None
         self._lock_owner: asyncio.Task | None = None
-        self._lock_depth = 0
 
         logger.debug(
             f"GMA2TelnetClient initialized: host={host}, port={port}, user={user}"
@@ -191,6 +190,11 @@ class GMA2TelnetClient:
             return False
         return not self._socket_closed()
 
+    @property
+    def is_busy(self) -> bool:
+        """True while some task holds the connection (an exchange is in progress)."""
+        return self._lock is not None and self._lock.locked()
+
     @contextlib.asynccontextmanager
     async def exclusive(self):
         """Hold the connection for a multi-command sequence (re-entrant per task).
@@ -200,20 +204,16 @@ class GMA2TelnetClient:
         """
         task = asyncio.current_task()
         if self._lock_owner is task and task is not None:
-            self._lock_depth += 1
-            try:
-                yield self
-            finally:
-                self._lock_depth -= 1
+            yield self
             return
         if self._lock is None:
             self._lock = asyncio.Lock()
         async with self._lock:
-            self._lock_owner, self._lock_depth = task, 1
+            self._lock_owner = task
             try:
                 yield self
             finally:
-                self._lock_owner, self._lock_depth = None, 0
+                self._lock_owner = None
 
     async def _drain(self, max_reads: int = 50) -> str:
         """Discard output that arrived since the last exchange (echo of other
