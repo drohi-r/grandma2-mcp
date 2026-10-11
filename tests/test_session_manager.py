@@ -210,6 +210,29 @@ class TestSessionManagerCloseAll:
             c.disconnect.assert_awaited()
 
 
+# ── SessionManager keepalive ─────────────────────────────────────────────────
+
+
+class TestSessionManagerKeepalive:
+
+    @pytest.mark.asyncio
+    async def test_busy_session_is_not_pinged(self):
+        manager = _make_manager()
+        busy, idle = MagicMock(), MagicMock()
+        for client, is_busy in ((busy, True), (idle, False)):
+            client.is_connected = True
+            client.is_busy = is_busy
+            client.ping = AsyncMock()
+        manager._sessions = {
+            "busy": OperatorSession(identity="busy", username="u", client=busy),
+            "idle": OperatorSession(identity="idle", username="u", client=idle),
+        }
+
+        assert await manager._ping_idle_sessions() == 1
+        idle.ping.assert_awaited_once()
+        busy.ping.assert_not_awaited()
+
+
 # ── SessionManager.session_info ──────────────────────────────────────────────
 
 

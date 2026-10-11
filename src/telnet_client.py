@@ -191,6 +191,11 @@ class GMA2TelnetClient:
             return False
         return not self._socket_closed()
 
+    @property
+    def is_busy(self) -> bool:
+        """True while some task holds the connection (an exchange is in progress)."""
+        return self._lock is not None and self._lock.locked()
+
     @contextlib.asynccontextmanager
     async def exclusive(self):
         """Hold the connection for a multi-command sequence (re-entrant per task).
