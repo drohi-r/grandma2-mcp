@@ -1,9 +1,9 @@
 ---
 title: Project Rules
 description: Thin root conventions for MA2 Agent — architectural invariants, safety rules, and build commands
-version: 1.4.0
+version: 1.4.1
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-08T05:40:38Z
+last_updated: 2026-10-11T20:40:46Z
 ---
 
 # Project Rules
@@ -72,7 +72,7 @@ All network I/O is isolated in `src/telnet_client.py`. Command builders in `src/
 
 | Server | Command | Purpose |
 |--------|---------|---------|
-| `time` | `npx -y @modelcontextprotocol/server-time` | Accurate timestamps for `.md` front matter |
+| `time` | `uvx mcp-server-time` | Accurate timestamps for `.md` front matter |
 
 When writing or editing any `.md` file, call `get_current_time` first and use the returned `datetime` value for `created` / `last_updated` front matter fields.
 

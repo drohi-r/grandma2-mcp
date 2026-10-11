@@ -1,9 +1,9 @@
 ---
 title: grandMA2 MCP
 description: MCP server for grandMA2 lighting consoles — 237 MCP tools via Telnet
-version: 1.3.0
+version: 1.3.1
 created: 2026-04-02T00:00:00Z
-last_updated: 2026-10-08T05:40:38Z
+last_updated: 2026-10-11T20:40:46Z
 ---
 
 <p align="center">
@@ -825,8 +825,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       }
     },
     "time": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-time"]
+      "command": "uvx",
+      "args": ["mcp-server-time"]
     }
   }
 }
