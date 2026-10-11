@@ -160,6 +160,40 @@ class TestHandleErrorsIntegration:
         finally:
             server._last_pending_popup = None
 
+    POPUP = {"text": "Overwrite?", "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}]}
+
+    @pytest.mark.asyncio
+    async def test_console_reply_without_popup_clears_the_memory(self):
+        import src.server as server
+        from src.server import _handle_errors
+
+        @_handle_errors
+        async def list_cue() -> str:
+            return json.dumps({"command_sent": "list cue", "raw_response": "Cue 1\r\n[Channel]>"})
+
+        server._last_pending_popup = self.POPUP
+        try:
+            await list_cue()
+            assert server._last_pending_popup is None
+        finally:
+            server._last_pending_popup = None
+
+    @pytest.mark.asyncio
+    async def test_reply_without_console_text_keeps_the_memory(self):
+        import src.server as server
+        from src.server import _handle_errors
+
+        @_handle_errors
+        async def local_tool() -> str:
+            return json.dumps({"result": 1})
+
+        server._last_pending_popup = self.POPUP
+        try:
+            await local_tool()
+            assert server._last_pending_popup == self.POPUP
+        finally:
+            server._last_pending_popup = None
+
     @pytest.mark.asyncio
     async def test_exception_reply_names_the_error_class(self):
         from src.server import _handle_errors

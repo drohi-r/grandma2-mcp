@@ -45,7 +45,7 @@ from src.commands import (
     new_show as build_new_show,  # noqa: F401 — used via src.server
     release_executor as build_release_executor,  # noqa: F401 — used via src.server
 )
-from src.console_feedback import annotate_tool_result
+from src.console_feedback import CONSOLE_TEXT_KEYS, CONSOLE_TEXT_LIST_KEYS, annotate_tool_result
 from src.context import _current_session_id
 from src.credentials import get_operator_identity, resolve_console_credentials
 from src.mcp_features import (
@@ -140,6 +140,10 @@ _taxonomy_cache: dict | None = None
 # The pop-up the last tool reply reported as pending (set by _handle_errors);
 # answer_console_popup reads it to know which option is really Cancel.
 _last_pending_popup: dict | None = None
+# Only replies containing one of these JSON keys are parsed to update it.
+_POPUP_MEMORY_MARKERS = tuple(
+    f'"{key}"' for key in ("pending_popup", *CONSOLE_TEXT_KEYS, *CONSOLE_TEXT_LIST_KEYS)
+)
 
 
 def _get_telemetry() -> ToolTelemetry:
@@ -212,11 +216,11 @@ def _handle_errors(func):
 
         async def _invoke(call_kwargs: dict) -> tuple[str, str | None, list[str]]:
             warnings: list[str] = []
+            # error_class tells callers (the agent executor) an exception blocked
+            # the call, as opposed to a tool-level gate such as a missing confirm.
             try:
                 with collect_transport_warnings() as warnings:
                     return await func(*args, **call_kwargs), None, warnings
-            # error_class tells callers (the agent executor) an exception blocked
-            # the call, as opposed to a tool-level gate such as a missing confirm.
             except ConnectionError as e:
                 logger.error("Connection error in %s: %s", func.__name__, e)
                 error = {"error": f"Connection failed: {e}", "blocked": True, "error_class": type(e).__name__}
@@ -256,8 +260,8 @@ def _handle_errors(func):
                 error_class = "ConsoleError"
         except Exception:  # noqa: BLE001 — annotation must never break a tool call
             logger.debug("Reply annotation failed for %s", func.__name__, exc_info=True)
-        if isinstance(result, str) and '"pending_popup"' in result:
-            _remember_pending_popup(result)
+        if isinstance(result, str) and any(marker in result for marker in _POPUP_MEMORY_MARKERS):
+            _track_pending_popup(result)
         if os.getenv("GMA_TELEMETRY", "1") != "0":
             try:  # noqa: SIM105
                 _get_telemetry().record_sync(
@@ -284,15 +288,28 @@ def _handle_errors(func):
     return wrapper
 
 
-def _remember_pending_popup(result: str) -> None:
-    """Record the reply's top-level ``pending_popup`` (None when it has none)."""
+def _track_pending_popup(result: str) -> None:
+    """Update ``_last_pending_popup`` from one (annotated) tool reply.
+
+    A top-level ``pending_popup`` is remembered. Any other reply carrying
+    console text clears the memory: the console blocks every command while a
+    pop-up is open, so a console reply without one means it is gone. Replies
+    without console text (local tools, exception replies) leave it untouched.
+    """
     global _last_pending_popup
     try:
         data = json.loads(result)
     except (TypeError, ValueError):
         return
-    if isinstance(data, dict):
-        _last_pending_popup = data.get("pending_popup")
+    if not isinstance(data, dict):
+        return
+    popup = data.get("pending_popup")
+    if isinstance(popup, dict):
+        _last_pending_popup = popup
+    elif any(isinstance(data.get(key), str) for key in CONSOLE_TEXT_KEYS) or any(
+        isinstance(data.get(key), list) for key in CONSOLE_TEXT_LIST_KEYS
+    ):
+        _last_pending_popup = None
 
 
 def _with_fields(result: str, **fields) -> str:
