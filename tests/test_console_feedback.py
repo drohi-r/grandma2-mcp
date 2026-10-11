@@ -142,6 +142,8 @@ class TestHandleErrorsIntegration:
 
         assert json.loads(await boom())["ok"] is False
 
+    POPUP = {"text": "Overwrite?", "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}]}
+
     @pytest.mark.asyncio
     async def test_reported_popup_is_remembered_for_answer_console_popup(self):
         import src.server as server
@@ -151,16 +153,8 @@ class TestHandleErrorsIntegration:
         async def store_thing() -> str:
             return json.dumps({"command_sent": "x", "raw_response": "Overwrite?\r\n[1]: Ok   2 : Cancel"})
 
-        try:
-            await store_thing()
-            assert server._last_pending_popup == {
-                "text": "Overwrite?",
-                "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}],
-            }
-        finally:
-            server._last_pending_popup = None
-
-    POPUP = {"text": "Overwrite?", "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}]}
+        await store_thing()
+        assert server._last_pending_popup == {server._operator_identity(): self.POPUP}
 
     @pytest.mark.asyncio
     async def test_console_reply_without_popup_clears_the_memory(self):
@@ -171,12 +165,22 @@ class TestHandleErrorsIntegration:
         async def list_cue() -> str:
             return json.dumps({"command_sent": "list cue", "raw_response": "Cue 1\r\n[Channel]>"})
 
-        server._last_pending_popup = self.POPUP
-        try:
-            await list_cue()
-            assert server._last_pending_popup is None
-        finally:
-            server._last_pending_popup = None
+        server._last_pending_popup = {server._operator_identity(): self.POPUP}
+        await list_cue()
+        assert server._last_pending_popup == {}
+
+    @pytest.mark.asyncio
+    async def test_console_reply_list_without_popup_clears_the_memory(self):
+        import src.server as server
+        from src.server import _handle_errors
+
+        @_handle_errors
+        async def multi() -> str:
+            return json.dumps({"commands_sent": ["x"], "raw_responses": ["[Channel]>"]})
+
+        server._last_pending_popup = {server._operator_identity(): self.POPUP}
+        await multi()
+        assert server._last_pending_popup == {}
 
     @pytest.mark.asyncio
     async def test_reply_without_console_text_keeps_the_memory(self):
@@ -187,12 +191,9 @@ class TestHandleErrorsIntegration:
         async def local_tool() -> str:
             return json.dumps({"result": 1})
 
-        server._last_pending_popup = self.POPUP
-        try:
-            await local_tool()
-            assert server._last_pending_popup == self.POPUP
-        finally:
-            server._last_pending_popup = None
+        server._last_pending_popup = {server._operator_identity(): self.POPUP}
+        await local_tool()
+        assert server._last_pending_popup == {server._operator_identity(): self.POPUP}
 
     @pytest.mark.asyncio
     async def test_exception_reply_names_the_error_class(self):
@@ -205,6 +206,19 @@ class TestHandleErrorsIntegration:
         data = json.loads(await boom())
         assert data["blocked"] is True
         assert data["error_class"] == "RuntimeError"
+        assert data["retryable"] is True
+
+    @pytest.mark.asyncio
+    async def test_bad_argument_exception_is_not_retryable(self):
+        from src.server import _handle_errors
+
+        @_handle_errors
+        async def boom() -> str:
+            raise ValueError("bad id")
+
+        data = json.loads(await boom())
+        assert data["error_class"] == "ValueError"
+        assert data["retryable"] is False
 
     @pytest.mark.asyncio
     async def test_connection_error_subclass_is_named(self):
@@ -218,3 +232,4 @@ class TestHandleErrorsIntegration:
         data = json.loads(await login())
         assert data["error"].startswith("Connection failed")
         assert data["error_class"] == "ConsoleLoginRejected"
+        assert data["retryable"] is False

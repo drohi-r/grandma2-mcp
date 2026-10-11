@@ -237,12 +237,11 @@ class StepExecutor:
         """Error text when the reply is a refusal that retrying cannot change.
 
         - ``console_errors`` present: the console rejected the command → refusal.
-        - ``blocked`` with no ``error_class``: a tool-level gate (missing
-          confirmation, validation, read-only mode) → refusal.
-        - ``blocked`` with ``error_class == "ConsoleLoginRejected"``: the
-          console refused the credentials → refusal.
-        - any other ``blocked`` reply with an ``error_class`` (a transport or
-          runtime exception) → ``None``, so the step is retried.
+        - ``blocked`` without ``retryable: true``: a tool-level gate (missing
+          confirmation, validation, read-only mode) or an exception retrying
+          cannot fix (rejected login, bad argument) → refusal.
+        - ``blocked`` with ``retryable: true`` (``_handle_errors`` sets it for
+          transport and runtime exceptions) → ``None``, so the step is retried.
         """
         data = self._parse(result)
         if data is None:
@@ -250,10 +249,8 @@ class StepExecutor:
         error = str(data.get("error") or "")
         if data.get("console_errors"):
             return error or result
-        if data.get("blocked") is True:
-            error_class = data.get("error_class")
-            if not error_class or error_class == "ConsoleLoginRejected":
-                return error or result
+        if data.get("blocked") is True and data.get("retryable") is not True:
+            return error or result
         return None
 
     def _fail(self, step: PlanStep, error: str) -> None:

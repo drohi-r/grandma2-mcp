@@ -18,7 +18,8 @@ PKG = REPO / "src" / "mcp_tools"
 
 # Names tests patch on src.server — tool modules must reach them as _srv.<name>.
 CALL_TIME_NAMES = {"get_client", "navigate", "list_destination", "set_property", "get_current_location",
-                   "active_context", "_orchestrator", "_session_manager", "_get_session_manager"}
+                   "active_context", "_orchestrator", "_session_manager", "_get_session_manager",
+                   "_operator_identity", "_last_pending_popup"}
 
 
 def _tool_modules() -> list[Path]:

@@ -265,13 +265,27 @@ class TestRunCommandBatch:
         client.send_command_with_response = AsyncMock(side_effect=lambda cmd, **kw: replies[cmd])
         mock_get_client.return_value = client
 
-        try:
-            data = json.loads(await run_command_batch(commands=["List Cue", "List Group", "List Macro"]))
-            assert data["stopped_early"] is True
-            assert len(data["pending_popup"]["options"]) == 2
-            assert server._last_pending_popup == data["pending_popup"]
-        finally:
-            server._last_pending_popup = None
+        data = json.loads(await run_command_batch(commands=["List Cue", "List Group", "List Macro"]))
+        assert data["stopped_early"] is True
+        assert len(data["pending_popup"]["options"]) == 2
+        assert server._last_pending_popup[server._operator_identity()] == data["pending_popup"]
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_batch_without_popup_clears_a_remembered_one(self, mock_get_client):
+        import src.server as server
+        from src.server import run_command_batch
+
+        client = MagicMock()
+        client.exclusive = MagicMock(return_value=_NullAsyncCtx())
+        client.send_command_with_response = AsyncMock(return_value="[Channel]>")
+        mock_get_client.return_value = client
+        server._last_pending_popup = {server._operator_identity(): TestAnswerConsolePopup.POPUP}
+
+        data = json.loads(await run_command_batch(commands=["List Cue", "List Group"]))
+        assert data["ok"] is True
+        assert data["pending_popup"] is None
+        assert server._last_pending_popup == {}
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
@@ -316,6 +330,8 @@ class _NullAsyncCtx:
 
 
 class TestAnswerConsolePopup:
+    POPUP = {"text": "Overwrite?", "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}]}
+
     @pytest.mark.asyncio
     @patch("src.server.get_client")
     async def test_ok_requires_confirm(self, mock_get_client):
@@ -324,8 +340,6 @@ class TestAnswerConsolePopup:
         data = json.loads(await answer_console_popup(choice=1))
         assert data["blocked"] is True
         mock_get_client.assert_not_called()
-
-    POPUP = {"text": "Overwrite?", "options": [{"choice": 1, "label": "Ok"}, {"choice": 2, "label": "Cancel"}]}
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
@@ -336,15 +350,13 @@ class TestAnswerConsolePopup:
         client = MagicMock()
         client.send_command_with_response = AsyncMock(return_value="[Channel]>")
         mock_get_client.return_value = client
-        server._last_pending_popup = self.POPUP
-        try:
-            data = json.loads(await answer_console_popup(choice=2))
-            assert data["command_sent"] == "2"
-            assert data["ok"] is True
-            assert data["risk_tier"] == "SAFE_WRITE"
-            assert server._last_pending_popup is None
-        finally:
-            server._last_pending_popup = None
+        server._last_pending_popup = {server._operator_identity(): self.POPUP}
+
+        data = json.loads(await answer_console_popup(choice=2))
+        assert data["command_sent"] == "2"
+        assert data["ok"] is True
+        assert data["risk_tier"] == "SAFE_WRITE"
+        assert server._operator_identity() not in server._last_pending_popup
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
@@ -352,22 +364,56 @@ class TestAnswerConsolePopup:
         import src.server as server
         from src.server import answer_console_popup
 
-        server._last_pending_popup = self.POPUP
-        try:
-            data = json.loads(await answer_console_popup(choice=1))
-            assert data["blocked"] is True
-            mock_get_client.assert_not_called()
-        finally:
-            server._last_pending_popup = None
+        server._last_pending_popup = {server._operator_identity(): self.POPUP}
+        data = json.loads(await answer_console_popup(choice=1))
+        assert data["blocked"] is True
+        mock_get_client.assert_not_called()
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
     async def test_without_a_remembered_popup_every_answer_is_blocked(self, mock_get_client):
-        import src.server as server
         from src.server import answer_console_popup
 
-        server._last_pending_popup = None
         data = json.loads(await answer_console_popup(choice=2))
+        assert data["blocked"] is True
+        mock_get_client.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_popup_of_another_operator_does_not_unlock_cancel(self, mock_get_client):
+        from src.server import _handle_errors, answer_console_popup
+
+        @_handle_errors
+        async def store_thing() -> str:
+            return json.dumps({"command_sent": "x", "raw_response": "Overwrite?\r\n[1]: Ok   2 : Cancel"})
+
+        with patch("src.server._operator_identity", return_value="op-b"):
+            await store_thing()
+        with patch("src.server._operator_identity", return_value="op-a"):
+            data = json.loads(await answer_console_popup(choice=2))
+        assert data["blocked"] is True
+        mock_get_client.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_other_operators_popup_does_not_overwrite_mine(self, mock_get_client):
+        """B sees (1 Overwrite, 2 Merge, 3 Cancel); A's later (1 Ok, 2 Cancel) must not make B's 2 a Cancel."""
+        from src.server import _handle_errors, answer_console_popup
+
+        replies = {
+            "op-b": "Store?\r\n[1]: Overwrite   2 : Merge   3 : Cancel",
+            "op-a": "Overwrite?\r\n[1]: Ok   2 : Cancel",
+        }
+
+        @_handle_errors
+        async def store_thing(who: str) -> str:
+            return json.dumps({"command_sent": "x", "raw_response": replies[who]})
+
+        for who in ("op-b", "op-a"):
+            with patch("src.server._operator_identity", return_value=who):
+                await store_thing(who=who)
+        with patch("src.server._operator_identity", return_value="op-b"):
+            data = json.loads(await answer_console_popup(choice=2))
         assert data["blocked"] is True
         mock_get_client.assert_not_called()
 

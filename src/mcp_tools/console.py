@@ -299,11 +299,12 @@ def _load_batch_lines(commands: list[str] | None, commands_file: str | None) -> 
             return [], f"commands_file must be one of {sorted(_srv._BATCH_FILE_SUFFIXES)}"
         # Only files under the batch root: GMA_BATCH_DIR, else the MA2 data root.
         root = Path(os.environ.get("GMA_BATCH_DIR") or _srv._GMA2_DATA_ROOT).resolve()
-        if not path.resolve().is_relative_to(root):
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
             return [], f"commands_file must be inside {root} (set GMA_BATCH_DIR to allow another directory)"
-        if not path.is_file():
+        if not resolved.is_file():
             return [], f"commands_file not found: {commands_file}"
-        raw_lines = path.read_text(encoding="utf-8").splitlines()
+        raw_lines = resolved.read_text(encoding="utf-8").splitlines()
     else:
         raw_lines = list(commands or [])
     lines = [ln.strip() for ln in raw_lines]
@@ -343,8 +344,8 @@ async def run_command_batch(
 
     Returns:
         str: JSON summary — total, executed, failed (line, command, errors),
-            stopped_early, duration_s, last_reply, and pending_popup when a
-            pop-up stopped the batch.
+            stopped_early, duration_s, last_reply, and pending_popup (the
+            pop-up that stopped the batch, else null).
     """
     from src.console_feedback import find_console_errors, find_pending_popup
 
@@ -425,11 +426,11 @@ async def run_command_batch(
         "duration_s": round(time.monotonic() - started, 2),
         "destructive_count": len(destructive),
         "last_reply": last_reply[-500:],
+        # Always present, so _handle_errors remembers (dict) or forgets (None)
+        # this operator's pop-up for answer_console_popup.
+        "pending_popup": pending_popup,
         "ok": not failed,
     }
-    if pending_popup:
-        # Top level, so _handle_errors remembers it for answer_console_popup.
-        result["pending_popup"] = pending_popup
     if failed:
         first = failed[0]
         result["error"] = (
@@ -450,9 +451,9 @@ async def answer_console_popup(
     Answer a console pop-up a previous tool reported as pending_popup.
 
     Pass the option number from pending_popup.options. Choosing the Cancel
-    option of the pop-up the server last reported is always allowed; any other
-    answer (or any answer when no pop-up was reported) can confirm an
-    overwrite or delete and needs confirm_destructive=True.
+    option of the pop-up the server last reported to this operator is always
+    allowed; any other answer (or any answer when no pop-up was reported) can
+    confirm an overwrite or delete and needs confirm_destructive=True.
 
     Args:
         choice: Option number to press (e.g. 1 for "Ok").
@@ -463,7 +464,8 @@ async def answer_console_popup(
     """
     if choice < 0 or choice > 9:
         return json.dumps({"error": "choice must be a single option number 0-9", "blocked": True}, indent=2)
-    popup = _srv._last_pending_popup
+    identity = _srv._operator_identity()
+    popup = _srv._last_pending_popup.get(identity)
     options = popup.get("options") if isinstance(popup, dict) else None
     is_cancel = any(
         isinstance(o, dict) and o.get("choice") == choice and str(o.get("label", "")).lower() == "cancel"
@@ -484,7 +486,7 @@ async def answer_console_popup(
     client = await _srv.get_client()
     cmd = str(choice)
     raw_response = await client.send_command_with_response(cmd)
-    _srv._last_pending_popup = None
+    _srv._last_pending_popup.pop(identity, None)
     return json.dumps({
         "command_sent": cmd,
         "raw_response": raw_response,

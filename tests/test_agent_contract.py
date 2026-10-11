@@ -288,9 +288,10 @@ async def test_refusals_are_not_retried(reply):
 
 
 @pytest.mark.asyncio
-async def test_runtime_exception_block_is_retried(monkeypatch):
+async def test_retryable_exception_block_is_retried(monkeypatch):
     monkeypatch.setattr("src.agent.executor.RETRY_DELAYS", [0.0, 0.0, 0.0])
-    reply = {"blocked": True, "error": "Runtime error: Reconnect timed out", "error_class": "RuntimeError"}
+    reply = {"blocked": True, "error": "Runtime error: Reconnect timed out",
+             "error_class": "RuntimeError", "retryable": True}
     tool = AsyncMock(return_value=json.dumps(reply))
     step = PlanStep(tool_name="go_tool", tool_args={}, description="go", risk_tier=RiskTier.SAFE_WRITE)
     ctx = RunContext(goal="g", plan=[step])
@@ -300,10 +301,13 @@ async def test_runtime_exception_block_is_retried(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_rejected_login_is_not_retried(monkeypatch):
+@pytest.mark.parametrize("reply", [
+    {"blocked": True, "error": "Connection failed: Console rejected login for user 'x'",
+     "error_class": "ConsoleLoginRejected", "retryable": False},
+    {"blocked": True, "error": "Unexpected error: bad id", "error_class": "ValueError", "retryable": False},
+], ids=["login_rejected", "value_error"])
+async def test_non_retryable_exception_block_is_not_retried(monkeypatch, reply):
     monkeypatch.setattr("src.agent.executor.RETRY_DELAYS", [0.0, 0.0, 0.0])
-    reply = {"blocked": True, "error": "Connection failed: Console rejected login for user 'x'",
-             "error_class": "ConsoleLoginRejected"}
     tool = AsyncMock(return_value=json.dumps(reply))
     step = PlanStep(tool_name="go_tool", tool_args={}, description="go", risk_tier=RiskTier.SAFE_WRITE)
     ctx = RunContext(goal="g", plan=[step])

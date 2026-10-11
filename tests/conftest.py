@@ -5,6 +5,7 @@ This file is used to define shared fixtures and test configuration.
 """
 
 import asyncio
+import sys
 
 import pytest
 
@@ -25,6 +26,27 @@ pytest_plugins = ["pytest_asyncio"]
 def _auth_bypass(monkeypatch):
     """Set GMA_AUTH_BYPASS=1 for every test unless it opts out via monkeypatch."""
     monkeypatch.setenv("GMA_AUTH_BYPASS", "1")
+
+
+# ---------------------------------------------------------------------------
+# Console pop-up memory — no remembered pop-up leaks between tests
+# ---------------------------------------------------------------------------
+
+
+def _reset_pending_popups() -> None:
+    # Only touch src.server when a test already imported it: importing it here
+    # would load .env and configure logging for tests that never use the server.
+    server = sys.modules.get("src.server")
+    if server is not None:
+        server._last_pending_popup = {}
+
+
+@pytest.fixture(autouse=True)
+def _no_remembered_popups():
+    """Start and end every test with an empty src.server._last_pending_popup."""
+    _reset_pending_popups()
+    yield
+    _reset_pending_popups()
 
 # ---------------------------------------------------------------------------
 # Live-test pacing — prevent overwhelming grandMA2 onPC with rapid commands

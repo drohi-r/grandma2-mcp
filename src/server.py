@@ -64,8 +64,8 @@ from src.navigation import (  # noqa: F401 — used via src.server
 )
 from src.orchestrator import Orchestrator
 from src.server_orchestration_tools import register_orchestration_tools
-from src.session_manager import SessionManager
-from src.telemetry import ToolTelemetry, infer_risk_tier, redact_inputs
+from src.session_manager import ConsoleLoginRejected, SessionManager
+from src.telemetry import ToolTelemetry, infer_risk_tier, redact_inputs, redact_text
 from src.telnet_client import GMA2TelnetClient, collect_transport_warnings
 from src.tools import set_gma2_client
 from src.vocab import build_v39_spec
@@ -137,9 +137,10 @@ _console_baseline: dict | None = None
 # Taxonomy cache — avoids re-reading the categorization file on every call
 _taxonomy_cache: dict | None = None
 
-# The pop-up the last tool reply reported as pending (set by _handle_errors);
-# answer_console_popup reads it to know which option is really Cancel.
-_last_pending_popup: dict | None = None
+# Per operator identity (the session-pool key): the pop-up that operator's last
+# tool reply reported as pending (set by _handle_errors). answer_console_popup
+# reads it to know which option is really Cancel on that operator's session.
+_last_pending_popup: dict[str, dict] = {}
 # Only replies containing one of these JSON keys are parsed to update it.
 _POPUP_MEMORY_MARKERS = tuple(
     f'"{key}"' for key in ("pending_popup", *CONSOLE_TEXT_KEYS, *CONSOLE_TEXT_LIST_KEYS)
@@ -154,6 +155,11 @@ def _get_telemetry() -> ToolTelemetry:
     return _telemetry_singleton
 
 
+def _operator_identity() -> str:
+    """Identity of the operator making this call — the session-pool key get_client uses."""
+    from src.auth import get_granted_scopes
+
+    return get_operator_identity(get_granted_scopes())
 
 
 async def _get_session_manager():
@@ -191,7 +197,7 @@ async def get_client() -> GMA2TelnetClient:
     """
     from src.auth import get_granted_scopes
     scopes = get_granted_scopes()
-    identity = get_operator_identity(scopes)
+    identity = _operator_identity()
     username, password = resolve_console_credentials(scopes)
 
     manager = await _get_session_manager()
@@ -216,23 +222,21 @@ def _handle_errors(func):
 
         async def _invoke(call_kwargs: dict) -> tuple[str, str | None, list[str]]:
             warnings: list[str] = []
-            # error_class tells callers (the agent executor) an exception blocked
-            # the call, as opposed to a tool-level gate such as a missing confirm.
+            # error_class / retryable tell callers (the agent executor) an exception
+            # blocked the call, and whether retrying can help — as opposed to a
+            # tool-level gate such as a missing confirm (no error_class).
             try:
                 with collect_transport_warnings() as warnings:
                     return await func(*args, **call_kwargs), None, warnings
             except ConnectionError as e:
                 logger.error("Connection error in %s: %s", func.__name__, e)
-                error = {"error": f"Connection failed: {e}", "blocked": True, "error_class": type(e).__name__}
-                return json.dumps(error, indent=2), type(e).__name__, warnings
+                return _exception_reply(f"Connection failed: {e}", e), type(e).__name__, warnings
             except RuntimeError as e:
                 logger.error("Runtime error in %s: %s", func.__name__, e)
-                error = {"error": f"Runtime error: {e}", "blocked": True, "error_class": type(e).__name__}
-                return json.dumps(error, indent=2), type(e).__name__, warnings
+                return _exception_reply(f"Runtime error: {e}", e), type(e).__name__, warnings
             except Exception as e:
                 logger.error("Unexpected error in %s: %s", func.__name__, e, exc_info=True)
-                error = {"error": f"Unexpected error: {e}", "blocked": True, "error_class": type(e).__name__}
-                return json.dumps(error, indent=2), type(e).__name__, warnings
+                return _exception_reply(f"Unexpected error: {e}", e), type(e).__name__, warnings
 
         result, error_class, transport_warnings = await _invoke(kwargs)
         ctx = active_context(mcp)
@@ -261,7 +265,10 @@ def _handle_errors(func):
         except Exception:  # noqa: BLE001 — annotation must never break a tool call
             logger.debug("Reply annotation failed for %s", func.__name__, exc_info=True)
         if isinstance(result, str) and any(marker in result for marker in _POPUP_MEMORY_MARKERS):
-            _track_pending_popup(result)
+            try:
+                _track_pending_popup(result)
+            except Exception:  # noqa: BLE001 — pop-up tracking must never break a tool call
+                logger.debug("Pop-up tracking failed for %s", func.__name__, exc_info=True)
         if os.getenv("GMA_TELEMETRY", "1") != "0":
             try:  # noqa: SIM105
                 _get_telemetry().record_sync(
@@ -269,7 +276,8 @@ def _handle_errors(func):
                     inputs_json=json.dumps(
                         {k: str(v)[:200] for k, v in redact_inputs(kwargs).items()}, default=str
                     ),
-                    output_preview=result[:500] if result else "",
+                    # Redacted copy only — the caller still gets the full reply.
+                    output_preview=redact_text(result, kwargs)[:500] if result else "",
                     error_class=error_class,
                     latency_ms=(time.monotonic() - t0) * 1000,
                     risk_tier=_risk_tier,
@@ -288,28 +296,49 @@ def _handle_errors(func):
     return wrapper
 
 
-def _track_pending_popup(result: str) -> None:
-    """Update ``_last_pending_popup`` from one (annotated) tool reply.
+def _is_retryable(exc: BaseException) -> bool:
+    """A transport or runtime failure may clear on retry; a rejected login or a bad argument won't."""
+    if isinstance(exc, ConsoleLoginRejected):
+        return False
+    return isinstance(exc, (ConnectionError, RuntimeError, OSError))
 
-    A top-level ``pending_popup`` is remembered. Any other reply carrying
-    console text clears the memory: the console blocks every command while a
-    pop-up is open, so a console reply without one means it is gone. Replies
-    without console text (local tools, exception replies) leave it untouched.
+
+def _exception_reply(message: str, exc: BaseException) -> str:
+    """JSON reply for a tool call an exception blocked."""
+    return json.dumps({
+        "error": message,
+        "blocked": True,
+        "error_class": type(exc).__name__,
+        "retryable": _is_retryable(exc),
+    }, indent=2)
+
+
+def _track_pending_popup(result: str) -> None:
+    """Update this operator's ``_last_pending_popup`` entry from one (annotated) tool reply.
+
+    A top-level ``pending_popup`` key is authoritative: a dict is remembered,
+    anything else (None) clears the entry. Without that key, a reply carrying
+    console text clears it — the console blocks every command while a pop-up
+    is open, so a console reply without one means it is gone. Replies without
+    console text (local tools, exception replies) leave it untouched.
     """
-    global _last_pending_popup
     try:
         data = json.loads(result)
     except (TypeError, ValueError):
         return
     if not isinstance(data, dict):
         return
-    popup = data.get("pending_popup")
-    if isinstance(popup, dict):
-        _last_pending_popup = popup
+    identity = _operator_identity()
+    if "pending_popup" in data:
+        popup = data["pending_popup"]
+        if isinstance(popup, dict):
+            _last_pending_popup[identity] = popup
+        else:
+            _last_pending_popup.pop(identity, None)
     elif any(isinstance(data.get(key), str) for key in CONSOLE_TEXT_KEYS) or any(
         isinstance(data.get(key), list) for key in CONSOLE_TEXT_LIST_KEYS
     ):
-        _last_pending_popup = None
+        _last_pending_popup.pop(identity, None)
 
 
 def _with_fields(result: str, **fields) -> str:

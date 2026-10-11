@@ -122,6 +122,12 @@ class TestIdentifyFailurePatterns:
         assert suggestions[0].failure_count == 4
         assert "ConnectionError" in suggestions[0].error_classes
 
+    def test_rejected_login_hint_points_at_credentials(self, imp, tel):
+        self._insert_errors(tel, "login_tool", "ConsoleLoginRejected", 3)
+        suggestions = imp.identify_failure_patterns(days=7, min_failures=3)
+        assert len(suggestions) == 1
+        assert "GMA_USER/GMA_PASSWORD" in suggestions[0].hint
+
     def test_sorted_by_failure_count_desc(self, imp, tel):
         self._insert_errors(tel, "worst_tool", "RuntimeError", 10)
         self._insert_errors(tel, "medium_tool", "RuntimeError", 5)

@@ -7,7 +7,20 @@ from unittest.mock import patch
 
 import pytest
 
-from src.telemetry import ToolTelemetry, redact_inputs
+from src.telemetry import ToolTelemetry, redact_inputs, redact_text
+
+
+def test_redact_text_masks_credential_values():
+    text = 'Login "op" "s3cret"'
+    assert redact_text(text, {"user": "op", "password": "s3cret"}) == 'Login "op" "***"'
+
+
+def test_redact_text_masks_json_escaped_values_and_longest_first():
+    text = json.dumps({"command_sent": 'Login "op" "pa\\ss"', "note": "token abc123"})
+    out = redact_text(text, {"password": "pa\\ss", "api_key": "abc", "token": "abc123", "client_secret": ""})
+    assert "pa" not in out
+    assert "abc" not in out and "123" not in out  # abc123 masked whole, not as ***123
+    assert out.count("***") == 2  # the empty secret is ignored
 
 
 def test_redact_inputs_masks_credential_keys():
@@ -44,5 +57,31 @@ async def test_handle_errors_never_records_the_password(tmp_path, monkeypatch):
         assert len(raw) == 1
         assert "s3cret" not in raw[0][0]
         assert json.loads(raw[0][0]) == {"host": "1.2.3.4", "password": "***"}
+    finally:
+        telemetry.close()
+
+
+@pytest.mark.asyncio
+async def test_password_echoed_in_the_reply_is_not_recorded(tmp_path, monkeypatch):
+    from src.server import _handle_errors
+
+    monkeypatch.setenv("GMA_TELEMETRY", "1")
+    telemetry = ToolTelemetry(db_path=tmp_path / "t.db")
+
+    @_handle_errors
+    async def login(user: str, password: str) -> str:
+        return json.dumps({"command_sent": f'Login "{user}" "{password}"'})
+
+    try:
+        with patch("src.server._get_telemetry", return_value=telemetry):
+            reply = await login(user="op", password="s3cret")
+
+        assert "s3cret" in reply  # the caller's reply is untouched
+        rows = telemetry._conn.execute("SELECT inputs_json, output_preview FROM tool_invocations").fetchall()
+        assert len(rows) == 1
+        inputs_json, output_preview = rows[0]
+        assert "s3cret" not in inputs_json
+        assert "s3cret" not in output_preview
+        assert "***" in output_preview
     finally:
         telemetry.close()
