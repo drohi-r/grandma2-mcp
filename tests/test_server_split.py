@@ -59,6 +59,18 @@ def test_tool_modules_look_up_patchable_names_at_call_time(path):
     assert not bad, f"{path.name} imports {bad} directly; use _srv.<name> inside functions"
 
 
+def test_server_owned_state_lives_only_on_src_server():
+    """The live copies are src.server's (reached as _srv.<name>); no dead module duplicates."""
+    import src.mcp_tools.categorization as categorization
+    import src.mcp_tools.divergence as divergence
+    import src.server as server
+
+    assert not hasattr(divergence, "_console_baseline")
+    assert not hasattr(categorization, "_taxonomy_cache")
+    assert hasattr(server, "_console_baseline")
+    assert hasattr(server, "_taxonomy_cache")
+
+
 def test_python_dash_m_runs_with_all_tools_on_one_instance():
     """`python -m src.server` hands over to the canonical module (no second FastMCP)."""
     env = {**os.environ, "GMA_TRANSPORT": "not-a-transport", "GMA_TELEMETRY": "0"}

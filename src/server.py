@@ -131,6 +131,12 @@ _session_manager_lock = asyncio.Lock()
 # Telemetry singleton — created lazily, shared by all tool wrappers
 _telemetry_singleton: ToolTelemetry | None = None
 
+# Console-state baseline for detect_console_divergence (snapshot_console_baseline sets it)
+_console_baseline: dict | None = None
+
+# Taxonomy cache — avoids re-reading the categorization file on every call
+_taxonomy_cache: dict | None = None
+
 # The pop-up the last tool reply reported as pending (set by _handle_errors);
 # answer_console_popup reads it to know which option is really Cancel.
 _last_pending_popup: dict | None = None
@@ -631,7 +637,6 @@ from src.mcp_tools.busking import (
     normalize_page_faders as normalize_page_faders,
 )
 from src.mcp_tools.categorization import (
-    _taxonomy_cache as _taxonomy_cache,
     get_similar_tools as get_similar_tools,
     list_tool_categories as list_tool_categories,
     recluster_tools as recluster_tools,
@@ -723,7 +728,6 @@ from src.mcp_tools.discovery import (
 from src.mcp_tools.divergence import (
     _DIVERGENCE_POOLS as _DIVERGENCE_POOLS,
     _DIVERGENCE_VARS as _DIVERGENCE_VARS,
-    _console_baseline as _console_baseline,
     _read_divergence_state as _read_divergence_state,
     detect_console_divergence as detect_console_divergence,
 )
@@ -916,7 +920,3 @@ def apply_tool_profile(value: str | None) -> str:
     mcp._tool_manager._tools = {name: tool for name, tool in _ALL_TOOLS.items() if name in keep}
     logger.info("Tool profile %r: %d of %d tools visible", profile, len(keep), len(_ALL_TOOLS))
     return profile
-
-
-if __name__ == "__main__":
-    main()

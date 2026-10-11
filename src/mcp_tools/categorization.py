@@ -26,9 +26,6 @@ from src.server import (
 # Tools 83–86 — ML-Based Tool Categorization
 # ============================================================
 
-# Module-level cache for the taxonomy to avoid repeated disk reads.
-_taxonomy_cache: dict | None = None
-
 
 @mcp.tool()
 @require_scope(OAuthScope.DISCOVER)
