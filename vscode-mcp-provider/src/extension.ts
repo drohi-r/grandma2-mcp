@@ -13,8 +13,8 @@ export function activate(context: vscode.ExtensionContext) {
                 ),
                 new vscode.McpStdioServerDefinition(
                     'time',
-                    'npx',
-                    ['-y', '@modelcontextprotocol/server-time'],
+                    'uvx',
+                    ['mcp-server-time'],
                     {},
                     '1.0.0'
                 )
