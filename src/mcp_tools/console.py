@@ -7,6 +7,7 @@ that live in other tool modules are looked up as ``_srv.<name>`` at call time.
 # ruff: noqa: E501
 
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -296,6 +297,10 @@ def _load_batch_lines(commands: list[str] | None, commands_file: str | None) -> 
         path = Path(commands_file)
         if path.suffix.lower() not in _srv._BATCH_FILE_SUFFIXES:
             return [], f"commands_file must be one of {sorted(_srv._BATCH_FILE_SUFFIXES)}"
+        # Only files under the batch root: GMA_BATCH_DIR, else the MA2 data root.
+        root = Path(os.environ.get("GMA_BATCH_DIR") or _srv._GMA2_DATA_ROOT).resolve()
+        if not path.resolve().is_relative_to(root):
+            return [], f"commands_file must be inside {root} (set GMA_BATCH_DIR to allow another directory)"
         if not path.is_file():
             return [], f"commands_file not found: {commands_file}"
         raw_lines = path.read_text(encoding="utf-8").splitlines()
@@ -328,7 +333,9 @@ async def run_command_batch(
     Args:
         commands: Command lines to send, in order.
         commands_file: Path to a .txt/.cmd/.ma2/.macro file, one command per
-            line; blank lines and lines starting with '#' are skipped.
+            line; blank lines and lines starting with '#' are skipped. The
+            file must be inside GMA_BATCH_DIR, or the grandMA2 data directory
+            when GMA_BATCH_DIR is unset.
         confirm_destructive: Required when any line is DESTRUCTIVE.
         stop_on_error: Stop at the first rejected command (default True).
         delay: Seconds to wait after each send before reading (default 0).

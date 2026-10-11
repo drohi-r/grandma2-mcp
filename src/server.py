@@ -65,7 +65,7 @@ from src.navigation import (  # noqa: F401 — used via src.server
 from src.orchestrator import Orchestrator
 from src.server_orchestration_tools import register_orchestration_tools
 from src.session_manager import SessionManager
-from src.telemetry import ToolTelemetry, infer_risk_tier
+from src.telemetry import ToolTelemetry, infer_risk_tier, redact_inputs
 from src.telnet_client import GMA2TelnetClient, collect_transport_warnings
 from src.tools import set_gma2_client
 from src.vocab import build_v39_spec
@@ -249,7 +249,7 @@ def _handle_errors(func):
                 _get_telemetry().record_sync(
                     tool_name=func.__name__,
                     inputs_json=json.dumps(
-                        {k: str(v)[:200] for k, v in kwargs.items()}, default=str
+                        {k: str(v)[:200] for k, v in redact_inputs(kwargs).items()}, default=str
                     ),
                     output_preview=result[:500] if result else "",
                     error_class=error_class,

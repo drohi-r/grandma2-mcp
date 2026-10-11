@@ -223,9 +223,10 @@ class TestRunCommandBatch:
 
     @pytest.mark.asyncio
     @patch("src.server.get_client")
-    async def test_batch_from_file_skips_comments(self, mock_get_client, tmp_path):
+    async def test_batch_from_file_skips_comments(self, mock_get_client, tmp_path, monkeypatch):
         from src.server import run_command_batch
 
+        monkeypatch.setenv("GMA_BATCH_DIR", str(tmp_path))
         f = tmp_path / "cmds.txt"
         f.write_text("# header\nList Cue\n\nList Group\n", encoding="utf-8")
         client = MagicMock()
@@ -236,6 +237,36 @@ class TestRunCommandBatch:
         data = json.loads(await run_command_batch(commands_file=str(f)))
         assert data["executed"] == 2
         assert data["ok"] is True
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_batch_file_outside_batch_dir_is_rejected(self, mock_get_client, tmp_path, monkeypatch):
+        from src.server import run_command_batch
+
+        allowed = tmp_path / "allowed"
+        allowed.mkdir()
+        monkeypatch.setenv("GMA_BATCH_DIR", str(allowed))
+        f = tmp_path / "outside.txt"
+        f.write_text("List Cue\n", encoding="utf-8")
+
+        data = json.loads(await run_command_batch(commands_file=str(f)))
+        assert data["blocked"] is True
+        assert "GMA_BATCH_DIR" in data["error"]
+        mock_get_client.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.server.get_client")
+    async def test_batch_file_outside_data_root_is_rejected_by_default(self, mock_get_client, tmp_path, monkeypatch):
+        from src.server import run_command_batch
+
+        monkeypatch.delenv("GMA_BATCH_DIR", raising=False)
+        f = tmp_path / "cmds.txt"
+        f.write_text("List Cue\n", encoding="utf-8")
+
+        data = json.loads(await run_command_batch(commands_file=str(f)))
+        assert data["blocked"] is True
+        assert "must be inside" in data["error"]
+        mock_get_client.assert_not_called()
 
 
 class _NullAsyncCtx:

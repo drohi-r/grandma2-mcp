@@ -39,6 +39,22 @@ _SAFE_READ_PREFIXES: tuple[str, ...] = (
     "check_",  # T6 helper `check_plugin_available` lands in Path B; staged here.
 )
 
+# Input names whose values never reach the telemetry log (credentials).
+_SECRET_KEY_PARTS: tuple[str, ...] = ("password", "passwd", "secret", "token", "api_key")
+_REDACTED = "***"
+
+
+def redact_inputs(kwargs: dict) -> dict:
+    """Copy of *kwargs* with credential-like values replaced by ``"***"``.
+
+    A key is redacted when its lower-case name contains any of
+    ``password``, ``passwd``, ``secret``, ``token`` or ``api_key``.
+    """
+    return {
+        k: _REDACTED if any(part in str(k).lower() for part in _SECRET_KEY_PARTS) else v
+        for k, v in kwargs.items()
+    }
+
 
 def infer_risk_tier(func: Callable) -> str:
     """Return the most likely risk tier for a tool function.
